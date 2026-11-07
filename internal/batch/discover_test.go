@@ -45,9 +45,14 @@ func TestDiscoverNestedScanBundlesWithoutMixingRuns(t *testing.T) {
 func TestDiscoverRejectsIncompleteBundle(t *testing.T) {
 	root := t.TempDir()
 	privateDir(t, root)
-	privateFile(t, filepath.Join(root, "scan.results.xccdf.xml"))
+	privateFile(t, filepath.Join(root, "scan.report.html"))
 	if _, err := Discover(root); err == nil {
-		t.Fatal("missing HTML accepted")
+		t.Fatal("HTML without XCCDF accepted")
+	}
+	privateFile(t, filepath.Join(root, "scan.results.xccdf.xml"))
+	privateFile(t, filepath.Join(root, "other.results.arf.xml"))
+	if _, err := Discover(root); err == nil {
+		t.Fatal("ARF without same-prefix XCCDF/HTML accepted")
 	}
 }
 func TestDiscoverRejectsDuplicateXCCDFForOneRun(t *testing.T) {

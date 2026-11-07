@@ -1,33 +1,22 @@
 # Burden of Proof
 
-Independent, offline XCCDF policy tailoring and fail-closed STIG Viewer 3 CKLB evidence packaging. No VM, scanner, installation, or licensed-media operations occur here. The `stig_evidence` package uses Python's standard library plus `jsonschema` for release validation; `openssl` is required to verify detached approval signatures. The Go CLI supports recursive, offline OpenSCAP-to-CKLB review conversion; Python remains the only evidence-release implementation. See [batch converter](BATCH-CKLB.md) and [Go migration](GO-MIGRATION.md).
+Offline conversion of saved OpenSCAP results in a host inventory tree into private STIG Viewer 3 CKLB **review** checklists. The Go application does not run scans, sign off findings, or deliver evidence. Those later pipeline stages are out of scope until conversion is verified for each OS.
 
-Run from this repository root:
+## Build and convert
 
-```sh
-python -m stig_evidence.cli tailor --policy stig_evidence/policy.example.json --benchmark /path/to/official-benchmark.xml --benchmark-href official-benchmark.xml --out /private/tailoring.xml
-python -m stig_evidence.cli cklb --policy /private/policy.json --benchmark /private/official-benchmark.xml --asset /private/asset.json --pre /private/pre.xml --post /private/post.xml --coverage /private/coverage.xml --tailoring /private/tailoring.xml --schema /private/official-cklb-1.0-schema.json --approval-ledger /private/ledger.json --approval-signature /private/ledger.sig --trusted-key /private/isso.pub --host node.example.test --evidence-dir /private/evidence/run-001
-```
-
-The example policy intentionally contains placeholder approvals and cannot be released. The CKLB schema is supplied externally and must match the pinned official DISA 1.0 SHA-256 in `stig_evidence/cklb.py`. The destination must be absent and its parent must be an owner-owned, nonsymlinked directory with mode **0700**. Input symlinks are refused; copied inputs and outputs are owner-only. Keep private keys **outside** this repository; only a trusted public key and signature are release inputs. Verify the trusted key's owner out of band.
-
-For recursive Go conversion of a directory of saved OpenSCAP runs (no scanner or VM access), build and run with a caller-supplied path:
+From the repository root on Linux with Go 1.22+ (vendored dependency; no runtime network access):
 
 ```sh
 install -d -m 700 dist
 GOPROXY=off GOSUMDB=off go build -mod=vendor -o dist/stig-evidence ./cmd/stig-evidence
-./dist/stig-evidence batch-cklb --input-root /path/to/lab_results --library-root /private/extracted-stig-library --dry-run
-./dist/stig-evidence batch-cklb --input-root /path/to/lab_results --library-root /private/extracted-stig-library
+./dist/stig-evidence batch-cklb --input-root /private/inventory --library-root /private/extracted-stig-library --dry-run
+./dist/stig-evidence batch-cklb --input-root /private/inventory --library-root /private/extracted-stig-library
 ```
 
-The input root is not hard-coded; change `--input-root` on each invocation. `--library-root` selects the newest extracted RHEL 9 manual XCCDF by verified benchmark version and release metadata on every invocation. Extract the product ZIP inside the quarterly library first; a directory containing only ZIP archives is not sufficient. For an intentionally pinned historical conversion, use `--benchmark /private/official.xml` **instead of** `--library-root`. Numeric V/SV matching is the default mapping rule. Complete scan bundles are paired by prefix and written as private `-ASSESSMENT.cklb` review files beside their inputs. Each assessment has an adjacent `.cklb.provenance.json` sidecar binding the exact checklist bytes to full input hashes and per-control mapping details; keep both files together. Repeated runs verify both outputs before skipping. See [batch converter](BATCH-CKLB.md) for pairing, safety, and validation details. These review files are not signed releases.
+The caller supplies the inventory root; no lab path is compiled in. Each scan's SSG XCCDF Benchmark ID selects its RHEL 7, 8, 9, or 10 family, and the library selects the newest eligible **extracted manual DISA XCCDF for that family** on each invocation. A library of ZIPs alone is insufficient. Use `--benchmark /private/official.xml` instead of `--library-root` only for a pinned, single-OS conversion.
 
-`.gitignore` is only a convenience, not a secret-control boundary: before every commit, review the staged file list and staged diff for scan inputs, signing material, approvals, and generated evidence (including files outside the ignored names). Do not commit any such material.
+Place `<prefix>.results.xml` or `<prefix>.results.xccdf.xml` in a directory whose basename equals the XCCDF target host. Same-prefix `<prefix>.report.html` enriches executed checks and item comparisons; `<prefix>.results.arf.xml` adds collected host values when HTML also exists. XCCDF-only results are accepted, but no unobserved values are invented. The application writes `-ASSESSMENT.cklb` plus a byte-bound `.cklb.provenance.json` beside each run in owner-private storage. It never silently overwrites changed output. Numeric V/SV mapping uses explicit newer SSG `V-…` or older SSG `SV-…` references; it is a mapping convention, not proof of semantic equivalence. Missing or ambiguous controls remain Not Reviewed. See [batch converter](BATCH-CKLB.md) for all input, permission, and output rules.
 
-For tests, supply the externally obtained official schema so the full synthetic release test is exercised:
+**Verification status:** The Go v6 batch tool converted all five available real saved-scan bundles (RHEL 8 ×1, RHEL 9 ×3, RHEL 10 ×1) against matching official manual benchmarks. Their CKLB bytes are identical to the externally schema-validated v5 review checklists; an independent Go readback checked all five v6 pairs' control IDs/statuses, complete raw-reference inventory, absolute input paths, hashes and owner-private modes. A Go rerun from another working directory skipped all five without replacing them. RHEL 8's older SSG `SV-…` references mapped 329 of 371 official controls to candidate statuses; 42 remained Not Reviewed. Regression tests now reject dual V/SV references to the same numeric control as ambiguous and require absolute provenance in single-scan assessment views. These are unsigned review candidates, not approved assessments. Synthetic mixed-tree tests cover RHEL 7/8/9/10; **real** RHEL 7 results and STIG Viewer GUI import are still outstanding. See [Go-only scope](GO-MIGRATION.md) for limitations.
 
-```sh
-STIG_EVIDENCE_SCHEMA=/path/to/official-cklb-1.0-schema.json python -m unittest discover -s tests -v
-```
-
-Without it, the two official-schema-dependent tests skip. See [workflow](WORKFLOW.md) and [asset contract](../contracts/asset-record-v1.md). Synthetic fixtures establish code paths and fail-closed behavior, **not** authenticity of a real scan, an actual clean baseline, approval authority, STIG Viewer import, or operational compliance. Independent ISSO review and signed per-asset acceptance remain outstanding after release.
+The legacy tailoring and signed-release workflow is retired, not ported. **No signed-release, signature verification, or evidence-publication command exists here.** See the [Go workflow](WORKFLOW.md) and [asset contract](../contracts/asset-record-v1.md); a separate authorized process must handle signoff and delivery. Keep raw scans, approvals, generated checklists, keys, and host evidence private and out of Git; `.gitignore` is not a security boundary.

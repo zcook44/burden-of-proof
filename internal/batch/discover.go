@@ -1,6 +1,6 @@
 // Package batch discovers owner-private OpenSCAP scan bundles recursively.
-// A bundle is one ordinary XCCDF result and the same-prefix HTML report;
-// ARF/OVAL evidence is optional. No files are modified by discovery.
+// A bundle is one ordinary XCCDF result; same-prefix HTML and ARF/OVAL
+// evidence enrich it when both exist. No files are modified by discovery.
 package batch
 
 import (
@@ -27,8 +27,8 @@ func privateDirectory(path string) error {
 	return nil
 }
 
-// Discover rejects symlinks, public directories, ambiguous XCCDF names, and
-// missing HTML. The path is provided by the caller, never hard-coded.
+// Discover rejects symlinks, public directories, ambiguous XCCDF names and
+// orphaned HTML/ARF. The path is provided by the caller, never hard-coded.
 func Discover(root string) ([]Scan, error) {
 	if err := privateDirectory(root); err != nil {
 		return nil, err
@@ -92,8 +92,8 @@ func Discover(root string) ([]Scan, error) {
 	}
 	scans := make([]Scan, 0, len(found))
 	for key, v := range found {
-		if v.XCCDF == "" || v.HTML == "" {
-			return nil, fmt.Errorf("incomplete scan bundle %s: XCCDF and same-prefix HTML required", key)
+		if v.XCCDF == "" || (v.ARF != "" && v.HTML == "") {
+			return nil, fmt.Errorf("incomplete scan bundle %s: XCCDF required and ARF requires same-prefix HTML", key)
 		}
 		scans = append(scans, *v)
 	}

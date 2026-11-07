@@ -65,7 +65,7 @@ func TestLatestBenchmarkRejectsUnsupportedSourceAndSymlink(t *testing.T) {
 	root := t.TempDir()
 	_ = os.Chmod(root, 0700)
 	p := privateBench(t, root, "U_RHEL_9_STIG_V2R10_Manual-xccdf.xml", benchmarkFixture("2", "10"))
-	if _, _, err := latestBenchmark(root, []byte(strings.Replace(sourceRHEL9, "RHEL-9", "RHEL-8", 1))); err == nil || !strings.Contains(err.Error(), "unsupported") {
+	if _, _, err := latestBenchmark(root, []byte(strings.Replace(sourceRHEL9, "RHEL-9", "RHEL-6", 1))); err == nil || !strings.Contains(err.Error(), "unsupported") {
 		t.Fatalf("wrong source accepted: %v", err)
 	}
 	if err := os.Symlink(p, filepath.Join(root, "link.xml")); err != nil {

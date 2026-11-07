@@ -123,7 +123,7 @@ func buildWithEvidence(report reconcile.Report, data []byte, assumeEquivalent bo
 	if err := xml.Unmarshal(data, &b); err != nil {
 		return nil, err
 	}
-	if b.XMLName.Space != "http://checklists.nist.gov/xccdf/1.1" || b.ID != report.DISABenchmark || b.Version != report.DISAVersion || b.ID != "RHEL_9_STIG" {
+	if b.XMLName.Space != "http://checklists.nist.gov/xccdf/1.1" || b.ID != report.DISABenchmark || b.Version != report.DISAVersion {
 		return nil, fmt.Errorf("official benchmark identity mismatch")
 	}
 	indexed := map[string]reconcile.Control{}
@@ -156,6 +156,9 @@ func buildWithEvidence(report reconcile.Report, data []byte, assumeEquivalent bo
 				continue
 			}
 			details := []string{"DRAFT: SSG-to-DISA vulnerability reference only; DISA check equivalence not reviewed.", "SSG scan SHA-256: " + report.ScanSHA256, "DISA benchmark SHA-256: " + report.BenchmarkSHA256, "Candidate outcome (not a DISA result): " + candidate.Status, "Mapping reason: " + candidate.Reason}
+			if evidence == nil {
+				details = append(details, "No HTML or ARF host observation supplied; only XCCDF rule outcomes are available.")
+			}
 			if assumeEquivalent {
 				details[0] = "DRAFT: numeric V/SV mapping of SSG results; DISA check equivalence not independently verified."
 			}

@@ -10,17 +10,38 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 )
 
 const (
-	ssgNS   = "http://checklists.nist.gov/xccdf/1.2"
-	disaNS  = "http://checklists.nist.gov/xccdf/1.1"
-	vulnRef = "https://www.cyber.mil/stigs/srg-stig-tools#vulnerability_id"
+	ssgNS       = "http://checklists.nist.gov/xccdf/1.2"
+	disaNS      = "http://checklists.nist.gov/xccdf/1.1"
+	vulnRef     = "https://www.cyber.mil/stigs/srg-stig-tools#vulnerability_id"
+	legacySVRef = "https://public.cyber.mil/stigs/srg-stig-tools/"
 )
 
 var vulnID = regexp.MustCompile(`^V-[0-9]+$`)
 var svID = regexp.MustCompile(`^SV-([0-9]+)r[0-9]+_rule$`)
+var sourceID = regexp.MustCompile(`^xccdf_org\.ssgproject\.content_benchmark_RHEL-(7|8|9|10)$`)
+
+func familyFromID(id string) (int, error) {
+	match := sourceID.FindStringSubmatch(id)
+	if match == nil {
+		return 0, fmt.Errorf("unsupported RHEL source benchmark %q", id)
+	}
+	major, _ := strconv.Atoi(match[1])
+	return major, nil
+}
+
+// SourceFamily identifies a supported SSG RHEL XCCDF Benchmark by its XML ID.
+func SourceFamily(scan []byte) (int, error) {
+	s, err := parse(scan, ssgNS)
+	if err != nil {
+		return 0, err
+	}
+	return familyFromID(s.ID)
+}
 
 type reference struct {
 	Href string `xml:"href,attr"`
@@ -54,11 +75,28 @@ type benchmark struct {
 	Tests   []testResult `xml:"TestResult"`
 }
 
+// SourceReference preserves the exact XML reference text and href alongside
+// the normalized numeric V join key (which is not an official rule revision).
+type SourceReference struct {
+	Text    string `json:"text"`
+	Href    string `json:"href"`
+	JoinKey string `json:"v_join_key"`
+}
+
 // Source retains the original SSG result, not a purported DISA scan result.
 type Source struct {
-	RuleID     string   `json:"ssg_rule_id"`
-	Result     string   `json:"raw_result"`
-	References []string `json:"vulnerability_references"`
+	RuleID             string            `json:"ssg_rule_id"`
+	Result             string            `json:"raw_result"`
+	References         []string          `json:"vulnerability_references"`
+	OriginalReferences []SourceReference `json:"original_references"`
+}
+
+// RuleReferences records the exact references on one TestResult rule-result,
+// regardless of selection or whether any reference maps to an official group.
+type RuleReferences struct {
+	RuleID             string            `json:"ssg_rule_id"`
+	Result             string            `json:"raw_result"`
+	OriginalReferences []SourceReference `json:"original_references"`
 }
 type Control struct {
 	GroupID string   `json:"disa_group_id"`
@@ -78,6 +116,10 @@ type Report struct {
 	BenchmarkSHA256 string    `json:"benchmark_sha256"`
 	Controls        []Control `json:"controls"`
 	Unmapped        []string  `json:"unmapped_ssg_rules"`
+	// RuleReferences inventories every TestResult rule-result, including
+	// unselected and rules with no matching official control. It is not a
+	// list of positive mapping candidates.
+	RuleReferences []RuleReferences `json:"rule_references"`
 }
 
 func parse(data []byte, namespace string) (benchmark, error) {
@@ -101,10 +143,31 @@ func walk(groups []group, visit func(group)) {
 }
 func digest(data []byte) string { d := sha256.Sum256(data); return hex.EncodeToString(d[:]) }
 
+// sourceVulnerability accepts only explicit SSG DISA V or legacy SV IDs.
+// A different SV revision may share a numeric control; this is a join key,
+// not independent proof that the checks are semantically identical.
+func sourceVulnerability(ref reference) (string, bool) {
+	value := strings.TrimSpace(ref.ID)
+	switch ref.Href {
+	case vulnRef:
+		return value, true
+	case legacySVRef:
+		if !strings.HasPrefix(value, "SV-") {
+			return "", false // generic STIG metadata is not a control reference
+		}
+		if parts := svID.FindStringSubmatch(value); parts != nil {
+			return "V-" + parts[1], true
+		}
+		return value, true // selected malformed DISA reference fails validation
+	default:
+		return "", false
+	}
+}
+
 // Convert produces a conservative ID reconciliation, not official XCCDF results.
 // A source that references multiple vulnerabilities cannot prove either control.
 func Convert(scan, official []byte) (Report, error) {
-	report := Report{SchemaVersion: 1, ScanSHA256: digest(scan), BenchmarkSHA256: digest(official), Controls: []Control{}, Unmapped: []string{}}
+	report := Report{SchemaVersion: 1, ScanSHA256: digest(scan), BenchmarkSHA256: digest(official), Controls: []Control{}, Unmapped: []string{}, RuleReferences: []RuleReferences{}}
 	s, err := parse(scan, ssgNS)
 	if err != nil {
 		return report, err
@@ -113,14 +176,18 @@ func Convert(scan, official []byte) (Report, error) {
 	if err != nil {
 		return report, err
 	}
-	if s.ID != "xccdf_org.ssgproject.content_benchmark_RHEL-9" || d.ID != "RHEL_9_STIG" || strings.TrimSpace(d.Version) == "" {
-		return report, fmt.Errorf("RHEL 9 benchmark identity/version mismatch")
+	major, err := familyFromID(s.ID)
+	if err != nil {
+		return report, err
+	}
+	if d.ID != fmt.Sprintf("RHEL_%d_STIG", major) || strings.TrimSpace(d.Version) == "" {
+		return report, fmt.Errorf("RHEL %d benchmark identity/version mismatch", major)
 	}
 	if len(s.Tests) != 1 || len(s.Tests[0].Targets) != 1 || strings.TrimSpace(s.Tests[0].Targets[0]) == "" || len(s.Tests[0].Profiles) != 1 {
 		return report, fmt.Errorf("exactly one target, profile and TestResult required")
 	}
 	profile := s.Tests[0].Profiles[0].ID
-	if profile != "xccdf_org.ssgproject.content_profile_stig" && profile != "xccdf_org.ssgproject.content_profile_stig_gui" {
+	if profile != "xccdf_org.ssgproject.content_profile_stig" && profile != "xccdf_org.ssgproject.content_profile_stig_gui" && !(major == 7 && profile == "xccdf_org.ssgproject.content_profile_stig-rhel7-disa") {
 		return report, fmt.Errorf("unexpected SSG profile")
 	}
 	report.Target = s.Tests[0].Targets[0]
@@ -169,14 +236,11 @@ func Convert(scan, official []byte) (Report, error) {
 	related := map[string]map[string]bool{}
 	for id, rule := range sourceRules {
 		for _, ref := range rule.References {
-			if ref.Href == vulnRef {
-				v := strings.TrimSpace(ref.ID)
-				if officialIDs[v] {
-					if related[v] == nil {
-						related[v] = map[string]bool{}
-					}
-					related[v][id] = true
+			if v, ok := sourceVulnerability(ref); ok && officialIDs[v] {
+				if related[v] == nil {
+					related[v] = map[string]bool{}
 				}
+				related[v][id] = true
 			}
 		}
 	}
@@ -195,28 +259,44 @@ func Convert(scan, official []byte) (Report, error) {
 		default:
 			return report, fmt.Errorf("invalid raw result: %s", rr.Result)
 		}
+		inventory := RuleReferences{RuleID: rr.ID, Result: rr.Result, OriginalReferences: []SourceReference{}}
+		for _, ref := range rule.References {
+			original := SourceReference{Text: ref.ID, Href: ref.Href}
+			if key, ok := sourceVulnerability(ref); ok && vulnID.MatchString(key) {
+				original.JoinKey = key
+			}
+			inventory.OriginalReferences = append(inventory.OriginalReferences, original)
+		}
+		report.RuleReferences = append(report.RuleReferences, inventory)
 		if rr.Result == "notselected" {
 			continue
 		}
 		refs := []string{}
+		originalRefs := []SourceReference{}
 		unique := map[string]bool{}
+		seenRefs := map[string]bool{}
 		for _, ref := range rule.References {
-			if ref.Href != vulnRef {
+			id, ok := sourceVulnerability(ref)
+			if !ok {
 				continue
 			}
-			id := strings.TrimSpace(ref.ID)
-			if !vulnID.MatchString(id) || unique[id] {
+			key := ref.Href + "|" + id
+			if !vulnID.MatchString(id) || seenRefs[key] {
 				return report, fmt.Errorf("invalid or duplicate vulnerability reference on %s", rr.ID)
 			}
-			unique[id] = true
-			refs = append(refs, id)
+			seenRefs[key] = true
+			originalRefs = append(originalRefs, SourceReference{Text: ref.ID, Href: ref.Href, JoinKey: id})
+			if !unique[id] {
+				unique[id] = true
+				refs = append(refs, id)
+			}
 		}
 		if len(refs) == 0 {
 			report.Unmapped = append(report.Unmapped, rr.ID)
 			continue
 		}
 		sort.Strings(refs)
-		src := Source{RuleID: rr.ID, Result: rr.Result, References: refs}
+		src := Source{RuleID: rr.ID, Result: rr.Result, References: refs, OriginalReferences: originalRefs}
 		for _, ref := range refs {
 			if index, ok := indexed[ref]; ok {
 				report.Controls[index].Sources = append(report.Controls[index].Sources, src)
@@ -241,7 +321,7 @@ func Convert(scan, official []byte) (Report, error) {
 		allNA := true
 		failed := false
 		for _, src := range c.Sources {
-			if len(src.References) != 1 {
+			if len(src.References) != 1 || len(src.OriginalReferences) != 1 {
 				ambiguous = true
 			}
 			if src.Result != "pass" {
@@ -269,5 +349,6 @@ func Convert(scan, official []byte) (Report, error) {
 		}
 	}
 	sort.Strings(report.Unmapped)
+	sort.Slice(report.RuleReferences, func(i, j int) bool { return report.RuleReferences[i].RuleID < report.RuleReferences[j].RuleID })
 	return report, nil
 }

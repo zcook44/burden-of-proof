@@ -288,8 +288,8 @@ func TestBatchCLIRecursesConvertsAndSkipsOnlyMatchingOutput(t *testing.T) {
 func TestBatchCLIDryRunDoesNotWrite(t *testing.T) {
 	root := t.TempDir()
 	_ = os.Chmod(root, 0700)
-	for p := range map[string]bool{"scan.results.xml": true, "scan.report.html": true} {
-		if err := os.WriteFile(filepath.Join(root, p), []byte("fixture"), 0600); err != nil {
+	for p, content := range map[string]string{"scan.results.xml": sourceFixture(9), "scan.report.html": htmlFixture} {
+		if err := os.WriteFile(filepath.Join(root, p), []byte(content), 0600); err != nil {
 			t.Fatal(err)
 		}
 	}

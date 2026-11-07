@@ -1,4 +1,4 @@
-// stig-evidence starts with read-only asset contract validation; evidence release remains Python-only.
+// stig-evidence creates private review candidates; signed release is unsupported.
 package main
 
 import (
@@ -79,7 +79,7 @@ func runMapped(args []string, asDraft bool, out, stderr io.Writer) int {
 	flags := flag.NewFlagSet(command, flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	scanPath := flags.String("scan", "", "SSG XCCDF result")
-	benchmarkPath := flags.String("benchmark", "", "official DISA RHEL 9 XCCDF benchmark")
+	benchmarkPath := flags.String("benchmark", "", "official DISA RHEL 7/8/9/10 XCCDF benchmark matching the source OS")
 	outPath := flags.String("out", "", "new private JSON report path")
 	htmlPath := flags.String("html-report", "", "owner-private OpenSCAP HTML report with item-state evidence (draft only)")
 	arfPath := flags.String("arf", "", "owner-private OpenSCAP ARF with collected OVAL item values (requires --html-report)")
@@ -88,6 +88,17 @@ func runMapped(args []string, asDraft bool, out, stderr io.Writer) int {
 	if err := flags.Parse(args); err != nil || flags.NArg() != 0 || *scanPath == "" || *benchmarkPath == "" || *outPath == "" || (*htmlPath != "" && !asDraft) || (*arfPath != "" && *htmlPath == "") || (*assessmentView && *htmlPath == "") || (*operatorApproved && (!*assessmentView || *arfPath == "")) {
 		fmt.Fprintln(stderr, "invalid flags: --assessment-view requires --html-report; --operator-approved requires --assessment-view and --arf; draft-cklb requires --scan, --benchmark and --out")
 		return 2
+	}
+	for _, input := range []*string{scanPath, benchmarkPath, htmlPath, arfPath} {
+		if *input == "" {
+			continue
+		}
+		absolute, err := filepath.Abs(*input)
+		if err != nil {
+			fmt.Fprintf(stderr, "stig-evidence: input path: %v\n", err)
+			return 2
+		}
+		*input = absolute
 	}
 	scan, err := readPrivate(*scanPath)
 	if err != nil {

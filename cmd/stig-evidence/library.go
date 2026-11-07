@@ -11,9 +11,11 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+
+	"github.com/zcook44/burden-of-proof/internal/reconcile"
 )
 
-var officialName = regexp.MustCompile(`^U_RHEL_9_STIG_V([0-9]+)R([0-9]+)_Manual-xccdf\.xml$`)
+var officialName = regexp.MustCompile(`^U_RHEL_([0-9]+)_STIG_V([0-9]+)R([0-9]+)_Manual-xccdf\.xml$`)
 var releaseInfo = regexp.MustCompile(`^Release: ([0-9]+) Benchmark Date: .+$`)
 
 type libraryBenchmark struct {
@@ -38,21 +40,12 @@ func privateLibraryDirectory(path string) error {
 	return nil
 }
 
-// latestBenchmark selects the highest official V/R tuple for the supported
-// source family. SSG result version is not a DISA release number.
+// latestBenchmark selects the highest official V/R tuple for the source OS.
+// SSG result version is not a DISA release number.
 func latestBenchmark(root string, scan []byte) (string, []byte, error) {
-	if bytes.Contains(scan, []byte("<!DOCTYPE")) || bytes.Contains(scan, []byte("<!ENTITY")) {
-		return "", nil, fmt.Errorf("source XML DTD/entity forbidden")
-	}
-	var source struct {
-		XMLName xml.Name `xml:"Benchmark"`
-		ID      string   `xml:"id,attr"`
-	}
-	if err := xml.Unmarshal(scan, &source); err != nil {
-		return "", nil, fmt.Errorf("source XCCDF: %w", err)
-	}
-	if source.XMLName.Space != "http://checklists.nist.gov/xccdf/1.2" || source.ID != "xccdf_org.ssgproject.content_benchmark_RHEL-9" {
-		return "", nil, fmt.Errorf("unsupported source benchmark %q", source.ID)
+	major, err := reconcile.SourceFamily(scan)
+	if err != nil {
+		return "", nil, err
 	}
 	if err := privateLibraryDirectory(root); err != nil {
 		return "", nil, err
@@ -60,7 +53,7 @@ func latestBenchmark(root string, scan []byte) (string, []byte, error) {
 	selected := ""
 	var selectedData []byte
 	bestV, bestR := 0, 0
-	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+	err = filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
@@ -71,17 +64,18 @@ func latestBenchmark(root string, scan []byte) (string, []byte, error) {
 			return privateLibraryDirectory(path)
 		}
 		name := entry.Name()
-		if !strings.HasPrefix(name, "U_RHEL_9_STIG") || !strings.HasSuffix(name, "_Manual-xccdf.xml") {
+		if !strings.HasPrefix(name, fmt.Sprintf("U_RHEL_%d_STIG", major)) || !strings.HasSuffix(name, "_Manual-xccdf.xml") {
 			return nil
 		}
 		parts := officialName.FindStringSubmatch(name)
 		if parts == nil {
-			return fmt.Errorf("invalid RHEL 9 benchmark filename: %s", path)
+			return fmt.Errorf("invalid RHEL %d benchmark filename: %s", major, path)
 		}
-		v, _ := strconv.Atoi(parts[1])
-		r, _ := strconv.Atoi(parts[2])
-		if v < 1 || r < 1 {
-			return fmt.Errorf("invalid RHEL 9 benchmark release: %s", path)
+		family, _ := strconv.Atoi(parts[1])
+		v, _ := strconv.Atoi(parts[2])
+		r, _ := strconv.Atoi(parts[3])
+		if family != major || v < 1 || r < 1 {
+			return fmt.Errorf("invalid RHEL %d benchmark release: %s", major, path)
 		}
 		data, err := readPrivate(path)
 		if err != nil {
@@ -95,7 +89,7 @@ func latestBenchmark(root string, scan []byte) (string, []byte, error) {
 			return fmt.Errorf("benchmark %s: %w", path, err)
 		}
 		version, err := strconv.Atoi(strings.TrimSpace(b.Version))
-		if err != nil || b.XMLName.Space != "http://checklists.nist.gov/xccdf/1.1" || b.ID != "RHEL_9_STIG" || version != v {
+		if err != nil || b.XMLName.Space != "http://checklists.nist.gov/xccdf/1.1" || b.ID != fmt.Sprintf("RHEL_%d_STIG", major) || version != v {
 			return fmt.Errorf("benchmark identity/version mismatch: %s", path)
 		}
 		release := 0
@@ -123,7 +117,7 @@ func latestBenchmark(root string, scan []byte) (string, []byte, error) {
 		return "", nil, err
 	}
 	if selected == "" {
-		return "", nil, fmt.Errorf("no extracted RHEL 9 manual XCCDF benchmark beneath %s", root)
+		return "", nil, fmt.Errorf("no extracted RHEL %d manual XCCDF benchmark beneath %s", major, root)
 	}
 	return selected, selectedData, nil
 }

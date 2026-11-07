@@ -76,8 +76,8 @@ func runBatch(args []string, out, stderr io.Writer) int {
 	flags := flag.NewFlagSet("batch-cklb", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	root := flags.String("input-root", "", "owner-private directory to scan recursively")
-	benchmarkPath := flags.String("benchmark", "", "explicit official DISA RHEL 9 XCCDF benchmark (instead of --library-root)")
-	libraryRoot := flags.String("library-root", "", "owner-private extracted STIG library; choose newest matching RHEL 9 release")
+	benchmarkPath := flags.String("benchmark", "", "explicit official DISA XCCDF benchmark (single OS; instead of --library-root)")
+	libraryRoot := flags.String("library-root", "", "owner-private extracted STIG library; choose newest benchmark for each scan's RHEL OS")
 	dryRun := flags.Bool("dry-run", false, "list complete bundles without converting or writing")
 	if err := flags.Parse(args); errors.Is(err, flag.ErrHelp) {
 		return 0
@@ -88,37 +88,36 @@ func runBatch(args []string, out, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "usage: stig-evidence batch-cklb --input-root PATH (--library-root DIR | --benchmark XCCDF) [--dry-run]")
 		return 2
 	}
+	// Resolve caller-relative inputs once before discovery or benchmark selection.
+	for _, input := range []*string{root, benchmarkPath, libraryRoot} {
+		if *input == "" {
+			continue
+		}
+		absolute, err := filepath.Abs(*input)
+		if err != nil {
+			fmt.Fprintf(stderr, "batch input path: %v\n", err)
+			return 2
+		}
+		*input = absolute
+	}
 	scans, err := batch.Discover(*root)
 	if err != nil {
 		fmt.Fprintf(stderr, "batch: %v\n", err)
 		return 2
 	}
-	selectedPath := *benchmarkPath
-	var benchmark []byte
-	if *libraryRoot != "" {
-		var firstScan []byte
-		firstScan, err = readPrivate(scans[0].XCCDF)
-		if err == nil {
-			selectedPath, benchmark, err = latestBenchmark(*libraryRoot, firstScan)
-		}
-	} else {
-		benchmark, err = readPrivate(selectedPath)
+	type selection struct {
+		path string
+		data []byte
 	}
-	if err != nil {
-		fmt.Fprintf(stderr, "batch benchmark: %v\n", err)
-		return 2
-	}
-	fmt.Fprintf(out, "BENCHMARK %s (sha256 %x)\n", selectedPath, sha256.Sum256(benchmark))
-	if *dryRun {
-		for _, s := range scans {
-			kind := "HTML-only"
-			if s.ARF != "" {
-				kind = "ARF+HTML"
-			}
-			fmt.Fprintf(out, "SCAN %s [%s]\n", s.XCCDF, kind)
+	selected := map[int]selection{}
+	if *benchmarkPath != "" {
+		data, err := readPrivate(*benchmarkPath)
+		if err != nil {
+			fmt.Fprintf(stderr, "batch benchmark: %v\n", err)
+			return 2
 		}
-		fmt.Fprintf(out, "bundles: %d; no files written\n", len(scans))
-		return 0
+		// The explicit benchmark's OS is checked by reconciliation for every scan.
+		selected[0] = selection{*benchmarkPath, data}
 	}
 	created, skipped := 0, 0
 	for _, s := range scans {
@@ -127,10 +126,45 @@ func runBatch(args []string, out, stderr io.Writer) int {
 			fmt.Fprintf(stderr, "batch %s: %v\n", s.XCCDF, err)
 			return 2
 		}
-		html, err := readPrivate(s.HTML)
+		major, err := reconcile.SourceFamily(scan)
 		if err != nil {
-			fmt.Fprintf(stderr, "batch %s: %v\n", s.HTML, err)
+			fmt.Fprintf(stderr, "batch %s: %v\n", s.XCCDF, err)
 			return 2
+		}
+		choice, ok := selected[major]
+		if *benchmarkPath != "" {
+			choice = selected[0]
+			ok = true
+		}
+		if !ok {
+			path, data, err := latestBenchmark(*libraryRoot, scan)
+			if err != nil {
+				fmt.Fprintf(stderr, "batch benchmark for %s: %v\n", s.XCCDF, err)
+				return 2
+			}
+			choice = selection{path, data}
+			selected[major] = choice
+		}
+		fmt.Fprintf(out, "BENCHMARK RHEL %d: %s (sha256 %x)\n", major, choice.path, sha256.Sum256(choice.data))
+		selectedPath, benchmark := choice.path, choice.data
+		if *dryRun {
+			kind := "XCCDF-only"
+			if s.HTML != "" {
+				kind = "HTML-only"
+			}
+			if s.ARF != "" {
+				kind = "ARF+HTML"
+			}
+			fmt.Fprintf(out, "SCAN %s [%s]\n", s.XCCDF, kind)
+			continue
+		}
+		var html []byte
+		if s.HTML != "" {
+			html, err = readPrivate(s.HTML)
+			if err != nil {
+				fmt.Fprintf(stderr, "batch %s: %v\n", s.HTML, err)
+				return 2
+			}
 		}
 		var arfBytes []byte
 		if s.ARF != "" {
@@ -153,8 +187,10 @@ func runBatch(args []string, out, stderr io.Writer) int {
 		var doc map[string]any
 		if s.ARF != "" {
 			doc, err = draft.BuildAssessmentWithARF(report, benchmark, html, arfBytes, false)
-		} else {
+		} else if s.HTML != "" {
 			doc, err = draft.BuildAssessmentWithReport(report, benchmark, html)
+		} else {
+			doc, err = draft.BuildMapped(report, benchmark)
 		}
 		if err != nil {
 			fmt.Fprintf(stderr, "batch %s: %v\n", s.XCCDF, err)
@@ -166,7 +202,7 @@ func runBatch(args []string, out, stderr io.Writer) int {
 			return 2
 		}
 		body = append(body, '\n')
-		name := s.Prefix + "-disa-" + report.BenchmarkSHA256[:16] + "-" + bundleDigest([]byte("assessment-provenance-v2"), scan, benchmark, html, arfBytes)[:16] + "-ASSESSMENT.cklb"
+		name := s.Prefix + "-disa-" + report.BenchmarkSHA256[:16] + "-" + bundleDigest([]byte("assessment-provenance-v6"), scan, benchmark, html, arfBytes)[:16] + "-ASSESSMENT.cklb"
 		path := filepath.Join(s.Dir, name)
 		provenance, err := assessmentProvenance(body, report, s.XCCDF, selectedPath, s.HTML, s.ARF, html, arfBytes)
 		if err != nil {
@@ -178,6 +214,16 @@ func runBatch(args []string, out, stderr io.Writer) int {
 			fmt.Fprintf(stderr, "batch %s: %v (created=%d skipped=%d)\n", s.XCCDF, err, created, skipped)
 			return 2
 		}
+		if wasSkipped {
+			// A prior run may have used a different private path for the same
+			// benchmark or a different spelling of the scan root. Validate the
+			// original paths and all non-path fields before retaining its sidecar.
+			if old, readErr := readPrivate(path + ".provenance.json"); readErr == nil && equivalentProvenance(old, provenance) {
+				skipped++
+				fmt.Fprintf(out, "SKIP %s (verified equivalent provenance; original paths retained)\n", path)
+				continue
+			}
+		}
 		if _, err := writeBatchResult(path+".provenance.json", provenance); err != nil {
 			fmt.Fprintf(stderr, "batch provenance %s: %v (checklist retained for safe retry)\n", path, err)
 			return 2
@@ -187,8 +233,19 @@ func runBatch(args []string, out, stderr io.Writer) int {
 			fmt.Fprintf(out, "SKIP %s (verified identical)\n", path)
 		} else {
 			created++
-			fmt.Fprintf(out, "CREATED %s (%d controls, %s)\n", path, len(report.Controls), map[bool]string{true: "ARF+HTML", false: "HTML-only"}[s.ARF != ""])
+			kind := "XCCDF-only"
+			if s.HTML != "" {
+				kind = "HTML-only"
+			}
+			if s.ARF != "" {
+				kind = "ARF+HTML"
+			}
+			fmt.Fprintf(out, "CREATED %s (%d controls, %s)\n", path, len(report.Controls), kind)
 		}
+	}
+	if *dryRun {
+		fmt.Fprintf(out, "bundles: %d; no files written\n", len(scans))
+		return 0
 	}
 	fmt.Fprintf(out, "complete: %d bundles; created=%d skipped=%d\n", len(scans), created, skipped)
 	return 0
