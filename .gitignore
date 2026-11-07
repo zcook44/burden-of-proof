@@ -1,0 +1,18 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+*.egg-info/
+# Keep scan inputs, signing keys, approvals and generated evidence out of source control.
+evidence/
+private/
+*.cklb
+*.pem
+*.key
+*.sig
+*.env
+asset.json
+pre.xml
+post.xml
+coverage.xml
+approval-ledger.json
