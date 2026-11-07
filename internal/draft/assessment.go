@@ -27,7 +27,12 @@ func BuildAssessmentWithARF(report reconcile.Report, benchmark, html, arfBytes [
 	if err != nil {
 		return nil, err
 	}
-	return renderAssessment(report, doc, checks, host, operatorApproved, ":arf")
+	result, err := renderAssessment(report, doc, checks, host, operatorApproved, ":arf")
+	if err != nil {
+		return nil, err
+	}
+	result["id"] = uuid5(result["id"].(string) + ":arf:" + hash(arfBytes))
+	return result, nil
 }
 
 // BuildAssessmentWithReport supports older scans that saved XCCDF and HTML but no

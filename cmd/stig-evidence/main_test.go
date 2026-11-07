@@ -129,6 +129,27 @@ func TestDraftCLIWithHTMLReportWritesCheckAndComparison(t *testing.T) {
 	if !strings.Contains(rule["comments"].(string), "Path: /etc/settings") || !strings.Contains(rule["finding_details"].(string), "verify setting") {
 		t.Fatal("report evidence not exported")
 	}
+	sidecar, err := os.ReadFile(out + ".provenance.json")
+	if err != nil {
+		t.Fatalf("missing single-scan provenance: %v", err)
+	}
+	var provenance struct {
+		ChecklistSHA256 string `json:"checklist_sha256"`
+		Reconciliation  struct {
+			Controls []struct {
+				Sources []struct {
+					RuleID string `json:"ssg_rule_id"`
+				} `json:"sources"`
+			} `json:"controls"`
+		} `json:"reconciliation"`
+	}
+	if err := json.Unmarshal(sidecar, &provenance); err != nil {
+		t.Fatal(err)
+	}
+	digest := sha256.Sum256(data)
+	if provenance.ChecklistSHA256 != hex.EncodeToString(digest[:]) || len(provenance.Reconciliation.Controls) != 1 || provenance.Reconciliation.Controls[0].Sources[0].RuleID != "ssg_a" {
+		t.Fatalf("unbound or incomplete source provenance: %+v", provenance)
+	}
 }
 
 func TestDraftCLIRejectsInvalidARFWithoutWriting(t *testing.T) {
@@ -204,10 +225,55 @@ func TestBatchCLIRecursesConvertsAndSkipsOnlyMatchingOutput(t *testing.T) {
 	if row["status"] != "not_a_finding" || !strings.Contains(row["comments"].(string), "enabled") || strings.Contains(doc["title"].(string), "APPROVED") {
 		t.Fatal("wrong batch result")
 	}
+	provenance, err := os.ReadFile(outputs[0] + ".provenance.json")
+	if err != nil {
+		t.Fatalf("missing batch provenance: %v", err)
+	}
+	var record struct {
+		ChecklistSHA256 string `json:"checklist_sha256"`
+		Scan            struct {
+			SHA256 string `json:"sha256"`
+		} `json:"scan"`
+		Benchmark struct {
+			SHA256 string `json:"sha256"`
+		} `json:"benchmark"`
+		HTML struct {
+			SHA256 string `json:"sha256"`
+		} `json:"html"`
+		Reconciliation struct {
+			Controls []struct {
+				Reason  string `json:"reason"`
+				Sources []struct {
+					RuleID string `json:"ssg_rule_id"`
+				} `json:"sources"`
+			} `json:"controls"`
+		} `json:"reconciliation"`
+	}
+	if err := json.Unmarshal(provenance, &record); err != nil {
+		t.Fatal(err)
+	}
+	ck := sha256.Sum256(body)
+	sh := sha256.Sum256([]byte(s))
+	bh := sha256.Sum256([]byte(b))
+	hh := sha256.Sum256([]byte(h))
+	if record.ChecklistSHA256 != hex.EncodeToString(ck[:]) || record.Scan.SHA256 != hex.EncodeToString(sh[:]) || record.Benchmark.SHA256 != hex.EncodeToString(bh[:]) || record.HTML.SHA256 != hex.EncodeToString(hh[:]) || len(record.Reconciliation.Controls) != 1 || record.Reconciliation.Controls[0].Reason == "" || record.Reconciliation.Controls[0].Sources[0].RuleID != "ssg_a" {
+		t.Fatalf("batch provenance incomplete or unbound: %+v", record)
+	}
 	out.Reset()
 	errs.Reset()
 	if code := run(args, &out, &errs); code != 0 || !strings.Contains(out.String(), "SKIP") {
 		t.Fatalf("same output not safely skipped: %d %s %s", code, out.String(), errs.String())
+	}
+	if err := os.WriteFile(outputs[0]+".provenance.json", []byte("tampered"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	out.Reset()
+	errs.Reset()
+	if code := run(args, &out, &errs); code == 0 || !strings.Contains(errs.String(), "differs") {
+		t.Fatalf("tampered provenance accepted: %d %s", code, errs.String())
+	}
+	if err := os.WriteFile(outputs[0]+".provenance.json", provenance, 0600); err != nil {
+		t.Fatal(err)
 	}
 	if err := os.WriteFile(outputs[0], []byte("tampered"), 0600); err != nil {
 		t.Fatal(err)

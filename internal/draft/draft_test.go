@@ -139,6 +139,18 @@ func TestDraftWithARFUsesCollectedHostValueAndReturnResult(t *testing.T) {
 	if row["status"] != "not_a_finding" || !strings.Contains(row["finding_details"].(string), `value: "1"`) || !strings.Contains(row["comments"].(string), "item-state result: true") || !strings.Contains(row["comments"].(string), `value: "1"`) {
 		t.Fatalf("ARF value absent: %+v", row)
 	}
+	first, err := BuildAssessmentWithARF(report, []byte(benchmark), []byte(html), []byte(arfXML), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	changed := strings.Replace(arfXML, "<value>1</value>", "<value>2</value>", 1)
+	second, err := BuildAssessmentWithARF(report, []byte(benchmark), []byte(html), []byte(changed), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first["id"] == second["id"] {
+		t.Fatal("different collected ARF values share checklist identity")
+	}
 }
 
 func TestDraftWithARFReportsVerifiedAbsentObjectWithoutInventingItem(t *testing.T) {

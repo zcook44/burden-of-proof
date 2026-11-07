@@ -105,13 +105,13 @@ func runMapped(args []string, asDraft bool, out, stderr io.Writer) int {
 		return 2
 	}
 	var value any = report
+	var htmlReport, arfBytes []byte
 	if asDraft {
 		if filepath.Ext(*outPath) != ".cklb" {
 			fmt.Fprintln(stderr, "stig-evidence: draft output must have .cklb extension")
 			return 2
 		}
 		if *arfPath != "" {
-			var htmlReport, arfBytes []byte
 			htmlReport, err = readPrivate(*htmlPath)
 			if err == nil {
 				arfBytes, err = readPrivate(*arfPath)
@@ -124,7 +124,6 @@ func runMapped(args []string, asDraft bool, out, stderr io.Writer) int {
 				}
 			}
 		} else if *htmlPath != "" {
-			var htmlReport []byte
 			htmlReport, err = readPrivate(*htmlPath)
 			if err == nil {
 				if *assessmentView {
@@ -145,6 +144,15 @@ func runMapped(args []string, asDraft bool, out, stderr io.Writer) int {
 	if err != nil {
 		fmt.Fprintf(stderr, "stig-evidence: %v\n", err)
 		return 2
+	}
+	body = append(body, '\n')
+	var provenance []byte
+	if asDraft && *assessmentView {
+		provenance, err = assessmentProvenance(body, report, *scanPath, *benchmarkPath, *htmlPath, *arfPath, htmlReport, arfBytes)
+		if err != nil {
+			fmt.Fprintf(stderr, "stig-evidence: provenance rejected: %v\n", err)
+			return 2
+		}
 	}
 	parent := filepath.Dir(*outPath)
 	parentFD, err := syscall.Open(parent, syscall.O_RDONLY|syscall.O_DIRECTORY|syscall.O_NOFOLLOW|syscall.O_CLOEXEC, 0)
@@ -169,13 +177,19 @@ func runMapped(args []string, asDraft bool, out, stderr io.Writer) int {
 		return 2
 	}
 	file := os.NewFile(uintptr(fd), name)
-	_, err = file.Write(append(body, '\n'))
+	_, err = file.Write(body)
 	if closeErr := file.Close(); err == nil {
 		err = closeErr
 	}
 	if err != nil {
 		fmt.Fprintf(stderr, "stig-evidence: incomplete output, inspect before retrying: %v\n", err)
 		return 2
+	}
+	if provenance != nil {
+		if _, err := writeBatchResult(*outPath+".provenance.json", provenance); err != nil {
+			fmt.Fprintf(stderr, "stig-evidence: provenance sidecar failed: %v (checklist retained for safe inspection)\n", err)
+			return 2
+		}
 	}
 	if asDraft {
 		if *assessmentView {

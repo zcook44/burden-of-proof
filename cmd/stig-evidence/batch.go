@@ -166,11 +166,20 @@ func runBatch(args []string, out, stderr io.Writer) int {
 			return 2
 		}
 		body = append(body, '\n')
-		name := s.Prefix + "-disa-" + report.BenchmarkSHA256[:16] + "-" + bundleDigest(scan, benchmark, html, arfBytes)[:16] + "-ASSESSMENT.cklb"
+		name := s.Prefix + "-disa-" + report.BenchmarkSHA256[:16] + "-" + bundleDigest([]byte("assessment-provenance-v2"), scan, benchmark, html, arfBytes)[:16] + "-ASSESSMENT.cklb"
 		path := filepath.Join(s.Dir, name)
+		provenance, err := assessmentProvenance(body, report, s.XCCDF, selectedPath, s.HTML, s.ARF, html, arfBytes)
+		if err != nil {
+			fmt.Fprintf(stderr, "batch provenance %s: %v\n", s.XCCDF, err)
+			return 2
+		}
 		wasSkipped, err := writeBatchResult(path, body)
 		if err != nil {
 			fmt.Fprintf(stderr, "batch %s: %v (created=%d skipped=%d)\n", s.XCCDF, err, created, skipped)
+			return 2
+		}
+		if _, err := writeBatchResult(path+".provenance.json", provenance); err != nil {
+			fmt.Fprintf(stderr, "batch provenance %s: %v (checklist retained for safe retry)\n", path, err)
 			return 2
 		}
 		if wasSkipped {
