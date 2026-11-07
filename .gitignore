@@ -16,3 +16,8 @@ pre.xml
 post.xml
 coverage.xml
 approval-ledger.json
+
+# Raw lab scans and reports are private runtime artifacts.
+lab_results/
+# Local Go build output; rebuild from source instead of committing executables.
+dist/
