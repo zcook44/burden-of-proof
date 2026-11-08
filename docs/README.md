@@ -1,6 +1,8 @@
-# Burden of Proof
+# Quick start: private review conversion
 
-Offline conversion of saved OpenSCAP results in a host inventory tree into private STIG Viewer 3 CKLB **review** checklists. The Go application does not run scans, sign off findings, or deliver evidence. Those later pipeline stages are out of scope until conversion is verified for each OS.
+Burden of Proof owns the evidence-side policy and review conversion: it checks a versioned, non-secret [lab asset record](../contracts/asset-record-v1.md), reconciles saved SSG results against official manual XCCDF controls, and writes private CKLB **review** candidates. The lab and its provisioning/scanning live in a separate repository. No lab path is compiled into this CLI, and conversion does not attest the lab's assertions. The CLI does not run scans, sign off findings, or deliver evidence.
+
+[Repository overview](../README.md) · [Batch rules](BATCH-CKLB.md) · [Commands and scope](GO-MIGRATION.md) · [Review workflow](WORKFLOW.md)
 
 ## Build and convert
 

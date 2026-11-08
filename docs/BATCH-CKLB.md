@@ -1,23 +1,26 @@
 # Recursive OpenSCAP → CKLB conversion
 
-Build the standalone Go CLI once (Go 1.22+; dependency is vendored for offline builds):
+[Quick start](README.md) · [Review workflow](WORKFLOW.md) · [CLI scope](GO-MIGRATION.md) · [Asset handoff](../contracts/asset-record-v1.md)
+
+This is evidence-side conversion of saved scans, not lab provisioning or an official DISA assessment. The lab lives in a separate repository; this CLI accepts caller-supplied private paths. No ceremonial stamp is included.
+
+Build the standalone Go CLI from the repository root (Go 1.22+; dependency is vendored for offline builds):
 
 ```sh
-cd /home/zrc/git/burden-of-proof
 install -d -m 700 dist
 GOPROXY=off GOSUMDB=off go build -mod=vendor -o dist/stig-evidence ./cmd/stig-evidence
 ```
 
-Run from **any working directory**. Supply the root you want to crawl with `--input-root`; there is no compiled-in lab path. Keep extracted official manual XCCDFs in a stable, owner-private `--library-root` (subdirectories are searched):
+Run from **any working directory** by using the built executable's path. In the example below, run from the repository root; replace the private paths with your own. Supply the saved-scan tree via `--input-root`; there is no compiled-in lab path. Keep extracted official manual XCCDFs in a stable, owner-private `--library-root` (subdirectories are searched):
 
 ```sh
-/home/zrc/git/burden-of-proof/dist/stig-evidence batch-cklb \
-  --input-root /home/zrc/git/burden-of-proof/lab_results \
+./dist/stig-evidence batch-cklb \
+  --input-root /private/inventory \
   --library-root /private/extracted-stig-library \
   --dry-run
 
-/home/zrc/git/burden-of-proof/dist/stig-evidence batch-cklb \
-  --input-root /home/zrc/git/burden-of-proof/lab_results \
+./dist/stig-evidence batch-cklb \
+  --input-root /private/inventory \
   --library-root /private/extracted-stig-library
 ```
 

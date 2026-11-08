@@ -1,11 +1,12 @@
 # Go-only review converter
 
-`stig-evidence` is the sole tracked application. It runs offline with Go 1.22+ and the vendored HTML parser; no Python runtime or package is required for conversion. The retired tailoring and signed-release implementation was **not** ported. No command in this repository verifies an approval signature, releases an official assessment, or delivers evidence. See [workflow](WORKFLOW.md) for the resulting operational boundary.
+`stig-evidence` is the sole tracked application. This repository owns the evidence-side handoff check, reconciliation and CKLB review conversion; the lab lives in a separate repository. It runs offline with Go 1.22+ and the vendored HTML parser; no Python runtime or package is required for conversion. The retired tailoring and signed-release implementation was **not** ported. No command in this repository verifies an approval signature, releases an official assessment, or delivers evidence. See [quick start](README.md), [workflow](WORKFLOW.md), and the [asset record contract](../contracts/asset-record-v1.md) for the resulting boundaries.
 
 ## Commands
 
 ```sh
 GOPROXY=off GOSUMDB=off go test -mod=vendor ./...
+install -d -m 700 dist
 GOPROXY=off GOSUMDB=off go build -mod=vendor -o dist/stig-evidence ./cmd/stig-evidence
 ./dist/stig-evidence asset-check --asset /private/asset.json --pre /private/pre.xml --host node.example.test
 ./dist/stig-evidence reconcile --scan /private/ssg-results.xml --benchmark /private/official.xml --out /private/candidates.json
