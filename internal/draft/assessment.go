@@ -2,7 +2,9 @@ package draft
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -64,10 +66,9 @@ func renderAssessment(report reconcile.Report, doc map[string]any, checks map[st
 		finding, comment := assessmentRule(c, checks, host)
 		row["finding_details"], row["comments"] = finding, comment
 	}
-	label := "OPENSCAP ASSESSMENT (NUMERIC V/SV MAPPING; UNSIGNED)"
-	mode := ":assessment" + evidenceMode
+	label := "STIG CHECKLIST"
+	mode := ":assessment-readable-v4" + evidenceMode
 	if operatorApproved {
-		label = "OPERATOR APPROVED ASSESSMENT (UNSIGNED; NUMERIC V/SV MAPPING)"
 		mode += ":operator-approved-unsigned"
 	}
 	doc["title"] = label + " - " + report.Target + " - " + stig["stig_name"].(string)
@@ -82,23 +83,21 @@ func appendDistinct(lines *[]string, seen map[string]bool, value string) {
 	}
 }
 
-// assessmentRule deliberately distinguishes rule-level pass/fail from individual
-// OVAL test/item outcomes. A passing negative check can include false items.
+// assessmentRule keeps the candidate status separate from individual OVAL
+// outcomes. A passing negative check can legitimately contain a false item.
 func assessmentRule(c reconcile.Control, html map[string]reporthtml.Rule, observed arf.Report) (string, string) {
-	findings, returns := []string{}, []string{}
-	fSeen, cSeen := map[string]bool{}, map[string]bool{}
-	label := map[string]string{"not_a_finding": "PASS", "open": "FAIL", "not_applicable": "N/A", "not_reviewed": "NOT REVIEWED"}[c.Status]
+	label := map[string]string{"not_a_finding": "Not a Finding", "open": "Open", "not_applicable": "Not Applicable", "not_reviewed": "NOT REVIEWED"}[c.Status]
 	if label == "" {
 		label = "NOT REVIEWED"
 	}
+	comment := label
 	if c.Status == "not_reviewed" {
-		returns = append(returns, label+": "+c.Reason)
-	} else {
-		returns = append(returns, label+" (OpenSCAP XCCDF)")
+		comment += " — " + c.Reason
 	}
 	if len(c.Sources) == 0 {
-		return "No mapped OpenSCAP check.", strings.Join(returns, "\n")
+		return "No matching automated check was available.", comment
 	}
+	findings, seen := []string{}, map[string]bool{}
 	for _, src := range c.Sources {
 		rule := observed.Rules[src.RuleID]
 		names := map[string]string{}
@@ -107,71 +106,136 @@ func assessmentRule(c reconcile.Control, html map[string]reporthtml.Rule, observ
 				names[check.ID] = check.Name
 			}
 		}
-		if len(c.Sources) > 1 || c.Status == "not_reviewed" {
-			appendDistinct(&returns, cSeen, fmt.Sprintf("%s: %s", src.RuleID, src.Result))
-		}
 		if len(rule.Tests) == 0 {
-			appendDistinct(&findings, fSeen, "Check: "+src.RuleID)
 			if len(html[src.RuleID].Checks) == 0 {
-				appendDistinct(&returns, cSeen, "No executed check or host value collected.")
+				appendDistinct(&findings, seen, "No executed check details or host values were recorded; see the source rule in the provenance file.")
 			}
-			for _, check := range html[src.RuleID].Checks {
-				appendDistinct(&findings, fSeen, fmt.Sprintf("Check: %s (%s)", check.Name, check.ID))
+			for i, check := range html[src.RuleID].Checks {
+				name := check.Name
+				if name == "" {
+					name = fmt.Sprintf("Automated test %d", i+1)
+				}
+				if len(check.Items) == 0 {
+					appendDistinct(&findings, seen, fmt.Sprintf("%s — check %s; no item comparison", name, check.Result))
+				}
 				for _, item := range check.Items {
-					appendDistinct(&findings, fSeen, "Observed: "+item.Description)
-					appendDistinct(&returns, cSeen, fmt.Sprintf("%s: item %s; %s", check.ID, item.Comparison, item.Description))
+					if item.Comparison == "not evaluated" {
+						appendDistinct(&findings, seen, fmt.Sprintf("%s — check %s; collected: %s", name, check.Result, briefObservation(item.Description)))
+					} else {
+						appendDistinct(&findings, seen, fmt.Sprintf("%s — check %s; item %s: %s", name, check.Result, item.Comparison, briefObservation(item.Description)))
+					}
 				}
 			}
 			continue
 		}
-		for _, test := range rule.Tests {
+		for i, test := range rule.Tests {
 			name := names[test.ID]
 			if name == "" {
-				name = test.ID
+				name = fmt.Sprintf("Automated test %d", i+1)
 			}
-			appendDistinct(&findings, fSeen, fmt.Sprintf("Check: %s (%s)", name, test.ID))
 			if len(test.Items) == 0 {
 				if test.ObjectFlag != "" {
-					obs := fmt.Sprintf("object %s: %s (check_existence=%s)", test.ObjectID, test.ObjectFlag, test.CheckExistence)
-					appendDistinct(&findings, fSeen, "Observed: "+obs)
-					appendDistinct(&returns, cSeen, fmt.Sprintf("%s: test %s; %s; no collected item value", test.ID, test.Result, obs))
+					appendDistinct(&findings, seen, fmt.Sprintf("%s — test result %s; %s; no collected value", name, test.Result, objectSummary(test)))
 				} else {
-					appendDistinct(&returns, cSeen, fmt.Sprintf("%s: test %s; no collected item value", test.ID, test.Result))
+					appendDistinct(&findings, seen, fmt.Sprintf("%s — test result %s; no collected item value", name, test.Result))
 				}
 			}
 			for _, item := range test.Items {
-				if item.Fields != "" {
-					appendDistinct(&findings, fSeen, "Observed: [item "+item.Result+"] "+item.Fields)
+				if item.Result == "not evaluated" {
+					label := "collected"
+					if test.CheckExistence == "all_exist" && test.Result == "true" {
+						label = "found"
+					}
+					appendDistinct(&findings, seen, fmt.Sprintf("%s — test result %s; %s: %s", name, test.Result, label, briefObservation(item.Fields)))
+				} else {
+					appendDistinct(&findings, seen, fmt.Sprintf("%s — test result %s; observed item %s: %s", name, test.Result, item.Result, briefObservation(item.Fields)))
 				}
-				value := "no collected field value"
-				if item.Fields != "" {
-					value = item.Fields
-				}
-				appendDistinct(&returns, cSeen, fmt.Sprintf("%s: test %s; item %s; %s", test.ID, test.Result, item.Result, value))
 			}
 		}
 	}
-	return strings.Join(boundEvidence(findings, c.Status, 16), "\n"), strings.Join(boundEvidence(returns, c.Status, 9), "\n")
+	return strings.Join(boundEvidence(findings, c.Status, 7), "\n"), comment
 }
 
-// Keep the first summary/check line. Prioritize decisive items in a long list;
-// omission is visible and the complete unmodified observations stay in ARF.
+func objectSummary(test arf.Test) string {
+	switch {
+	case test.ObjectFlag == "does not exist" && test.CheckExistence == "all_exist":
+		return "required object was not found"
+	case test.ObjectFlag == "does not exist" && test.CheckExistence == "none_exist":
+		return "no object found (absence is expected by this test)"
+	default:
+		return "object status: " + test.ObjectFlag + " (see raw ARF for test criteria)"
+	}
+}
+
+// ARF fields are quoted by the collector. Keep recognizable host observations,
+// not regex predicates, duplicate paths, or OS metadata. Raw ARF retains all.
+var observationField = regexp.MustCompile(`(?:^|; )([a-zA-Z_]+): ("(?:\\.|[^"\\])*"|[^;]*)`)
+
+func briefObservation(raw string) string {
+	parts := []string{}
+	for _, match := range observationField.FindAllStringSubmatch(raw, -1) {
+		switch match[1] {
+		case "filepath", "text", "value", "Value", "Path", "Content", "subexpression", "name", "username", "service_name", "content", "status":
+		default:
+			continue
+		}
+		value := match[2]
+		if strings.HasPrefix(value, `"`) {
+			if unquoted, err := strconv.Unquote(value); err == nil {
+				value = unquoted
+			}
+		}
+		value = strings.Join(strings.Fields(value), " ")
+		if utf8.RuneCountInString(value) > 100 {
+			value = string([]rune(value)[:100]) + "… [full value in raw ARF/HTML]"
+		}
+		parts = append(parts, match[1]+"="+value)
+		if len(parts) == 2 {
+			break
+		}
+	}
+	if len(parts) > 0 {
+		return strings.Join(parts, "; ")
+	}
+	if raw == "" {
+		return "no collected field value"
+	}
+	if strings.Contains(raw, ": ") {
+		return "additional host data recorded; see original scan report"
+	}
+	value := strings.Join(strings.Fields(raw), " ")
+	if utf8.RuneCountInString(value) > 100 {
+		return string([]rune(value)[:100]) + "… [full value in raw ARF/HTML]"
+	}
+	return value
+}
+
+// Display a few observations, prioritizing failed items for open controls.
+// The unmodified, complete evidence remains in the private ARF and HTML.
 func boundEvidence(lines []string, status string, limit int) []string {
 	if len(lines) > limit {
 		wanted := "item true"
 		if status == "open" {
 			wanted = "item false"
 		}
-		sort.SliceStable(lines[1:], func(i, j int) bool {
-			a, b := lines[i+1], lines[j+1]
-			return strings.Contains(a, wanted) && !strings.Contains(b, wanted)
+		sort.SliceStable(lines, func(i, j int) bool {
+			priority := func(s string) int {
+				if strings.Contains(s, wanted) {
+					return 2
+				}
+				if status == "open" && strings.Contains(s, "test result false") {
+					return 1
+				}
+				return 0
+			}
+			return priority(lines[i]) > priority(lines[j])
 		})
 		omitted := len(lines) - limit
-		lines = append(lines[:limit], fmt.Sprintf("... %d additional observations in raw ARF/HTML", omitted))
+		lines = append(lines[:limit], fmt.Sprintf("... %d more observations in raw ARF/HTML", omitted))
 	}
 	for i, line := range lines {
-		if utf8.RuneCountInString(line) > 1800 {
-			lines[i] = string([]rune(line)[:1800]) + "... [field truncated; full value in raw ARF/HTML]"
+		if utf8.RuneCountInString(line) > 320 {
+			lines[i] = string([]rune(line)[:320]) + "... [full observation in raw ARF/HTML]"
 		}
 	}
 	return lines

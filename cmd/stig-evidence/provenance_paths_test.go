@@ -29,7 +29,7 @@ func TestAssessmentOutputNamesVersionReconciliationChanges(t *testing.T) {
 	if err != nil || len(files) != 1 {
 		t.Fatalf("files %v %v", files, err)
 	}
-	want := bundleDigest([]byte("assessment-provenance-v6"), []byte(scan), []byte(bench), nil, nil)[:16]
+	want := bundleDigest([]byte("assessment-provenance-v10"), []byte(scan), []byte(bench), nil, nil)[:16]
 	if !strings.Contains(files[0], "-"+want+"-ASSESSMENT.cklb") {
 		t.Fatalf("mapping revision did not version output name: %s", files[0])
 	}

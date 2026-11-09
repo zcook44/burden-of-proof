@@ -28,6 +28,7 @@ type assessmentRecord struct {
 	Benchmark       evidenceInput    `json:"benchmark"`
 	HTML            *evidenceInput   `json:"html,omitempty"`
 	ARF             *evidenceInput   `json:"arf,omitempty"`
+	Tailoring       *evidenceInput   `json:"tailoring,omitempty"`
 	Reconciliation  reconcile.Report `json:"reconciliation"`
 }
 
@@ -43,7 +44,7 @@ func equivalentProvenance(existing, expected []byte) bool {
 	if err != nil || !bytes.Equal(append(canonical, '\n'), existing) {
 		return false // reject unknown fields, duplicates, or edited serialization
 	}
-	for _, input := range []*evidenceInput{&old.Scan, &old.Benchmark, old.HTML, old.ARF} {
+	for _, input := range []*evidenceInput{&old.Scan, &old.Benchmark, old.HTML, old.ARF, old.Tailoring} {
 		if input == nil {
 			continue
 		}
@@ -67,6 +68,9 @@ func equivalentProvenance(existing, expected []byte) bool {
 	if old.ARF != nil && current.ARF != nil {
 		old.ARF.Path = current.ARF.Path
 	}
+	if old.Tailoring != nil && current.Tailoring != nil {
+		old.Tailoring.Path = current.Tailoring.Path
+	}
 	canonical, err = json.MarshalIndent(old, "", "  ")
 	return err == nil && bytes.Equal(append(canonical, '\n'), expected)
 }
@@ -74,7 +78,7 @@ func equivalentProvenance(existing, expected []byte) bool {
 // assessmentProvenance binds exact checklist bytes to the complete source
 // reconciliation without cluttering each displayed check and return value.
 // This is a byte-identity record, not a signature or release authorization.
-func assessmentProvenance(body []byte, report reconcile.Report, scanPath, benchmarkPath, htmlPath, arfPath string, html, arf []byte) ([]byte, error) {
+func assessmentProvenance(body []byte, report reconcile.Report, scanPath, benchmarkPath, htmlPath, arfPath string, html, arf []byte, tailoring ...*evidenceInput) ([]byte, error) {
 	record := assessmentRecord{
 		SchemaVersion:   1,
 		ChecklistSHA256: sha256Hex(body),
@@ -88,6 +92,9 @@ func assessmentProvenance(body []byte, report reconcile.Report, scanPath, benchm
 	}
 	if arfPath != "" {
 		record.ARF = &evidenceInput{arfPath, sha256Hex(arf)}
+	}
+	if len(tailoring) == 1 {
+		record.Tailoring = tailoring[0]
 	}
 	data, err := json.MarshalIndent(record, "", "  ")
 	if err != nil {

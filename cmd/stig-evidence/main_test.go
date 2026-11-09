@@ -126,7 +126,7 @@ func TestDraftCLIWithHTMLReportWritesCheckAndComparison(t *testing.T) {
 		t.Fatal(err)
 	}
 	rule := doc["stigs"].([]any)[0].(map[string]any)["rules"].([]any)[0].(map[string]any)
-	if !strings.Contains(rule["comments"].(string), "Path: /etc/settings") || !strings.Contains(rule["finding_details"].(string), "verify setting") {
+	if !strings.Contains(rule["finding_details"].(string), "/etc/settings") || !strings.Contains(rule["finding_details"].(string), "verify setting") || !strings.Contains(rule["comments"].(string), "Not a Finding") {
 		t.Fatal("report evidence not exported")
 	}
 	sidecar, err := os.ReadFile(out + ".provenance.json")
@@ -222,7 +222,7 @@ func TestBatchCLIRecursesConvertsAndSkipsOnlyMatchingOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 	row := doc["stigs"].([]any)[0].(map[string]any)["rules"].([]any)[0].(map[string]any)
-	if row["status"] != "not_a_finding" || !strings.Contains(row["comments"].(string), "enabled") || strings.Contains(doc["title"].(string), "APPROVED") {
+	if row["status"] != "not_a_finding" || !strings.Contains(row["finding_details"].(string), "enabled") || strings.Contains(doc["title"].(string), "APPROVED") {
 		t.Fatal("wrong batch result")
 	}
 	provenance, err := os.ReadFile(outputs[0] + ".provenance.json")
@@ -294,7 +294,7 @@ func TestBatchCLIDryRunDoesNotWrite(t *testing.T) {
 		}
 	}
 	b := filepath.Join(root, "bench.xml")
-	if err := os.WriteFile(b, []byte("fixture"), 0600); err != nil {
+	if err := os.WriteFile(b, []byte(officialFixture(9, 1)), 0600); err != nil {
 		t.Fatal(err)
 	}
 	var out, errs bytes.Buffer

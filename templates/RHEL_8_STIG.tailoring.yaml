@@ -1,0 +1,65 @@
+# RHEL 8 DISA STIG V2R9 checklist tailoring.
+# Seeded from rh8-r2v9-ignore-rules; an excluded fix is not a checklist answer.
+# status: auto retains the scan result. Change it only with an admin comment.
+# This file applies to EVERY RHEL 8 host converted with this library.
+rules:
+  - rule_name: xwindows_remove_packages
+    stig_id: V-230553
+    sv_id: SV-230553r1017315_rule
+    status: auto
+    comment: "Remediation excluded to retain the graphical display manager where required; confirm applicability for this host."
+  - rule_name: xwindows_runlevel_target
+    stig_id: V-251718
+    sv_id: SV-251718r1017371_rule
+    status: auto
+    comment: "Remediation excluded to retain graphical startup where required; confirm applicability for this host."
+  - rule_name: package_gssproxy_removed
+    stig_id: V-230559
+    sv_id: SV-230559r1155398_rule
+    status: auto
+    comment: "Remediation excluded to retain gssproxy for dependent services; confirm applicability for this host."
+  - rule_name: network_configure_name_resolution
+    stig_id: V-230316
+    sv_id: SV-230316r1044801_rule
+    status: auto
+    comment: "Remediation excluded to preserve existing DNS configuration; review the configured name servers."
+  - rule_name: mount_option_home_noexec
+    stig_id: V-230302
+    sv_id: SV-230302r1017112_rule
+    status: auto
+    comment: "Remediation excluded pending review of home-directory execution requirements."
+  - rule_name: mount_option_tmp_noexec
+    stig_id: V-230513
+    sv_id: SV-230513r958804_rule
+    status: auto
+    comment: "Remediation excluded to preserve /tmp execution behavior; verify the mount configuration."
+  - rule_name: mount_option_var_tmp_noexec
+    stig_id: V-230522
+    sv_id: SV-230522r958804_rule
+    status: auto
+    comment: "Remediation excluded to preserve /var/tmp execution behavior; verify the mount configuration."
+  - rule_name: sysctl_user_max_user_namespaces_no_remediation
+    stig_id: V-230548
+    sv_id: SV-230548r1017310_rule
+    status: auto
+    comment: "Remediation excluded to retain user namespaces for workloads that require them; verify the current setting."
+  - rule_name: service_fapolicyd_enabled
+    stig_id: V-244545
+    sv_id: SV-244545r958804_rule
+    status: auto
+    comment: "Remediation excluded pending review of fapolicyd impact on installed workloads."
+  - rule_name: sudo_remove_nopasswd
+    stig_id: V-230271
+    sv_id: SV-230271r1101896_rule
+    status: auto
+    comment: "Remediation excluded to preserve explicitly granted passwordless sudo access; verify the configured privilege policy."
+  - rule_name: mount_option_nodev_remote_filesystems
+    stig_id: V-230307
+    sv_id: SV-230307r1155388_rule
+    status: auto
+    comment: "Remediation excluded pending review of NFS mount device options."
+  - rule_name: mount_option_noexec_remote_filesystems
+    stig_id: V-230306
+    sv_id: SV-230306r1155386_rule
+    status: auto
+    comment: "Remediation excluded to preserve required NFS execution behavior; verify the mount options."

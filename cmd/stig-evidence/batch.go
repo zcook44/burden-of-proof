@@ -147,6 +147,23 @@ func runBatch(args []string, out, stderr io.Writer) int {
 		}
 		fmt.Fprintf(out, "BENCHMARK RHEL %d: %s (sha256 %x)\n", major, choice.path, sha256.Sum256(choice.data))
 		selectedPath, benchmark := choice.path, choice.data
+		report, err := reconcile.Convert(scan, benchmark)
+		if err != nil {
+			fmt.Fprintf(stderr, "batch %s: %v\n", s.XCCDF, err)
+			return 2
+		}
+		policyDirectory := *libraryRoot
+		if policyDirectory == "" {
+			policyDirectory = filepath.Dir(selectedPath)
+		}
+		tailoring, tailoringPath, tailoringBytes, err := loadTailoring(policyDirectory, major, report)
+		if err != nil {
+			fmt.Fprintf(stderr, "batch tailoring for %s: %v\n", s.XCCDF, err)
+			return 2
+		}
+		if tailoringPath != "" {
+			fmt.Fprintf(out, "TAILORING RHEL %d: %s (sha256 %s; %d rules)\n", major, tailoringPath, sha256Hex(tailoringBytes), len(tailoring))
+		}
 		if *dryRun {
 			kind := "XCCDF-only"
 			if s.HTML != "" {
@@ -174,11 +191,6 @@ func runBatch(args []string, out, stderr io.Writer) int {
 				return 2
 			}
 		}
-		report, err := reconcile.Convert(scan, benchmark)
-		if err != nil {
-			fmt.Fprintf(stderr, "batch %s: %v\n", s.XCCDF, err)
-			return 2
-		}
 		// The target must agree with the host directory, not just with the HTML/ARF.
 		if filepath.Base(s.Dir) != report.Target {
 			fmt.Fprintf(stderr, "batch %s: target %q differs from directory %q\n", s.XCCDF, report.Target, s.Dir)
@@ -196,15 +208,31 @@ func runBatch(args []string, out, stderr io.Writer) int {
 			fmt.Fprintf(stderr, "batch %s: %v\n", s.XCCDF, err)
 			return 2
 		}
+		if err := applyTailoring(doc, report, tailoring); err != nil {
+			fmt.Fprintf(stderr, "batch tailoring %s: %v\n", s.XCCDF, err)
+			return 2
+		}
 		body, err := json.MarshalIndent(doc, "", "  ")
 		if err != nil {
 			fmt.Fprintf(stderr, "batch JSON %s: %v\n", s.XCCDF, err)
 			return 2
 		}
 		body = append(body, '\n')
-		name := s.Prefix + "-disa-" + report.BenchmarkSHA256[:16] + "-" + bundleDigest([]byte("assessment-provenance-v6"), scan, benchmark, html, arfBytes)[:16] + "-ASSESSMENT.cklb"
+		version := "assessment-provenance-v10"
+		if tailoringPath != "" {
+			version = "assessment-provenance-v11-tailored"
+		}
+		digest := bundleDigest([]byte(version), scan, benchmark, html, arfBytes)
+		if tailoringPath != "" {
+			digest = bundleDigest([]byte(version), scan, benchmark, html, arfBytes, tailoringBytes)
+		}
+		name := s.Prefix + "-disa-" + report.BenchmarkSHA256[:16] + "-" + digest[:16] + "-ASSESSMENT.cklb"
 		path := filepath.Join(s.Dir, name)
-		provenance, err := assessmentProvenance(body, report, s.XCCDF, selectedPath, s.HTML, s.ARF, html, arfBytes)
+		var policyInput *evidenceInput
+		if tailoringPath != "" {
+			policyInput = &evidenceInput{tailoringPath, sha256Hex(tailoringBytes)}
+		}
+		provenance, err := assessmentProvenance(body, report, s.XCCDF, selectedPath, s.HTML, s.ARF, html, arfBytes, policyInput)
 		if err != nil {
 			fmt.Fprintf(stderr, "batch provenance %s: %v\n", s.XCCDF, err)
 			return 2
