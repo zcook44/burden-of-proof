@@ -22,6 +22,10 @@ for major in 7 8 9 10; do
     echo "Missing or linked RHEL ${major} tailoring template" >&2; exit 1;
   }
 done
+[[ -f $root/schemas/SV3_CKLB_1_0_JSON_SCHEMA.json && ! -L $root/schemas/SV3_CKLB_1_0_JSON_SCHEMA.json ]] || {
+  echo 'Missing or linked DISA CKLB schema' >&2; exit 1;
+}
+printf '%s  %s\n' '8b88205de07662006e1660b1decad677d344828d6687b1dd26bca15105b7bb37' "$root/schemas/SV3_CKLB_1_0_JSON_SCHEMA.json" | sha256sum -c - >/dev/null
 # Fail instead of fetching a compiler or dependency in a disconnected build.
 export GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local GOWORK=off CGO_ENABLED=0
 export GOOS=linux GOARCH=amd64 GOFLAGS=-mod=vendor
@@ -38,7 +42,7 @@ name="stig-evidence-${version}-linux-amd64"
 stage=$(mktemp -d "$output/.package.XXXXXXXX")
 trap 'rm -rf -- "$stage"' EXIT
 package="$stage/$name"
-install -d -m 700 "$package" "$package/bin" "$package/scripts" "$package/templates" "$package/docs" "$package/docs/snapshots" "$package/contracts"
+install -d -m 700 "$package" "$package/bin" "$package/scripts" "$package/templates" "$package/docs" "$package/docs/snapshots" "$package/contracts" "$package/schemas"
 (cd "$root" && go build -trimpath -ldflags='-s -w' -o "$package/bin/stig-evidence" ./cmd/stig-evidence)
 install -m 755 "$root/scripts/preflight-offline.sh" "$package/scripts/preflight-offline.sh"
 install -m 644 "$root/README.md" "$package/README.md"
@@ -49,6 +53,7 @@ for doc in README BATCH-CKLB GO-MIGRATION WORKFLOW DISCONNECTED-RELEASE OSCAP-SO
 done
 install -m 644 "$root/docs/snapshots/oscap_scan.yml" "$package/docs/snapshots/oscap_scan.yml"
 install -m 644 "$root/docs/snapshots/run-lab-oscap.sh" "$package/docs/snapshots/run-lab-oscap.sh"
+install -m 644 "$root/schemas/SV3_CKLB_1_0_JSON_SCHEMA.json" "$root/schemas/PROVENANCE.md" "$package/schemas/"
 for major in 7 8 9 10; do
   install -m 644 "$root/templates/RHEL_${major}_STIG.tailoring.yaml" "$package/templates/RHEL_${major}_STIG.tailoring.yaml"
 done
@@ -62,13 +67,13 @@ fi
   printf 'Product: stig-evidence\nVersion: %s\nTarget: linux/amd64 (CGO_ENABLED=0)\n' "$version"
   printf 'Go: %s\nSource commit: %s\nSource worktree: %s\n' "$(go version)" "$commit" "$source_state"
   printf 'Build: GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local GOFLAGS=-mod=vendor\n'
-  printf 'Contents: CLI, Bash read-only preflight, four per-OS YAML examples, documentation and file checksums.\n'
+  printf 'Contents: CLI, Bash read-only preflight, four per-OS YAML examples, DISA CKLB schema, documentation and file checksums.\n'
   printf 'Not included: official DISA benchmarks, SSG scan inputs, private evidence, credentials, signatures.\n'
 } > "$package/RELEASE.txt"
 (
   cd "$package"
   sha256sum bin/stig-evidence scripts/preflight-offline.sh README.md LICENSE RELEASE.txt \
-    docs/*.md docs/snapshots/oscap_scan.yml docs/snapshots/run-lab-oscap.sh contracts/*.md templates/*.yaml > SHA256SUMS
+    docs/*.md docs/snapshots/oscap_scan.yml docs/snapshots/run-lab-oscap.sh contracts/*.md templates/*.yaml schemas/*.json schemas/*.md > SHA256SUMS
 )
 source_date_epoch=${SOURCE_DATE_EPOCH:-0}
 [[ $source_date_epoch =~ ^[0-9]+$ ]] || { echo 'SOURCE_DATE_EPOCH must be an unsigned integer' >&2; exit 2; }

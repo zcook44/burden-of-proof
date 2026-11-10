@@ -11,4 +11,4 @@ This repository owns evidence-side validation, SSG-to-CKLB review policy and con
 
 ## Checkmate is a separate tool
 
-If Checkmate is installed separately, pass **both** `--checkmate /private/checkmate/checkmate` and `--checklist-root /private/checklists` to the Bash preflight to run Checkmate `--root ... --list`; optional `--schema /private/schema.json` additionally runs `--validate --schema ...`. Without both Checkmate arguments, omit `--schema` as well. This inventory/schema check is not conversion, a STIG Viewer import, approval, or evidence publication. Checkmate is not included in this repository's archive.
+If Checkmate is installed separately, pass **both** `--checkmate /private/checkmate/checkmate` and `--checklist-root /private/checklists` to the Bash preflight to run Checkmate `--root ... --list`; optional `--schema "$PWD/schemas/SV3_CKLB_1_0_JSON_SCHEMA.json"` additionally runs `--validate --schema ...`. Without both Checkmate arguments, omit `--schema` as well. This inventory/schema check is not conversion, a STIG Viewer import, approval, or evidence publication. Checkmate is not included in this repository's archive.
