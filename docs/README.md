@@ -2,7 +2,7 @@
 
 Burden of Proof owns the evidence-side policy and review conversion: it checks a versioned, non-secret [lab asset record](../contracts/asset-record-v1.md), reconciles saved SSG results against official manual XCCDF controls, and writes private CKLB **review** candidates. The lab and its provisioning/scanning live in a separate repository. No lab path is compiled into this CLI, and conversion does not attest the lab's assertions. The CLI does not run scans, sign off findings, or deliver evidence.
 
-[Repository overview](../README.md) · [Batch rules](BATCH-CKLB.md) · [Commands and scope](GO-MIGRATION.md) · [Review workflow](WORKFLOW.md) · [Disconnected release](DISCONNECTED-RELEASE.md)
+[Repository overview](../README.md) · [Batch rules](BATCH-CKLB.md) · [Commands and scope](GO-MIGRATION.md) · [Review workflow](WORKFLOW.md) · [Lab scan command and playbook snapshot](OSCAP-SOURCE.md) · [Disconnected release](DISCONNECTED-RELEASE.md)
 
 ## Build and convert
 

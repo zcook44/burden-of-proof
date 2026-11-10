@@ -10,6 +10,7 @@ An offline Go toolkit for turning saved OpenSCAP SSG results into **private CKLB
 | Recursive input pairing, benchmark selection, output and provenance rules | [Batch CKLB converter](docs/BATCH-CKLB.md) |
 | CLI commands and retired implementation scope | [Go-only converter](docs/GO-MIGRATION.md) |
 | Operational review and external verification | [Workflow](docs/WORKFLOW.md) |
+| Exact Ansible/OpenSCAP scan command, captured playbook and fetched artifacts | [Lab scan source](docs/OSCAP-SOURCE.md) |
 | Lab-to-evidence v1 handoff fields and limitations | [Asset record contract](contracts/asset-record-v1.md) |
 | Package and run without internet access | [Disconnected release](docs/DISCONNECTED-RELEASE.md) |
 
@@ -58,7 +59,7 @@ flowchart TD
     convert --> provenance
 ```
 
-The initial scan, remediation, recheck scan, and artifact transfer occur outside this Go repository. Use a fresh recheck bundle for conversion; do not pair its XCCDF with an earlier run's HTML or ARF. Remediation ignore rules control which fixes are generated, **not** checklist results. The per-OS YAML in the private STIG library supplies administrator comments and optional status decisions for every host of that OS; `auto` retains the scan-derived status. The converter keeps raw scan candidates in provenance even when an administrator selects a different checklist status. ARF enriches observations only when the matching HTML report is present. See [batch converter](docs/BATCH-CKLB.md) for pairing, privacy, and benchmark-selection rules.
+The initial scan, remediation, recheck scan, and artifact transfer occur outside this Go repository. The current lab's [Ansible playbook and exact `oscap xccdf eval` command](docs/OSCAP-SOURCE.md) are captured separately for audit; the live scanner remains in `/scratch/ansible`. Use a fresh recheck bundle for conversion; do not pair its XCCDF with an earlier run's HTML or ARF. Remediation ignore rules control which fixes are generated, **not** checklist results. The per-OS YAML in the private STIG library supplies administrator comments and optional status decisions for every host of that OS; `auto` retains the scan-derived status. The converter keeps raw scan candidates in provenance even when an administrator selects a different checklist status. ARF enriches observations only when the matching HTML report is present. See [batch converter](docs/BATCH-CKLB.md) for pairing, privacy, and benchmark-selection rules.
 
 ## What the output means
 

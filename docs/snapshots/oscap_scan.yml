@@ -1,0 +1,135 @@
+# FILE NAME: oscap_scan.yml
+# ===================================================================
+#
+# OVERVIEW: Performs a CSCC or OSCAP scan of target host(s)
+#
+# AUTHOR: Nathan Forbeck
+#
+# TGT OS: RHEL 7/8/9
+#
+# ===================================================================
+
+---
+
+# Scan on the managed host; retain evidence on the Ansible controller.
+- name: Execute OSCAP scan and collect results
+  hosts: all
+  become: true
+  vars:
+    results_root: /scratch/src/admin/stig/completed_ckl
+    results: "{{ results_root }}/{{ qtr }}{{ year }}/rhel{{ major_vers }}/{{ hname }}"
+    scan_prefix: "{{ hname }}_{{ date }}"
+    qtr: "{% if month | int < 4 %}Q1_{% elif month | int < 7 %}Q2_{% elif month | int < 10 %}Q3_{% else %}Q4_{% endif %}"
+  tasks:
+    - name: Set date and host labels
+      ansible.builtin.set_fact:
+        month: "{{ ansible_facts['date_time']['month'] }}"
+        year: "{{ ansible_facts['date_time']['year'] }}"
+        date: "{{ ansible_facts['date_time']['date'] }}"
+        hname: "{{ inventory_hostname | upper }}"
+        target_fqdn: "{{ ansible_facts['fqdn'] }}"
+        major_vers: "{{ ansible_facts['distribution_major_version'] }}"
+
+    - name: Validate target label for converter host directory
+      ansible.builtin.assert:
+        that:
+          - target_fqdn is match('^[a-z0-9][a-z0-9.-]*[a-z0-9]$')
+          - "'..' not in target_fqdn"
+        fail_msg: "The gathered FQDN must be a safe lowercase host label matching the XCCDF target."
+
+    - name: Execute OSCAP scan against supported targets
+      when: (ansible_facts['kernel'].split('.')[0] | int) >= 3
+      block:
+        - name: Install/Update SCAP software - (RHEL 7+)
+          ansible.builtin.yum:
+            name:
+              - openscap
+              - scap-security-guide
+            state: latest
+
+        - name: Create private scan staging directory on managed host
+          ansible.builtin.tempfile:
+            state: directory
+            prefix: oscap_
+          register: remote_scan_dir
+
+        - name: Launch OSCAP scan - (RHEL 7+)
+          # Some OpenSCAP probes emit non-UTF-8 bytes. Keep raw output on the
+          # guest instead of passing it through Ansible's JSON module response.
+          ansible.builtin.shell: >-
+            oscap xccdf eval
+            --profile xccdf_org.ssgproject.content_profile_stig_gui
+            --stig-viewer {{ (remote_scan_dir.path ~ '/' ~ hname ~ '_' ~ date ~ '_XCCDF_Results.xml') | quote }}
+            --results {{ (remote_scan_dir.path ~ '/' ~ scan_prefix ~ '.results.xml') | quote }}
+            --results-arf {{ (remote_scan_dir.path ~ '/' ~ scan_prefix ~ '.results.arf.xml') | quote }}
+            --report {{ (remote_scan_dir.path ~ '/' ~ scan_prefix ~ '.report.html') | quote }}
+            {{ ('/usr/share/xml/scap/ssg/content/ssg-rhel' ~ major_vers ~ '-ds.xml') | quote }}
+            > {{ (remote_scan_dir.path ~ '/' ~ hname ~ '_' ~ date ~ '_Scan.log') | quote }} 2>&1
+          register: oscap_output
+          failed_when: oscap_output.rc not in [0, 2]
+
+        - name: Create owner-private controller-side evidence tree
+          ansible.builtin.file:
+            path: "{{ item }}"
+            state: directory
+            mode: '0700'
+          loop:
+            - "{{ results_root }}"
+            - "{{ results_root }}/{{ qtr }}{{ year }}"
+            - "{{ results_root }}/{{ qtr }}{{ year }}/rhel{{ major_vers }}"
+            - "{{ results }}"
+          delegate_to: localhost
+          become: false
+
+        - name: Create unique private controller-side run directory
+          ansible.builtin.tempfile:
+            path: "{{ results }}"
+            state: directory
+            prefix: "scan_{{ date }}_"
+          register: controller_scan_dir
+          delegate_to: localhost
+          become: false
+
+        - name: Create converter host directory within this unique run
+          ansible.builtin.file:
+            path: "{{ controller_scan_dir.path }}/{{ target_fqdn }}"
+            state: directory
+            mode: '0700'
+          delegate_to: localhost
+          become: false
+
+        - name: Fetch scan results, ARF, report, STIG Viewer XML, and log
+          ansible.builtin.fetch:
+            src: "{{ remote_scan_dir.path }}/{{ scan_prefix }}{{ item.suffix }}"
+            dest: "{{ controller_scan_dir.path }}/{{ target_fqdn }}/{{ scan_prefix }}{{ item.suffix }}"
+            flat: true
+            fail_on_missing: true
+            validate_checksum: true
+          loop:
+            - suffix: .results.xml
+            - suffix: .results.arf.xml
+            - suffix: .report.html
+            - suffix: _XCCDF_Results.xml
+            - suffix: _Scan.log
+
+        - name: Restrict controller-side evidence files
+          ansible.builtin.file:
+            path: "{{ controller_scan_dir.path }}/{{ target_fqdn }}/{{ scan_prefix }}{{ item.suffix }}"
+            mode: '0600'
+          loop:
+            - suffix: .results.xml
+            - suffix: .results.arf.xml
+            - suffix: .report.html
+            - suffix: _XCCDF_Results.xml
+            - suffix: _Scan.log
+          delegate_to: localhost
+          become: false
+
+        - name: Remove remote staging only after all files are fetched and restricted
+          ansible.builtin.file:
+            path: "{{ remote_scan_dir.path }}"
+            state: absent
+
+        - name: Show controller evidence location
+          ansible.builtin.debug:
+            msg: "OSCAP evidence: {{ controller_scan_dir.path }}/{{ target_fqdn }}"

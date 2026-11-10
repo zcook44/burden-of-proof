@@ -1,6 +1,6 @@
 # Recursive OpenSCAP → CKLB conversion
 
-[Quick start](README.md) · [Review workflow](WORKFLOW.md) · [CLI scope](GO-MIGRATION.md) · [Asset handoff](../contracts/asset-record-v1.md)
+[Quick start](README.md) · [Review workflow](WORKFLOW.md) · [Exact lab scan command and playbook snapshot](OSCAP-SOURCE.md) · [CLI scope](GO-MIGRATION.md) · [Asset handoff](../contracts/asset-record-v1.md)
 
 This is evidence-side conversion of saved scans, not lab provisioning or an official DISA assessment. The lab lives in a separate repository; this CLI accepts caller-supplied private paths. No ceremonial stamp is included.
 
