@@ -38,14 +38,17 @@ name="stig-evidence-${version}-linux-amd64"
 stage=$(mktemp -d "$output/.package.XXXXXXXX")
 trap 'rm -rf -- "$stage"' EXIT
 package="$stage/$name"
-install -d -m 700 "$package" "$package/bin" "$package/templates" "$package/docs" "$package/contracts"
+install -d -m 700 "$package" "$package/bin" "$package/scripts" "$package/templates" "$package/docs" "$package/docs/snapshots" "$package/contracts"
 (cd "$root" && go build -trimpath -ldflags='-s -w' -o "$package/bin/stig-evidence" ./cmd/stig-evidence)
+install -m 755 "$root/scripts/preflight-offline.sh" "$package/scripts/preflight-offline.sh"
 install -m 644 "$root/README.md" "$package/README.md"
 install -m 644 "$root/LICENSE" "$package/LICENSE"
 install -m 644 "$root/contracts/asset-record-v1.md" "$package/contracts/asset-record-v1.md"
-for doc in README BATCH-CKLB GO-MIGRATION WORKFLOW DISCONNECTED-RELEASE; do
+for doc in README BATCH-CKLB GO-MIGRATION WORKFLOW DISCONNECTED-RELEASE OSCAP-SOURCE; do
   install -m 644 "$root/docs/$doc.md" "$package/docs/$doc.md"
 done
+install -m 644 "$root/docs/snapshots/oscap_scan.yml" "$package/docs/snapshots/oscap_scan.yml"
+install -m 644 "$root/docs/snapshots/run-lab-oscap.sh" "$package/docs/snapshots/run-lab-oscap.sh"
 for major in 7 8 9 10; do
   install -m 644 "$root/templates/RHEL_${major}_STIG.tailoring.yaml" "$package/templates/RHEL_${major}_STIG.tailoring.yaml"
 done
@@ -59,13 +62,13 @@ fi
   printf 'Product: stig-evidence\nVersion: %s\nTarget: linux/amd64 (CGO_ENABLED=0)\n' "$version"
   printf 'Go: %s\nSource commit: %s\nSource worktree: %s\n' "$(go version)" "$commit" "$source_state"
   printf 'Build: GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local GOFLAGS=-mod=vendor\n'
-  printf 'Contents: CLI, four per-OS YAML templates, documentation and file checksums.\n'
+  printf 'Contents: CLI, Bash read-only preflight, four per-OS YAML examples, documentation and file checksums.\n'
   printf 'Not included: official DISA benchmarks, SSG scan inputs, private evidence, credentials, signatures.\n'
 } > "$package/RELEASE.txt"
 (
   cd "$package"
-  sha256sum bin/stig-evidence README.md LICENSE RELEASE.txt \
-    docs/*.md contracts/*.md templates/*.yaml > SHA256SUMS
+  sha256sum bin/stig-evidence scripts/preflight-offline.sh README.md LICENSE RELEASE.txt \
+    docs/*.md docs/snapshots/oscap_scan.yml docs/snapshots/run-lab-oscap.sh contracts/*.md templates/*.yaml > SHA256SUMS
 )
 source_date_epoch=${SOURCE_DATE_EPOCH:-0}
 [[ $source_date_epoch =~ ^[0-9]+$ ]] || { echo 'SOURCE_DATE_EPOCH must be an unsigned integer' >&2; exit 2; }

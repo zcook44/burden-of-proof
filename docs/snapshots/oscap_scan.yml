@@ -19,6 +19,8 @@
     results_root: /scratch/src/admin/stig/completed_ckl
     results: "{{ results_root }}/{{ qtr }}{{ year }}/rhel{{ major_vers }}/{{ hname }}"
     scan_prefix: "{{ hname }}_{{ date }}"
+    scan_profile: xccdf_org.ssgproject.content_profile_stig_gui
+    scan_datastream: "/usr/share/xml/scap/ssg/content/ssg-rhel{{ major_vers }}-ds.xml"
     qtr: "{% if month | int < 4 %}Q1_{% elif month | int < 7 %}Q2_{% elif month | int < 10 %}Q3_{% else %}Q4_{% endif %}"
   tasks:
     - name: Set date and host labels
@@ -47,6 +49,17 @@
               - scap-security-guide
             state: latest
 
+        - name: Verify installed STIG profile after SCAP package update
+          ansible.builtin.command: "oscap info {{ scan_datastream | quote }}"
+          register: oscap_info
+          changed_when: false
+
+        - name: Require exact STIG GUI profile in installed datastream
+          ansible.builtin.assert:
+            that:
+              - 'oscap_info.stdout is search("(?m)^\\s*Id:\\s*" ~ scan_profile ~ "\\s*$")'
+            fail_msg: "Installed SCAP datastream lacks the required STIG GUI profile. Check oscap info and the installed scap-security-guide package before scanning."
+
         - name: Create private scan staging directory on managed host
           ansible.builtin.tempfile:
             state: directory
@@ -58,12 +71,12 @@
           # guest instead of passing it through Ansible's JSON module response.
           ansible.builtin.shell: >-
             oscap xccdf eval
-            --profile xccdf_org.ssgproject.content_profile_stig_gui
+            --profile {{ scan_profile | quote }}
             --stig-viewer {{ (remote_scan_dir.path ~ '/' ~ hname ~ '_' ~ date ~ '_XCCDF_Results.xml') | quote }}
             --results {{ (remote_scan_dir.path ~ '/' ~ scan_prefix ~ '.results.xml') | quote }}
             --results-arf {{ (remote_scan_dir.path ~ '/' ~ scan_prefix ~ '.results.arf.xml') | quote }}
             --report {{ (remote_scan_dir.path ~ '/' ~ scan_prefix ~ '.report.html') | quote }}
-            {{ ('/usr/share/xml/scap/ssg/content/ssg-rhel' ~ major_vers ~ '-ds.xml') | quote }}
+            {{ scan_datastream | quote }}
             > {{ (remote_scan_dir.path ~ '/' ~ hname ~ '_' ~ date ~ '_Scan.log') | quote }} 2>&1
           register: oscap_output
           failed_when: oscap_output.rc not in [0, 2]

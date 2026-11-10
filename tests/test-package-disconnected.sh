@@ -15,6 +15,27 @@ done
 mkdir -m 700 "$tmp/extract"
 tar -xzf "$archive" -C "$tmp/extract"
 (cd "$tmp/extract/$name" && sha256sum -c SHA256SUMS)
+package="$tmp/extract/$name"
+for path in docs/OSCAP-SOURCE.md docs/snapshots/oscap_scan.yml docs/snapshots/run-lab-oscap.sh scripts/preflight-offline.sh; do
+  [[ -f $package/$path && -r $package/$path ]] || { echo "missing packaged source: $path" >&2; exit 1; }
+  cmp "$repo/$path" "$package/$path"
+  (cd "$package" && grep -Fqx "$(sha256sum "$path")" SHA256SUMS) || {
+    echo "missing inner checksum: $path" >&2; exit 1;
+  }
+done
+[[ $(stat -c %a "$package/docs/snapshots/oscap_scan.yml") == 644 && $(stat -c %a "$package/docs/snapshots/run-lab-oscap.sh") == 644 ]] || { echo 'snapshot mode is not nonexecutable 0644' >&2; exit 1; }
+[[ $(stat -c %a "$package/scripts/preflight-offline.sh") == 755 ]] || { echo 'preflight is not executable 0755' >&2; exit 1; }
+# These relative links must resolve inside the extracted bundle, not back to the repo.
+assert_relative_link() {
+  local source=$1 link=$2 target
+  grep -Fq "]($link)" "$package/$source" || { echo "missing relative link: $source -> $link" >&2; exit 1; }
+  target=${link%%#*}
+  [[ -r "$package/$(dirname "$source")/$target" ]] || { echo "broken relative link: $source -> $link" >&2; exit 1; }
+}
+assert_relative_link README.md docs/OSCAP-SOURCE.md
+assert_relative_link docs/OSCAP-SOURCE.md snapshots/oscap_scan.yml
+assert_relative_link docs/OSCAP-SOURCE.md snapshots/run-lab-oscap.sh
+assert_relative_link docs/OSCAP-SOURCE.md BATCH-CKLB.md#pairing-and-output
 for major in 7 8 9 10; do
   cmp "$repo/templates/RHEL_${major}_STIG.tailoring.yaml" "$tmp/extract/$name/templates/RHEL_${major}_STIG.tailoring.yaml"
 done
@@ -24,4 +45,4 @@ if "$repo/scripts/package-disconnected.sh" '../unsafe' "$tmp" >/dev/null 2>&1; t
   echo 'unsafe release name accepted' >&2
   exit 1
 fi
-echo 'PASS: offline release archive, checksums, four templates, static executable and invalid-name rejection'
+echo 'PASS: offline release archive, checksums, scan-source docs and snapshot, relative links, four templates, static executable and invalid-name rejection'
