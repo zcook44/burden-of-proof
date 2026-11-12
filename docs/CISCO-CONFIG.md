@@ -1,6 +1,23 @@
 # Cisco running-config review candidates
 
+The repository tracks `stig-library-cisco/`: 25 official manual XCCDF XMLs and 25 complete, hash-bound, all-`auto` YAML inventories covering 1,096 controls. Inventory is not assessment; a well-filled filing cabinet is still a filing cabinet. These files are **not** included in the generic offline archive. A Git checkout does not preserve the converter's required private modes: copy only authorized XML/policies into an owner-owned `0700` library, set each file to `0600`, and verify source authenticity and benchmark applicability independently. Do not run conversion against the checkout's ordinary `0755`/`0644` files or commit operational configs/decisions.
+
 `stig-evidence cisco-cklb` accepts a saved **Cisco running configuration** and one exact official DISA Cisco manual XCCDF benchmark. It creates a private, versioned CKLB plus `.cklb.provenance.json` beside the input. The default CLI now makes **bounded native configuration verdicts** for individually implemented rules: for `Cisco_IOS_XE_Switch_L2S_STIG` V3R2, `V-220657` (global STP Loop Guard) and `V-220664` (global Rapid STP/MSTP mode). It can mark Loop Guard `open` when it is explicitly disabled globally with no interface enable. All other rules remain `not_reviewed`; this is **not** a full Cisco STIG evaluator or a compliance score. It does **not** connect to a device, run show commands, infer which device role applies, or execute arbitrary benchmark prose checks. A running configuration cannot establish operational state, authentication-server behavior, remote peer state, or applicability of every control. Unsupported/ambiguous checks require human review and additional evidence.
+
+```mermaid
+flowchart TD
+  A[Authorized saved running-config in private target directory] --> C[Operator confirms platform and role]
+  B[Official manual XCCDF and optional complete YAML inventory in private library] --> C
+  C --> D[Select exact benchmark ID or pinned XML; dry-run validates inputs]
+  D --> E[Native evaluator: only two pinned IOS-XE Switch L2S V3R2 checks]
+  E --> F[Other or ambiguous checks: not_reviewed]
+  E --> G[Bounded config-only verdict when decisive]
+  F --> H[Optional all-auto policy preserves candidate; explicit admin override needs comment]
+  G --> H
+  H --> I[No-overwrite private CKLB and byte-bound provenance]
+  I --> J[Independent schema validation and human review with additional state evidence]
+  J --> K[Separate authorization and release process; not performed here]
+```
 
 ## Inputs and selection
 
@@ -16,7 +33,7 @@ stig-evidence cisco-cklb \
 # Remove --dry-run only after independently confirming device identity and benchmark applicability.
 ```
 
-For an exact pinned file, replace the two library flags with `--benchmark /private/stig-library/U_Cisco_IOS_Router_NDM_STIG_V3R9_Manual-xccdf.xml`. The extractor in the separate Checkmate source repository, `scripts/unpack-stig-library.sh`, can unpack allowlisted RHEL and Cisco manual XCCDF files from ZIPs into a new private library. Official benchmark ZIPs and raw configs are obtained and transferred separately; **do not commit or bundle them with generic binaries**. The extractor does not authenticate DISA provenance. The converter archive does not currently include that helper.
+For an exact pinned file, replace the two library flags with `--benchmark /private/stig-library/U_Cisco_IOS_Router_NDM_STIG_V3R9_Manual-xccdf.xml`. The extractor in the separate Checkmate source repository, `scripts/unpack-stig-library.sh`, can unpack allowlisted RHEL and Cisco manual XCCDF files from ZIPs into a new private library. This repository also tracks the 25 XML/policy pairs noted above; they still need a private staging copy. Raw configs are obtained and transferred separately; **do not bundle official benchmarks or configs with generic binaries**. The extractor does not authenticate DISA provenance. The converter archive does not currently include that helper.
 
 ## Full Cisco tailoring inventory
 
@@ -24,7 +41,7 @@ For each selected Cisco benchmark, the CLI optionally loads `<exact-benchmark-id
 
 An administrator can deliberately change one `status` to `open`, `not_a_finding`, `not_applicable`, or `not_reviewed`, **and must add a nonempty `comment`** explaining the decision. That override applies to **every device converted against that benchmark with the same library**; use separate libraries for differing site/host policies, and never place sensitive material in comments copied into the CKLB. The checklist preserves the prior automated candidate in `finding_details`, marks the admin decision in `comments`, and records exact overridden V/SV IDs, before/after status, and policy path/hash in provenance. Exact policy bytes change the CKLB ID and output filename, preserving older checklists. Without a policy, the existing v4 output remains byte-identical. An all-`auto` policy does **not** make unsupported rules compliant; it merely accounts for every rule in a reviewable inventory.
 
-`python3 scripts/generate-cisco-tailoring.py --library-root PRIVATE_CISCO_LIBRARY --dry-run` previews the full inventory; omit `--dry-run` to create the YAML beside each private XML. It refuses to overwrite an existing policy. Keep official XML and operational policies in an owner-private library, not in Git or a generic release. Re-generate and deliberately merge any administrator edits after a benchmark revision; do not silently carry overrides to a new V/SV revision.
+`python3 scripts/generate-cisco-tailoring.py --library-root PRIVATE_CISCO_LIBRARY --dry-run` previews a *new* full inventory; omit `--dry-run` to create the YAML beside each private XML. It refuses to overwrite existing policies, including staged copies of the tracked all-`auto` inventories. Keep **operational** policy changes and device configs out of Git and generic releases. Re-generate and deliberately merge any administrator edits after a benchmark revision; do not silently carry overrides to a new V/SV revision.
 
 ## CKLB and evidence boundary
 

@@ -15,7 +15,7 @@ ISE, ACI and SNA benchmarks are not represented by invented IOS-style running co
 
 ## Reproduce from an owner-private benchmark library
 
-The official manual XCCDF XMLs are **not included** in either repository. Obtain the ZIPs through your approved DISA source, then extract them with the Checkmate source script into a new private library. From the `burden-of-proof` root:
+This repository now tracks 25 official manual XCCDF XMLs and 25 all-`auto` inventories under `stig-library-cisco/` (not in the generic archive). Alternatively obtain ZIPs through your approved DISA source and extract them with the Checkmate source script. In either case independently verify provenance, then stage authorized XML/policies into an owner-owned `0700` private library with `0600` files; the Git checkout's modes are not accepted by the converter. The generator below uses that private library. From the `burden-of-proof` root:
 
 ```sh
 umask 077
@@ -32,4 +32,4 @@ python3 scripts/generate-cisco-examples.py \
 python3 tests/test-cisco-examples.py
 ```
 
-The generator refuses unmarked configs, validates converter output hashes and exact benchmark IDs, stages each benchmark in a separate private directory, and never overwrites a different checklist. All official benchmark XML and private scan material remain outside Git. For Checkmate inventory, run its executable with `--root /path/to/checkmate/examples/cisco-synthetic/checklists --list`; opt-in `--validate --schema /path/to/checkmate/schemas/SV3_CKLB_1_0_JSON_SCHEMA.json` checks the JSON schema. **Schema validity is not a successful STIG Viewer GUI import or a compliance score.**
+The generator refuses unmarked configs, validates converter output hashes and exact benchmark IDs, stages each benchmark in a separate private directory, and never overwrites a different checklist. Keep operational benchmark copies, private scans and generated evidence out of Git; the tracked Cisco reference XML/policies are the stated exception. For Checkmate inventory, run its executable with `--root /path/to/checkmate/examples/cisco-synthetic/checklists --list`; opt-in `--validate --schema /path/to/checkmate/schemas/SV3_CKLB_1_0_JSON_SCHEMA.json` checks the JSON schema. **Schema validity is not a successful STIG Viewer GUI import or a compliance score.**
