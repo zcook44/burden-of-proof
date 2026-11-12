@@ -45,6 +45,7 @@ package="$stage/$name"
 install -d -m 700 "$package" "$package/bin" "$package/scripts" "$package/templates" "$package/docs" "$package/docs/snapshots" "$package/contracts" "$package/schemas"
 (cd "$root" && go build -trimpath -ldflags='-s -w' -o "$package/bin/stig-evidence" ./cmd/stig-evidence)
 install -m 755 "$root/scripts/preflight-offline.sh" "$package/scripts/preflight-offline.sh"
+install -m 755 "$root/scripts/generate-cisco-tailoring.py" "$package/scripts/generate-cisco-tailoring.py"
 install -m 644 "$root/README.md" "$package/README.md"
 install -m 644 "$root/LICENSE" "$package/LICENSE"
 install -m 644 "$root/contracts/asset-record-v1.md" "$package/contracts/asset-record-v1.md"
@@ -67,12 +68,12 @@ fi
   printf 'Product: stig-evidence\nVersion: %s\nTarget: linux/amd64 (CGO_ENABLED=0)\n' "$version"
   printf 'Go: %s\nSource commit: %s\nSource worktree: %s\n' "$(go version)" "$commit" "$source_state"
   printf 'Build: GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local GOFLAGS=-mod=vendor\n'
-  printf 'Contents: CLI (RHEL XCCDF and Cisco running-config review candidates), Bash read-only preflight, four per-OS YAML examples, DISA CKLB schema, documentation and file checksums.\n'
+  printf 'Contents: CLI (RHEL XCCDF and Cisco running-config review candidates), Bash read-only preflight, Python 3 Cisco tailoring generator, four per-OS YAML examples, DISA CKLB schema, documentation and file checksums.\n'
   printf 'Not included: official DISA benchmarks, SSG scan inputs, Cisco running configs, private evidence, credentials, signatures.\n'
 } > "$package/RELEASE.txt"
 (
   cd "$package"
-  sha256sum bin/stig-evidence scripts/preflight-offline.sh README.md LICENSE RELEASE.txt \
+  sha256sum bin/stig-evidence scripts/preflight-offline.sh scripts/generate-cisco-tailoring.py README.md LICENSE RELEASE.txt \
     docs/*.md docs/snapshots/oscap_scan.yml docs/snapshots/run-lab-oscap.sh contracts/*.md templates/*.yaml schemas/*.json schemas/*.md > SHA256SUMS
 )
 source_date_epoch=${SOURCE_DATE_EPOCH:-0}

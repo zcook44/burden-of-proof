@@ -106,6 +106,12 @@ func BuildCiscoConfig(config []byte, target string, benchmark []byte) (map[strin
 	}, nil
 }
 
+// CiscoTailoredID gives an admin-edited policy a distinct CKLB identity from
+// the unmodified automated candidate and from every other policy revision.
+func CiscoTailoredID(baseID, policySHA256 string) string {
+	return uuid5(baseID + ":cisco-tailoring-v1:" + policySHA256)
+}
+
 // XML unmarshalling of unqualified struct fields accepts unexpected namespaces.
 // Validate the full token stream first, including directives and trailing XML.
 func validateCiscoXML(data []byte) error {

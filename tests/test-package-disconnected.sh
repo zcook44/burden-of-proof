@@ -16,7 +16,7 @@ mkdir -m 700 "$tmp/extract"
 tar -xzf "$archive" -C "$tmp/extract"
 (cd "$tmp/extract/$name" && sha256sum -c SHA256SUMS)
 package="$tmp/extract/$name"
-for path in docs/OSCAP-SOURCE.md docs/CISCO-CONFIG.md docs/snapshots/oscap_scan.yml docs/snapshots/run-lab-oscap.sh scripts/preflight-offline.sh schemas/SV3_CKLB_1_0_JSON_SCHEMA.json schemas/PROVENANCE.md; do
+for path in docs/OSCAP-SOURCE.md docs/CISCO-CONFIG.md docs/snapshots/oscap_scan.yml docs/snapshots/run-lab-oscap.sh scripts/preflight-offline.sh scripts/generate-cisco-tailoring.py schemas/SV3_CKLB_1_0_JSON_SCHEMA.json schemas/PROVENANCE.md; do
   [[ -f $package/$path && -r $package/$path ]] || { echo "missing packaged source: $path" >&2; exit 1; }
   cmp "$repo/$path" "$package/$path"
   (cd "$package" && grep -Fqx "$(sha256sum "$path")" SHA256SUMS) || {
@@ -25,7 +25,8 @@ for path in docs/OSCAP-SOURCE.md docs/CISCO-CONFIG.md docs/snapshots/oscap_scan.
 done
 printf '%s  %s\n' '8b88205de07662006e1660b1decad677d344828d6687b1dd26bca15105b7bb37' "$repo/schemas/SV3_CKLB_1_0_JSON_SCHEMA.json" | sha256sum -c -
 [[ $(stat -c %a "$package/docs/snapshots/oscap_scan.yml") == 644 && $(stat -c %a "$package/docs/snapshots/run-lab-oscap.sh") == 644 ]] || { echo 'snapshot mode is not nonexecutable 0644' >&2; exit 1; }
-[[ $(stat -c %a "$package/scripts/preflight-offline.sh") == 755 ]] || { echo 'preflight is not executable 0755' >&2; exit 1; }
+[[ $(stat -c %a "$package/scripts/preflight-offline.sh") == 755 && $(stat -c %a "$package/scripts/generate-cisco-tailoring.py") == 755 ]] || { echo 'runtime scripts are not executable 0755' >&2; exit 1; }
+python3 "$package/scripts/generate-cisco-tailoring.py" --help >/dev/null
 # These relative links must resolve inside the extracted bundle, not back to the repo.
 assert_relative_link() {
   local source=$1 link=$2 target

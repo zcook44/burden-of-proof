@@ -207,19 +207,32 @@ func runCisco(args []string, out, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "Cisco checklist: %v\n", err)
 		return 2
 	}
+	policyRules, policyPath, policyBytes, err := loadCiscoTailoring(filepath.Dir(*benchmarkPath), *benchmarkID, benchmark, doc)
+	if err != nil {
+		fmt.Fprintf(stderr, "Cisco tailoring: %v\n", err)
+		return 2
+	}
+	baselineAutomated := []map[string]string{}
+	for _, item := range doc["stigs"].([]any)[0].(map[string]any)["rules"].([]any) {
+		row := item.(map[string]any)
+		if row["status"] != "not_reviewed" {
+			baselineAutomated = append(baselineAutomated, map[string]string{"group_id": row["group_id"].(string), "rule_id": row["rule_id"].(string), "status": row["status"].(string)})
+		}
+	}
+	adminOverrides := []map[string]string{}
+	if policyPath != "" {
+		fmt.Fprintf(out, "TAILORING %s (sha256 %s; %d controls)\n", policyPath, sha256Hex(policyBytes), len(policyRules))
+		doc["id"] = draft.CiscoTailoredID(doc["id"].(string), sha256Hex(policyBytes))
+		adminOverrides = applyCiscoTailoring(doc, policyRules)
+	}
 	if *dryRun {
 		fmt.Fprintf(out, "CONFIG %s (sha256 %s); %d controls; no files written\n", *configPath, sha256Hex(config), len(doc["stigs"].([]any)[0].(map[string]any)["rules"].([]any)))
 		return 0
 	}
 	counts := map[string]int{}
-	automated := []map[string]string{}
 	for _, item := range doc["stigs"].([]any)[0].(map[string]any)["rules"].([]any) {
 		row := item.(map[string]any)
-		status := row["status"].(string)
-		counts[status]++
-		if status != "not_reviewed" {
-			automated = append(automated, map[string]string{"group_id": row["group_id"].(string), "rule_id": row["rule_id"].(string), "status": status})
-		}
+		counts[row["status"].(string)]++
 	}
 	body, err := json.MarshalIndent(doc, "", "  ")
 	if err != nil {
@@ -228,14 +241,25 @@ func runCisco(args []string, out, stderr io.Writer) int {
 	}
 	body = append(body, '\n')
 	digest := bundleDigest([]byte(draft.CiscoConfigEvaluatorVersion), config, benchmark, []byte(*target))
+	if policyPath != "" {
+		digest = bundleDigest([]byte(draft.CiscoConfigEvaluatorVersion+":tailoring-v1"), config, benchmark, []byte(*target), policyBytes)
+	}
 	prefix := strings.TrimSuffix(filepath.Base(*configPath), ".running-config")
 	path := filepath.Join(filepath.Dir(*configPath), prefix+"-cisco-"+sha256Hex(benchmark)[:16]+"-"+digest[:16]+"-ASSESSMENT.cklb")
-	sidecar, err := json.MarshalIndent(map[string]any{
+	provenanceRecord := map[string]any{
 		"schema_version": 2, "checklist_sha256": sha256Hex(body),
 		"mapping_method":    "config-only pinned automatic rules; unsupported controls require human review",
-		"evaluator_version": draft.CiscoConfigEvaluatorVersion, "status_counts": counts, "automated_controls": automated,
-		"config": evidenceInput{*configPath, sha256Hex(config)}, "benchmark": evidenceInput{*benchmarkPath, sha256Hex(benchmark)}, "target": *target, "benchmark_id": *benchmarkID,
-	}, "", "  ")
+		"evaluator_version": draft.CiscoConfigEvaluatorVersion, "status_counts": counts,
+		"automated_controls": baselineAutomated,
+		"config":             evidenceInput{*configPath, sha256Hex(config)}, "benchmark": evidenceInput{*benchmarkPath, sha256Hex(benchmark)}, "target": *target, "benchmark_id": *benchmarkID,
+	}
+	if policyPath != "" {
+		provenanceRecord["schema_version"] = 3
+		provenanceRecord["mapping_method"] = "config-only pinned automatic rules; optional administrator tailoring"
+		provenanceRecord["admin_overrides"] = adminOverrides
+		provenanceRecord["tailoring"] = evidenceInput{policyPath, sha256Hex(policyBytes)}
+	}
+	sidecar, err := json.MarshalIndent(provenanceRecord, "", "  ")
 	if err != nil {
 		fmt.Fprintln(stderr, err)
 		return 2
