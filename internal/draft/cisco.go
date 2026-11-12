@@ -24,11 +24,10 @@ func officialRuleRow(stigUUID string, g group, r rule, status, details, comments
 	}
 }
 
-// BuildCiscoConfig renders an unsigned CKLB review draft from raw running-config
-// bytes and the exact official Cisco XCCDF benchmark. No operational control is
-// evaluated by this function: every rule remains not_reviewed for manual review.
-// Raw config content is never copied into the checklist; its byte hash binds the
-// output identity and appears with the benchmark hash in finding_details.
+// BuildCiscoConfig renders a CKLB from a saved running-config and an exact Cisco
+// XCCDF. Only pinned, config-decidable checks receive automated verdicts; all
+// other checks remain not_reviewed. Raw config content is never copied into the
+// checklist; its byte hash binds the identity and finding details.
 func BuildCiscoConfig(config []byte, target string, benchmark []byte) (map[string]any, error) {
 	if len(bytes.TrimSpace(config)) == 0 || strings.TrimSpace(target) == "" {
 		return nil, fmt.Errorf("Cisco config and target are required")
@@ -70,9 +69,17 @@ func BuildCiscoConfig(config []byte, target string, benchmark []byte) (map[strin
 			default:
 				return fmt.Errorf("invalid Cisco rule severity: %q", r.Severity)
 			}
-			details := "Raw running config SHA-256: " + configHash + "\nOfficial Cisco benchmark SHA-256: " + benchHash + "\nRunning config alone does not verify this control's complete operational check; manual review required."
-			comments := "NOT REVIEWED — raw running config supplied for manual review; no automated pass, finding, or applicability decision asserted."
-			rows = append(rows, officialRuleRow(stigUUID, g, r, "not_reviewed", details, comments))
+			status, observation, automatedComment := evaluateCiscoRule(b, g, r, config)
+			details := "Raw running config SHA-256: " + configHash + "\nOfficial Cisco benchmark SHA-256: " + benchHash
+			comments := automatedComment
+			if status == "" {
+				status = "not_reviewed"
+				details += "\nRunning config alone does not verify this control's complete operational check; manual review required."
+				comments = "NOT REVIEWED — raw running config supplied for manual review; no automated pass, finding, or applicability decision asserted."
+			} else {
+				details += "\n" + observation
+			}
+			rows = append(rows, officialRuleRow(stigUUID, g, r, status, details, comments))
 			if err := walk(g.Groups); err != nil {
 				return err
 			}
@@ -92,8 +99,8 @@ func BuildCiscoConfig(config []byte, target string, benchmark []byte) (map[strin
 		}
 	}
 	return map[string]any{
-		"title":        "DRAFT - NOT REVIEWED - " + target + " - " + name,
-		"id":           uuid5(target + ":" + stigUUID + ":" + configHash + ":cisco-config-unreviewed-v1"),
+		"title":        "DRAFT - AUTO CONFIG VERDICTS - " + target + " - " + name,
+		"id":           uuid5(target + ":" + stigUUID + ":" + configHash + ":" + CiscoConfigEvaluatorVersion),
 		"cklb_version": "1.0", "target_data": map[string]any{"host_name": target},
 		"stigs": []any{map[string]any{"stig_name": name, "display_name": name, "stig_id": b.ID, "release_info": release, "uuid": stigUUID, "size": len(rows), "rules": rows}},
 	}, nil

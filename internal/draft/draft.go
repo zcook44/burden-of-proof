@@ -23,6 +23,9 @@ type rule struct {
 	Title    string `xml:"title"`
 	Version  string `xml:"version"`
 	Fix      string `xml:"fixtext"`
+	Check    struct {
+		Content string `xml:"check-content"`
+	} `xml:"check"`
 }
 type group struct {
 	ID     string  `xml:"id,attr"`

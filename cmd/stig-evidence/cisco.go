@@ -211,17 +211,29 @@ func runCisco(args []string, out, stderr io.Writer) int {
 		fmt.Fprintf(out, "CONFIG %s (sha256 %s); %d controls; no files written\n", *configPath, sha256Hex(config), len(doc["stigs"].([]any)[0].(map[string]any)["rules"].([]any)))
 		return 0
 	}
+	counts := map[string]int{}
+	automated := []map[string]string{}
+	for _, item := range doc["stigs"].([]any)[0].(map[string]any)["rules"].([]any) {
+		row := item.(map[string]any)
+		status := row["status"].(string)
+		counts[status]++
+		if status != "not_reviewed" {
+			automated = append(automated, map[string]string{"group_id": row["group_id"].(string), "rule_id": row["rule_id"].(string), "status": status})
+		}
+	}
 	body, err := json.MarshalIndent(doc, "", "  ")
 	if err != nil {
 		fmt.Fprintln(stderr, err)
 		return 2
 	}
 	body = append(body, '\n')
-	digest := bundleDigest([]byte("cisco-config-review-v1"), config, benchmark, []byte(*target))
+	digest := bundleDigest([]byte(draft.CiscoConfigEvaluatorVersion), config, benchmark, []byte(*target))
 	prefix := strings.TrimSuffix(filepath.Base(*configPath), ".running-config")
 	path := filepath.Join(filepath.Dir(*configPath), prefix+"-cisco-"+sha256Hex(benchmark)[:16]+"-"+digest[:16]+"-ASSESSMENT.cklb")
 	sidecar, err := json.MarshalIndent(map[string]any{
-		"schema_version": 1, "checklist_sha256": sha256Hex(body), "mapping_method": "config-only; no automated STIG assessment; all controls require human review",
+		"schema_version": 2, "checklist_sha256": sha256Hex(body),
+		"mapping_method":    "config-only pinned automatic rules; unsupported controls require human review",
+		"evaluator_version": draft.CiscoConfigEvaluatorVersion, "status_counts": counts, "automated_controls": automated,
 		"config": evidenceInput{*configPath, sha256Hex(config)}, "benchmark": evidenceInput{*benchmarkPath, sha256Hex(benchmark)}, "target": *target, "benchmark_id": *benchmarkID,
 	}, "", "  ")
 	if err != nil {
@@ -242,7 +254,7 @@ func runCisco(args []string, out, stderr io.Writer) int {
 	if skipped {
 		fmt.Fprintf(out, "SKIP %s (identical checklist and provenance)\n", path)
 	} else {
-		fmt.Fprintf(out, "CREATED %s (config-only review candidate; no automated compliance verdict)\n", path)
+		fmt.Fprintf(out, "CREATED %s (config-based automatic verdicts; unassessed controls require human review)\n", path)
 	}
 	return 0
 }
