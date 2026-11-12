@@ -231,7 +231,7 @@ func buildWithEvidence(report reconcile.Report, data []byte, assumeEquivalent bo
 				}
 				caution = strings.Join(comparisons, "\n") + "\n" + caution
 			}
-			rows = append(rows, map[string]any{"uuid": uuid5(stigUUID + r.ID), "stig_uuid": stigUUID, "group_id": g.ID, "group_id_src": g.ID, "rule_id": r.ID, "rule_id_src": r.ID, "severity": r.Severity, "weight": r.Weight, "rule_version": r.Version, "rule_title": r.Title, "group_title": g.Title, "fix_text": r.Fix, "status": status, "finding_details": strings.Join(details, "\n"), "comments": caution})
+			rows = append(rows, officialRuleRow(stigUUID, g, r, status, strings.Join(details, "\n"), caution))
 			walk(g.Groups)
 		}
 	}

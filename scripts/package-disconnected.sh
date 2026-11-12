@@ -48,7 +48,7 @@ install -m 755 "$root/scripts/preflight-offline.sh" "$package/scripts/preflight-
 install -m 644 "$root/README.md" "$package/README.md"
 install -m 644 "$root/LICENSE" "$package/LICENSE"
 install -m 644 "$root/contracts/asset-record-v1.md" "$package/contracts/asset-record-v1.md"
-for doc in README BATCH-CKLB GO-MIGRATION WORKFLOW DISCONNECTED-RELEASE OSCAP-SOURCE; do
+for doc in README BATCH-CKLB CISCO-CONFIG GO-MIGRATION WORKFLOW DISCONNECTED-RELEASE OSCAP-SOURCE; do
   install -m 644 "$root/docs/$doc.md" "$package/docs/$doc.md"
 done
 install -m 644 "$root/docs/snapshots/oscap_scan.yml" "$package/docs/snapshots/oscap_scan.yml"
@@ -67,8 +67,8 @@ fi
   printf 'Product: stig-evidence\nVersion: %s\nTarget: linux/amd64 (CGO_ENABLED=0)\n' "$version"
   printf 'Go: %s\nSource commit: %s\nSource worktree: %s\n' "$(go version)" "$commit" "$source_state"
   printf 'Build: GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local GOFLAGS=-mod=vendor\n'
-  printf 'Contents: CLI, Bash read-only preflight, four per-OS YAML examples, DISA CKLB schema, documentation and file checksums.\n'
-  printf 'Not included: official DISA benchmarks, SSG scan inputs, private evidence, credentials, signatures.\n'
+  printf 'Contents: CLI (RHEL XCCDF and Cisco running-config review candidates), Bash read-only preflight, four per-OS YAML examples, DISA CKLB schema, documentation and file checksums.\n'
+  printf 'Not included: official DISA benchmarks, SSG scan inputs, Cisco running configs, private evidence, credentials, signatures.\n'
 } > "$package/RELEASE.txt"
 (
   cd "$package"

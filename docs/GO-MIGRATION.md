@@ -12,12 +12,14 @@ GOPROXY=off GOSUMDB=off go build -mod=vendor -o dist/stig-evidence ./cmd/stig-ev
 ./dist/stig-evidence reconcile --scan /private/ssg-results.xml --benchmark /private/official.xml --out /private/candidates.json
 ./dist/stig-evidence draft-cklb --scan /private/ssg-results.xml --benchmark /private/official.xml --out /private/review.cklb
 ./dist/stig-evidence batch-cklb --input-root /private/inventory --library-root /private/extracted-stig-library
+./dist/stig-evidence cisco-cklb --config /private/configs/router1.example.test/scan.running-config --target router1.example.test --library-root /private/extracted-stig-library --benchmark-id Cisco_IOS_Router_NDM_STIG --dry-run
 ```
 
 - `asset-check` verifies a v1 asset record against the supplied pre-scan bytes. It does **not** attest lab provenance, baseline state, or authorization.
 - `reconcile` creates private candidate mapping JSON, never an official DISA scan result. Every TestResult rule-result (including unmatched and unselected) retains raw outcome, original reference text/href, and any numeric V join key. Ambiguous source references cannot establish a passing control.
 - `draft-cklb` creates a no-overwrite private checklist. `--assessment-view --html-report` adds executed-check/observed-value presentation; optional `--arf` adds collected OVAL values. `--operator-approved` is only an unsigned caller assertion for a single ARF assessment view, not a release gate or signature.
 - `batch-cklb` recurses a host inventory and independently selects the newest eligible extracted manual benchmark for each detected RHEL 7/8/9/10 OS. It reads optional per-OS YAML at the library root, then writes one private CKLB and byte-bound provenance sidecar per saved scan. Untailored outputs retain the v10 identity; tailored outputs use a separate v11 identity bound to the policy bytes. Earlier outputs remain unchanged. [Exact pairing, library and no-overwrite rules](BATCH-CKLB.md).
+- `cisco-cklb` accepts one saved `.running-config` under the exact target-named private directory and one exact Cisco manual XCCDF (or an owner-private library plus exact benchmark ID). It creates a private CKLB/sidecar for manual review with **every rule Not Reviewed**; it does not infer a benchmark, parse prose checks into results, or treat a present/absent config line as an assessment. [Cisco input and evidence boundaries](CISCO-CONFIG.md).
 
 A numeric `V-…` or historical `SV-…r…_rule` reference is an explicit join candidate, not independently verified check-equivalence. Missing, unselected, ambiguous, or unchecked controls remain Not Reviewed unless an administrator explicitly supplies a per-OS checklist decision. The packaged binary has converted copied real scans for all four RHEL families with their official benchmarks and bundled YAML templates; GUI import has not been exercised by this CLI. Keep scans, benchmarks, review files, and sidecars private and Git-ignored.
 

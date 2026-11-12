@@ -16,7 +16,7 @@ mkdir -m 700 "$tmp/extract"
 tar -xzf "$archive" -C "$tmp/extract"
 (cd "$tmp/extract/$name" && sha256sum -c SHA256SUMS)
 package="$tmp/extract/$name"
-for path in docs/OSCAP-SOURCE.md docs/snapshots/oscap_scan.yml docs/snapshots/run-lab-oscap.sh scripts/preflight-offline.sh schemas/SV3_CKLB_1_0_JSON_SCHEMA.json schemas/PROVENANCE.md; do
+for path in docs/OSCAP-SOURCE.md docs/CISCO-CONFIG.md docs/snapshots/oscap_scan.yml docs/snapshots/run-lab-oscap.sh scripts/preflight-offline.sh schemas/SV3_CKLB_1_0_JSON_SCHEMA.json schemas/PROVENANCE.md; do
   [[ -f $package/$path && -r $package/$path ]] || { echo "missing packaged source: $path" >&2; exit 1; }
   cmp "$repo/$path" "$package/$path"
   (cd "$package" && grep -Fqx "$(sha256sum "$path")" SHA256SUMS) || {
@@ -41,6 +41,7 @@ for major in 7 8 9 10; do
   cmp "$repo/templates/RHEL_${major}_STIG.tailoring.yaml" "$tmp/extract/$name/templates/RHEL_${major}_STIG.tailoring.yaml"
 done
 env -u GOPATH -u GOROOT GOPROXY=off GOSUMDB=off "$tmp/extract/$name/bin/stig-evidence" batch-cklb --help >/dev/null
+env -u GOPATH -u GOROOT GOPROXY=off GOSUMDB=off "$tmp/extract/$name/bin/stig-evidence" cisco-cklb --help >/dev/null
 [[ $(file -b "$tmp/extract/$name/bin/stig-evidence") == *'statically linked'* ]]
 if "$repo/scripts/package-disconnected.sh" '../unsafe' "$tmp" >/dev/null 2>&1; then
   echo 'unsafe release name accepted' >&2
