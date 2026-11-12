@@ -1,0 +1,15 @@
+{
+  "benchmark": {
+    "path": "/home/zrc/.hermes/cache/scratch/cisco-fixtures.pEIDsbsO/library/U_Cisco_IOS-XE_Router_NDM_STIG_V3R7_Manual-xccdf.xml",
+    "sha256": "748fab27a38ba2e980250338c8140bdc0eb00fc19cc269bc326a60185b8dd956"
+  },
+  "benchmark_id": "Cisco_IOS-XE_Router_NDM_STIG",
+  "checklist_sha256": "e7cb38f59c23482a6429b3fdd757995c66a2bb2d8635a8e5450ef93ffe70ce17",
+  "config": {
+    "path": "/home/zrc/git/burden-of-proof/examples/cisco-synthetic/targets/ios-xe-router-01/scan.running-config",
+    "sha256": "c15df98a4f59691da5b72d79fa2efddffd4f882cece35cc564947d14d6d5acdb"
+  },
+  "mapping_method": "config-only; no automated STIG assessment; all controls require human review",
+  "schema_version": 1,
+  "target": "ios-xe-router-01"
+}

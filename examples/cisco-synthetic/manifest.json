@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "purpose": "synthetic CKLB format and reviewer workflow examples, not compliance evidence",
+  "targets": [
+    {"host": "ios-router-01", "platform": "IOS router", "benchmarks": ["Cisco_IOS_Router_NDM_STIG", "Cisco_IOS_Router_RTR_STIG"]},
+    {"host": "ios-switch-01", "platform": "IOS switch", "benchmarks": ["Cisco_IOS_Switch_NDM_STIG", "Cisco_IOS_Switch_L2S_STIG", "Cisco_IOS_Switch_RTR_STIG"]},
+    {"host": "ios-xe-router-01", "platform": "IOS-XE router", "benchmarks": ["Cisco_IOS-XE_Router_NDM_STIG", "Cisco_IOS-XE_Router_RTR_STIG"]},
+    {"host": "ios-xe-switch-01", "platform": "IOS-XE switch", "benchmarks": ["Cisco_IOS_XE_Switch_NDM_STIG", "Cisco_IOS_XE_Switch_L2S_STIG", "Cisco_IOS_XE_Switch_RTR_STIG"]},
+    {"host": "xr-edge-01", "platform": "IOS-XR router", "benchmarks": ["Cisco_IOS-XR_Router_NDM_STIG", "Cisco_IOS-XR_Router_RTR_STIG"]},
+    {"host": "nx-access-01", "platform": "NX-OS switch", "benchmarks": ["Cisco_NX-OS_Switch_NDM_STIG", "Cisco_NX-OS_Switch_L2S_STIG", "Cisco_NX-OS_Switch_RTR_STIG"]},
+    {"host": "asa-perimeter-01", "platform": "ASA firewall", "benchmarks": ["Cisco_ASA_FW_STIG", "Cisco_ASA_NDM_STIG"]}
+  ]
+}

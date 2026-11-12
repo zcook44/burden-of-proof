@@ -1,0 +1,113 @@
+! SYNTHETIC TEST FIXTURE — not captured from a device; secrets are nonworking placeholders.
+! Cisco NX-OS access switch, NDM and L2S illustration; NOT a STIG assessment.
+version 9.3(10)
+hostname nx-access-01
+feature interface-vlan
+feature lacp
+feature dhcp
+feature ntp
+no feature telnet
+password strength-check
+ssh login-attempts 3
+ssh macs hmac-sha2-256 hmac-sha2-512
+ssh ciphers aes128-ctr aes256-ctr
+banner motd #
+Authorized test-lab access only. Activity may be monitored.
+#
+username breakglass password 0 NOT_A_REAL_PASSWORD_CHANGE_BEFORE_USE role network-admin
+!
+radius-server host 192.0.2.20 key 0 NOT_A_REAL_RADIUS_KEY
+radius-server host 192.0.2.21 key 0 NOT_A_REAL_RADIUS_KEY
+aaa group server radius RADIUS_SERVERS
+ server 192.0.2.20
+ server 192.0.2.21
+ use-vrf management
+!
+aaa authentication login default group RADIUS_SERVERS local
+aaa authentication login console group RADIUS_SERVERS local
+aaa accounting default group RADIUS_SERVERS
+logging level authpriv 6
+logging logfile LOG_FILE 6
+logging server 192.0.2.30 6 use-vrf management
+logging server 192.0.2.31 6 use-vrf management
+!
+ip access-list MGMT_NET
+ 10 permit ip 192.0.2.0/24 any
+ 20 deny ip any any log
+!
+line console
+ exec-timeout 5
+!
+line vty
+ exec-timeout 5
+ session-limit 2
+ access-class MGMT_NET in
+!
+ntp server 192.0.2.40 use-vrf management
+ntp server 192.0.2.41 use-vrf management
+!
+interface mgmt0
+ description Dedicated OOB management
+ vrf member management
+ ip address 192.0.2.12/24
+ no shutdown
+!
+vrf context management
+ ip route 0.0.0.0/0 192.0.2.1
+!
+vlan 10
+ name USER_DATA
+vlan 20
+ name VOICE
+vlan 44
+ name MANAGEMENT
+vlan 998
+ name UNUSED_NATIVE
+vlan 999
+ name PARKING
+!
+spanning-tree mode rapid-pvst
+spanning-tree port type edge bpduguard default
+ip dhcp snooping
+ip dhcp snooping vlan 10,20
+ip arp inspection vlan 10,20
+ip igmp snooping
+!
+interface Ethernet1/1
+ description User access port
+ switchport
+ switchport mode access
+ switchport access vlan 10
+ spanning-tree port type edge
+ spanning-tree bpduguard enable
+ ip verify source dhcp-snooping-vlan
+ no shutdown
+!
+interface Ethernet1/2
+ description Voice plus user access port
+ switchport
+ switchport mode access
+ switchport access vlan 10
+ switchport voice vlan 20
+ spanning-tree port type edge
+ spanning-tree bpduguard enable
+ ip verify source dhcp-snooping-vlan
+ no shutdown
+!
+interface Ethernet1/47
+ description Trusted distribution uplink
+ switchport
+ switchport mode trunk
+ switchport trunk native vlan 998
+ switchport trunk allowed vlan 10,20,44,998
+ ip dhcp snooping trust
+ ip arp inspection trust
+ no shutdown
+!
+interface Ethernet1/48
+ description Unused parked port
+ switchport
+ switchport mode access
+ switchport access vlan 999
+ shutdown
+!

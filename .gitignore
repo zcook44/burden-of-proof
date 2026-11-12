@@ -7,6 +7,8 @@ __pycache__/
 evidence/
 private/
 *.cklb
+# Explicitly version only wholly synthetic Cisco training checklists.
+!/examples/cisco-synthetic/checklists/**/*.cklb
 *.pem
 *.key
 *.sig

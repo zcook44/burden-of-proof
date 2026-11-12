@@ -1,0 +1,15 @@
+{
+  "benchmark": {
+    "path": "/home/zrc/.hermes/cache/scratch/cisco-fixtures.pEIDsbsO/library/U_Cisco_IOS-XR_Router_NDM_STIG_V3R6_Manual-xccdf.xml",
+    "sha256": "4c0e0c18d65fff727a5b64c39e6abf1a901b589d5c89cda1667b6e7aed58b215"
+  },
+  "benchmark_id": "Cisco_IOS-XR_Router_NDM_STIG",
+  "checklist_sha256": "c9c84001e6b832793a2a98b38825fad006364a2f816b057effd110211fc4467c",
+  "config": {
+    "path": "/home/zrc/git/burden-of-proof/examples/cisco-synthetic/targets/xr-edge-01/scan.running-config",
+    "sha256": "aee75ec93771eedc6391a141a5fbdc3613409dcba611e39db2e0be67f47b8953"
+  },
+  "mapping_method": "config-only; no automated STIG assessment; all controls require human review",
+  "schema_version": 1,
+  "target": "xr-edge-01"
+}

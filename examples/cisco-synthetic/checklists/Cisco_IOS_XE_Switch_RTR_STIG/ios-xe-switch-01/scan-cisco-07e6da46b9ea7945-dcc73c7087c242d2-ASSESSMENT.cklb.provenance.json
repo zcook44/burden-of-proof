@@ -1,0 +1,15 @@
+{
+  "benchmark": {
+    "path": "/home/zrc/.hermes/cache/scratch/cisco-fixtures.pEIDsbsO/library/U_Cisco_IOS-XE_Switch_RTR_STIG_V3R4_Manual-xccdf.xml",
+    "sha256": "07e6da46b9ea7945fdd6893f0d792b6231d2f6085ce90c316e086dea80b55194"
+  },
+  "benchmark_id": "Cisco_IOS_XE_Switch_RTR_STIG",
+  "checklist_sha256": "b54fa9193193d22750fce5528b9ceeee54f6e1036dd4a1860b0627a53b095e1e",
+  "config": {
+    "path": "/home/zrc/git/burden-of-proof/examples/cisco-synthetic/targets/ios-xe-switch-01/scan.running-config",
+    "sha256": "3f6fc46dd5f94ef654b685b11fbb64f0700bb78e8da3dba9fcb55525915202d0"
+  },
+  "mapping_method": "config-only; no automated STIG assessment; all controls require human review",
+  "schema_version": 1,
+  "target": "ios-xe-switch-01"
+}

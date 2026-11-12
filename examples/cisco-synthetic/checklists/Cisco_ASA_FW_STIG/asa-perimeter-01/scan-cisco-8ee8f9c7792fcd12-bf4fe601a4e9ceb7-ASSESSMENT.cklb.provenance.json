@@ -1,0 +1,15 @@
+{
+  "benchmark": {
+    "path": "/home/zrc/.hermes/cache/scratch/cisco-fixtures.pEIDsbsO/library/U_Cisco_ASA_Firewall_STIG_V2R1_Manual-xccdf.xml",
+    "sha256": "8ee8f9c7792fcd12ad232e1a24b7206178257094a2bc4d64fc8dfd746e8e3b40"
+  },
+  "benchmark_id": "Cisco_ASA_FW_STIG",
+  "checklist_sha256": "8a0c3d896911f6556bd062453b70c44a0aae745ff23ed0ea9f8badb7bf110946",
+  "config": {
+    "path": "/home/zrc/git/burden-of-proof/examples/cisco-synthetic/targets/asa-perimeter-01/scan.running-config",
+    "sha256": "8ed0c9e3e59ab6fc8afc4e5e20d238df8b4935a3640646cb62cedeb5ef3f3654"
+  },
+  "mapping_method": "config-only; no automated STIG assessment; all controls require human review",
+  "schema_version": 1,
+  "target": "asa-perimeter-01"
+}
