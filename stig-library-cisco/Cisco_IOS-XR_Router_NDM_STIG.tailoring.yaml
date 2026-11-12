@@ -1,0 +1,85 @@
+schema_version: 1
+benchmark_id: Cisco_IOS-XR_Router_NDM_STIG
+benchmark_sha256: 4c0e0c18d65fff727a5b64c39e6abf1a901b589d5c89cda1667b6e7aed58b215
+rules:
+  - stig_id: V-216522
+    sv_id: SV-216522r960735_rule
+    status: auto
+  - stig_id: V-216523
+    sv_id: SV-216523r1137875_rule
+    status: auto
+  - stig_id: V-216524
+    sv_id: SV-216524r960840_rule
+    status: auto
+  - stig_id: V-216525
+    sv_id: SV-216525r960843_rule
+    status: auto
+  - stig_id: V-216526
+    sv_id: SV-216526r960885_rule
+    status: auto
+  - stig_id: V-216527
+    sv_id: SV-216527r960894_rule
+    status: auto
+  - stig_id: V-216528
+    sv_id: SV-216528r960897_rule
+    status: auto
+  - stig_id: V-216529
+    sv_id: SV-216529r1043177_rule
+    status: auto
+  - stig_id: V-216530
+    sv_id: SV-216530r1051115_rule
+    status: auto
+  - stig_id: V-216531
+    sv_id: SV-216531r960993_rule
+    status: auto
+  - stig_id: V-216532
+    sv_id: SV-216532r961068_rule
+    status: auto
+  - stig_id: V-216533
+    sv_id: SV-216533r1193106_rule
+    status: auto
+  - stig_id: V-216534
+    sv_id: SV-216534r991930_rule
+    status: auto
+  - stig_id: V-216535
+    sv_id: SV-216535r1015296_rule
+    status: auto
+  - stig_id: V-216536
+    sv_id: SV-216536r961446_rule
+    status: auto
+  - stig_id: V-216537
+    sv_id: SV-216537r961443_rule
+    status: auto
+  - stig_id: V-216538
+    sv_id: SV-216538r961506_rule
+    status: auto
+  - stig_id: V-216539
+    sv_id: SV-216539r961506_rule
+    status: auto
+  - stig_id: V-216540
+    sv_id: SV-216540r1156820_rule
+    status: auto
+  - stig_id: V-216541
+    sv_id: SV-216541r961554_rule
+    status: auto
+  - stig_id: V-216542
+    sv_id: SV-216542r961557_rule
+    status: auto
+  - stig_id: V-216543
+    sv_id: SV-216543r961860_rule
+    status: auto
+  - stig_id: V-216544
+    sv_id: SV-216544r1137887_rule
+    status: auto
+  - stig_id: V-216545
+    sv_id: SV-216545r1069525_rule
+    status: auto
+  - stig_id: V-216546
+    sv_id: SV-216546r961863_rule
+    status: auto
+  - stig_id: V-216547
+    sv_id: SV-216547r961863_rule
+    status: auto
+  - stig_id: V-216549
+    sv_id: SV-216549r961863_rule
+    status: auto

@@ -1,0 +1,109 @@
+schema_version: 1
+benchmark_id: Cisco_IOS_Router_NDM_STIG
+benchmark_sha256: b92cccf9a63b08507cc8f96c80c7e7976634036a5677a5b151e9aea4a180ef13
+rules:
+  - stig_id: V-215662
+    sv_id: SV-215662r1269385_rule
+    status: auto
+  - stig_id: V-215667
+    sv_id: SV-215667r1137875_rule
+    status: auto
+  - stig_id: V-215668
+    sv_id: SV-215668r960840_rule
+    status: auto
+  - stig_id: V-215669
+    sv_id: SV-215669r1269388_rule
+    status: auto
+  - stig_id: V-215670
+    sv_id: SV-215670r1205833_rule
+    status: auto
+  - stig_id: V-215672
+    sv_id: SV-215672r960894_rule
+    status: auto
+  - stig_id: V-215673
+    sv_id: SV-215673r960897_rule
+    status: auto
+  - stig_id: V-215675
+    sv_id: SV-215675r960933_rule
+    status: auto
+  - stig_id: V-215676
+    sv_id: SV-215676r960936_rule
+    status: auto
+  - stig_id: V-215677
+    sv_id: SV-215677r960960_rule
+    status: auto
+  - stig_id: V-215678
+    sv_id: SV-215678r1043177_rule
+    status: auto
+  - stig_id: V-215679
+    sv_id: SV-215679r1051115_rule
+    status: auto
+  - stig_id: V-215681
+    sv_id: SV-215681r991820_rule
+    status: auto
+  - stig_id: V-215682
+    sv_id: SV-215682r991823_rule
+    status: auto
+  - stig_id: V-215683
+    sv_id: SV-215683r991826_rule
+    status: auto
+  - stig_id: V-215684
+    sv_id: SV-215684r991827_rule
+    status: auto
+  - stig_id: V-215685
+    sv_id: SV-215685r991828_rule
+    status: auto
+  - stig_id: V-215686
+    sv_id: SV-215686r1043189_rule
+    status: auto
+  - stig_id: V-215687
+    sv_id: SV-215687r991830_rule
+    status: auto
+  - stig_id: V-215688
+    sv_id: SV-215688r961068_rule
+    status: auto
+  - stig_id: V-215691
+    sv_id: SV-215691r961392_rule
+    status: auto
+  - stig_id: V-215692
+    sv_id: SV-215692r991831_rule
+    status: auto
+  - stig_id: V-215693
+    sv_id: SV-215693r1269389_rule
+    status: auto
+  - stig_id: V-215696
+    sv_id: SV-215696r961506_rule
+    status: auto
+  - stig_id: V-215697
+    sv_id: SV-215697r961506_rule
+    status: auto
+  - stig_id: V-215698
+    sv_id: SV-215698r1156808_rule
+    status: auto
+  - stig_id: V-215699
+    sv_id: SV-215699r1269391_rule
+    status: auto
+  - stig_id: V-215700
+    sv_id: SV-215700r961557_rule
+    status: auto
+  - stig_id: V-215701
+    sv_id: SV-215701r1269392_rule
+    status: auto
+  - stig_id: V-215704
+    sv_id: SV-215704r961824_rule
+    status: auto
+  - stig_id: V-215709
+    sv_id: SV-215709r1205827_rule
+    status: auto
+  - stig_id: V-215710
+    sv_id: SV-215710r1069534_rule
+    status: auto
+  - stig_id: V-215711
+    sv_id: SV-215711r1269394_rule
+    status: auto
+  - stig_id: V-220136
+    sv_id: SV-220136r1137890_rule
+    status: auto
+  - stig_id: V-220137
+    sv_id: SV-220137r1207744_rule
+    status: auto

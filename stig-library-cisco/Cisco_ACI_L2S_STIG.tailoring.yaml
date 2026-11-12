@@ -1,0 +1,25 @@
+schema_version: 1
+benchmark_id: Cisco_ACI_L2S_STIG
+benchmark_sha256: 0fc05a230810bd462d22c4b96971abcfadea8b115435907f1fa864e8ea0eb39a
+rules:
+  - stig_id: V-272029
+    sv_id: SV-272029r1168259_rule
+    status: auto
+  - stig_id: V-272032
+    sv_id: SV-272032r1168262_rule
+    status: auto
+  - stig_id: V-272033
+    sv_id: SV-272033r1168251_rule
+    status: auto
+  - stig_id: V-272037
+    sv_id: SV-272037r1168273_rule
+    status: auto
+  - stig_id: V-272038
+    sv_id: SV-272038r1168256_rule
+    status: auto
+  - stig_id: V-272039
+    sv_id: SV-272039r1168265_rule
+    status: auto
+  - stig_id: V-272045
+    sv_id: SV-272045r1168271_rule
+    status: auto

@@ -1,0 +1,67 @@
+schema_version: 1
+benchmark_id: Cisco_ASA_FW_STIG
+benchmark_sha256: 8ee8f9c7792fcd12ad232e1a24b7206178257094a2bc4d64fc8dfd746e8e3b40
+rules:
+  - stig_id: V-239852
+    sv_id: SV-239852r665842_rule
+    status: auto
+  - stig_id: V-239853
+    sv_id: SV-239853r665845_rule
+    status: auto
+  - stig_id: V-239854
+    sv_id: SV-239854r665848_rule
+    status: auto
+  - stig_id: V-239855
+    sv_id: SV-239855r665851_rule
+    status: auto
+  - stig_id: V-239856
+    sv_id: SV-239856r665854_rule
+    status: auto
+  - stig_id: V-239857
+    sv_id: SV-239857r665857_rule
+    status: auto
+  - stig_id: V-239858
+    sv_id: SV-239858r819136_rule
+    status: auto
+  - stig_id: V-239859
+    sv_id: SV-239859r665863_rule
+    status: auto
+  - stig_id: V-239860
+    sv_id: SV-239860r991796_rule
+    status: auto
+  - stig_id: V-239861
+    sv_id: SV-239861r665904_rule
+    status: auto
+  - stig_id: V-239862
+    sv_id: SV-239862r953982_rule
+    status: auto
+  - stig_id: V-239863
+    sv_id: SV-239863r855805_rule
+    status: auto
+  - stig_id: V-239864
+    sv_id: SV-239864r891328_rule
+    status: auto
+  - stig_id: V-239865
+    sv_id: SV-239865r991797_rule
+    status: auto
+  - stig_id: V-239866
+    sv_id: SV-239866r991798_rule
+    status: auto
+  - stig_id: V-239867
+    sv_id: SV-239867r891331_rule
+    status: auto
+  - stig_id: V-239868
+    sv_id: SV-239868r991800_rule
+    status: auto
+  - stig_id: V-239869
+    sv_id: SV-239869r665893_rule
+    status: auto
+  - stig_id: V-239870
+    sv_id: SV-239870r665896_rule
+    status: auto
+  - stig_id: V-239871
+    sv_id: SV-239871r665899_rule
+    status: auto
+  - stig_id: V-239872
+    sv_id: SV-239872r971533_rule
+    status: auto

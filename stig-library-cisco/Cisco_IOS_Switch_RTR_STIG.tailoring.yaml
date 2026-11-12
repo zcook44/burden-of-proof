@@ -1,0 +1,163 @@
+schema_version: 1
+benchmark_id: Cisco_IOS_Switch_RTR_STIG
+benchmark_sha256: 90dfb2d1999ae3f3b6cc09350ff02a0ba306a53dadf6f4171394e819ecc966f2
+rules:
+  - stig_id: V-220419
+    sv_id: SV-220419r1195270_rule
+    status: auto
+  - stig_id: V-220423
+    sv_id: SV-220423r1270917_rule
+    status: auto
+  - stig_id: V-220424
+    sv_id: SV-220424r1137913_rule
+    status: auto
+  - stig_id: V-220427
+    sv_id: SV-220427r856231_rule
+    status: auto
+  - stig_id: V-220428
+    sv_id: SV-220428r991872_rule
+    status: auto
+  - stig_id: V-220431
+    sv_id: SV-220431r856233_rule
+    status: auto
+  - stig_id: V-220432
+    sv_id: SV-220432r856234_rule
+    status: auto
+  - stig_id: V-220433
+    sv_id: SV-220433r1270920_rule
+    status: auto
+  - stig_id: V-220434
+    sv_id: SV-220434r856236_rule
+    status: auto
+  - stig_id: V-220435
+    sv_id: SV-220435r856237_rule
+    status: auto
+  - stig_id: V-220436
+    sv_id: SV-220436r622190_rule
+    status: auto
+  - stig_id: V-220437
+    sv_id: SV-220437r622190_rule
+    status: auto
+  - stig_id: V-220438
+    sv_id: SV-220438r622190_rule
+    status: auto
+  - stig_id: V-220439
+    sv_id: SV-220439r1137906_rule
+    status: auto
+  - stig_id: V-220440
+    sv_id: SV-220440r1137935_rule
+    status: auto
+  - stig_id: V-220441
+    sv_id: SV-220441r1137907_rule
+    status: auto
+  - stig_id: V-220442
+    sv_id: SV-220442r856238_rule
+    status: auto
+  - stig_id: V-220443
+    sv_id: SV-220443r863240_rule
+    status: auto
+  - stig_id: V-220445
+    sv_id: SV-220445r1269415_rule
+    status: auto
+  - stig_id: V-220446
+    sv_id: SV-220446r622190_rule
+    status: auto
+  - stig_id: V-220447
+    sv_id: SV-220447r622190_rule
+    status: auto
+  - stig_id: V-220449
+    sv_id: SV-220449r856240_rule
+    status: auto
+  - stig_id: V-220450
+    sv_id: SV-220450r856241_rule
+    status: auto
+  - stig_id: V-220451
+    sv_id: SV-220451r856242_rule
+    status: auto
+  - stig_id: V-220452
+    sv_id: SV-220452r945857_rule
+    status: auto
+  - stig_id: V-220453
+    sv_id: SV-220453r991873_rule
+    status: auto
+  - stig_id: V-220454
+    sv_id: SV-220454r864159_rule
+    status: auto
+  - stig_id: V-220455
+    sv_id: SV-220455r622190_rule
+    status: auto
+  - stig_id: V-220456
+    sv_id: SV-220456r622190_rule
+    status: auto
+  - stig_id: V-220458
+    sv_id: SV-220458r1270922_rule
+    status: auto
+  - stig_id: V-220459
+    sv_id: SV-220459r917426_rule
+    status: auto
+  - stig_id: V-220460
+    sv_id: SV-220460r622190_rule
+    status: auto
+  - stig_id: V-220461
+    sv_id: SV-220461r1269416_rule
+    status: auto
+  - stig_id: V-220462
+    sv_id: SV-220462r1137911_rule
+    status: auto
+  - stig_id: V-220463
+    sv_id: SV-220463r1137912_rule
+    status: auto
+  - stig_id: V-220464
+    sv_id: SV-220464r864160_rule
+    status: auto
+  - stig_id: V-220465
+    sv_id: SV-220465r864161_rule
+    status: auto
+  - stig_id: V-220466
+    sv_id: SV-220466r856246_rule
+    status: auto
+  - stig_id: V-220467
+    sv_id: SV-220467r945856_rule
+    status: auto
+  - stig_id: V-220471
+    sv_id: SV-220471r945858_rule
+    status: auto
+  - stig_id: V-220472
+    sv_id: SV-220472r945859_rule
+    status: auto
+  - stig_id: V-220473
+    sv_id: SV-220473r945860_rule
+    status: auto
+  - stig_id: V-237749
+    sv_id: SV-237749r648775_rule
+    status: auto
+  - stig_id: V-237751
+    sv_id: SV-237751r648779_rule
+    status: auto
+  - stig_id: V-237755
+    sv_id: SV-237755r999760_rule
+    status: auto
+  - stig_id: V-237758
+    sv_id: SV-237758r1270925_rule
+    status: auto
+  - stig_id: V-237761
+    sv_id: SV-237761r1270927_rule
+    status: auto
+  - stig_id: V-237763
+    sv_id: SV-237763r1270929_rule
+    status: auto
+  - stig_id: V-237765
+    sv_id: SV-237765r1270931_rule
+    status: auto
+  - stig_id: V-237771
+    sv_id: SV-237771r1270933_rule
+    status: auto
+  - stig_id: V-237773
+    sv_id: SV-237773r1270935_rule
+    status: auto
+  - stig_id: V-237775
+    sv_id: SV-237775r1270937_rule
+    status: auto
+  - stig_id: V-237777
+    sv_id: SV-237777r1270939_rule
+    status: auto

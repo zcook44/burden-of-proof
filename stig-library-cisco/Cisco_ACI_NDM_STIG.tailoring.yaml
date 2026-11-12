@@ -1,0 +1,82 @@
+schema_version: 1
+benchmark_id: Cisco_ACI_NDM_STIG
+benchmark_sha256: 1ea44a0597225e1de9d7988da1983a72b537fac3b5c8b2e7c137b94a8d02d789
+rules:
+  - stig_id: V-271916
+    sv_id: SV-271916r1168349_rule
+    status: auto
+  - stig_id: V-271917
+    sv_id: SV-271917r1114333_rule
+    status: auto
+  - stig_id: V-271918
+    sv_id: SV-271918r1168426_rule
+    status: auto
+  - stig_id: V-271919
+    sv_id: SV-271919r1168355_rule
+    status: auto
+  - stig_id: V-271920
+    sv_id: SV-271920r1168358_rule
+    status: auto
+  - stig_id: V-271921
+    sv_id: SV-271921r1113817_rule
+    status: auto
+  - stig_id: V-271922
+    sv_id: SV-271922r1168360_rule
+    status: auto
+  - stig_id: V-271923
+    sv_id: SV-271923r1114182_rule
+    status: auto
+  - stig_id: V-271924
+    sv_id: SV-271924r1168362_rule
+    status: auto
+  - stig_id: V-271926
+    sv_id: SV-271926r1168364_rule
+    status: auto
+  - stig_id: V-271927
+    sv_id: SV-271927r1168428_rule
+    status: auto
+  - stig_id: V-271929
+    sv_id: SV-271929r1113827_rule
+    status: auto
+  - stig_id: V-271931
+    sv_id: SV-271931r1168368_rule
+    status: auto
+  - stig_id: V-271932
+    sv_id: SV-271932r1114348_rule
+    status: auto
+  - stig_id: V-271933
+    sv_id: SV-271933r1114169_rule
+    status: auto
+  - stig_id: V-271935
+    sv_id: SV-271935r1114172_rule
+    status: auto
+  - stig_id: V-271936
+    sv_id: SV-271936r1113837_rule
+    status: auto
+  - stig_id: V-271939
+    sv_id: SV-271939r1114173_rule
+    status: auto
+  - stig_id: V-271944
+    sv_id: SV-271944r1168370_rule
+    status: auto
+  - stig_id: V-271958
+    sv_id: SV-271958r1168373_rule
+    status: auto
+  - stig_id: V-271960
+    sv_id: SV-271960r1168376_rule
+    status: auto
+  - stig_id: V-271966
+    sv_id: SV-271966r1114341_rule
+    status: auto
+  - stig_id: V-271969
+    sv_id: SV-271969r1168379_rule
+    status: auto
+  - stig_id: V-271971
+    sv_id: SV-271971r1168430_rule
+    status: auto
+  - stig_id: V-271972
+    sv_id: SV-271972r1114185_rule
+    status: auto
+  - stig_id: V-271975
+    sv_id: SV-271975r1168383_rule
+    status: auto
