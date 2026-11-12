@@ -1,0 +1,151 @@
+version 17.09
+!
+hostname ios-xe-switch-01
+!
+ip routing
+vtp mode transparent
+spanning-tree mode rapid-pvst
+spanning-tree loopguard default
+spanning-tree portfast bpduguard default
+ip dhcp snooping
+ip dhcp snooping vlan 20
+ip arp inspection vlan 20
+ip igmp snooping
+!
+vlan 20
+ name SYNTHETIC_USERS
+vlan 30
+ name SYNTHETIC_ROUTED_LAN
+vlan 99
+ name SYNTHETIC_MANAGEMENT
+vlan 998
+ name PARKING_ONLY
+vlan 999
+ name UNUSED_NATIVE
+!
+interface Vlan1
+ no ip address
+ shutdown
+interface Vlan20
+ description TEST USERS
+ ip address 203.0.113.1 255.255.255.0
+ ip ospf 10 area 0
+ no shutdown
+interface Vlan30
+ description TEST ROUTED VLAN
+ ip address 198.51.100.129 255.255.255.128
+ ip ospf 10 area 0
+ no shutdown
+interface Vlan99
+ description MANAGEMENT DOCUMENTATION SUBNET
+ ip address 192.0.2.4 255.255.255.0
+ no shutdown
+!
+interface GigabitEthernet1/0/1
+ description LAB TRUNK TO ROUTED PEER
+ switchport mode trunk
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 20,30,99,999
+ switchport nonegotiate
+ ip dhcp snooping trust
+ ip arp inspection trust
+ no shutdown
+interface GigabitEthernet1/0/2
+ description SYNTHETIC CLIENT
+ switchport mode access
+ switchport access vlan 20
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ ip verify source
+ no shutdown
+interface GigabitEthernet1/0/3
+ description UNUSED
+ switchport mode access
+ switchport access vlan 998
+ shutdown
+!
+router ospf 10
+ router-id 192.0.2.4
+ passive-interface default
+ log-adjacency-changes detail
+!
+!
+! SYNTHETIC EXAMPLE ONLY: documentation addresses, no operational credentials.
+! Type-9 strings are deliberately invalid; TACACS/NTP/SNMP keys are absent.
+! This file is incomplete operational evidence and is not a compliance determination.
+!
+no service pad
+service timestamps debug datetime msec localtime show-timezone
+service timestamps log datetime msec localtime show-timezone
+service password-encryption
+security passwords min-length 15
+no ip domain-lookup
+ip domain-name example.invalid
+ip ssh version 2
+ip ssh time-out 60
+ip ssh authentication-retries 3
+no ip http server
+no ip http secure-server
+no cdp run
+!
+aaa new-model
+tacacs server AUTH01
+ address ipv4 192.0.2.40
+tacacs server AUTH02
+ address ipv4 192.0.2.41
+aaa group server tacacs+ AUTH-SERVERS
+ server name AUTH01
+ server name AUTH02
+! No shared TACACS keys supplied: authentication is intentionally nonfunctional.
+aaa authentication login default group AUTH-SERVERS local
+aaa authorization exec default group AUTH-SERVERS local
+aaa accounting exec default start-stop group AUTH-SERVERS
+aaa accounting commands 15 default start-stop group AUTH-SERVERS
+username emergency-admin privilege 15 secret 9 $9$INTENTIONALLYINVALID$NOTAREALSCRYPTVALUE
+enable secret 9 $9$INTENTIONALLYINVALID$NOTAREALSCRYPTVALUE
+!
+ip access-list standard MGMT-SOURCES
+ permit 192.0.2.0 0.0.0.255
+ deny any log
+!
+login on-success log
+login on-failure log
+logging on
+logging buffered 32768 informational
+logging trap informational
+logging facility local6
+logging source-interface Vlan99
+logging host 192.0.2.10
+logging host 192.0.2.11
+archive
+ log config
+  logging enable
+  notify syslog
+  hidekeys
+!
+ntp authenticate
+ntp trusted-key 1
+ntp source Vlan99
+ntp server 192.0.2.20 key 1 prefer
+ntp server 192.0.2.21 key 1
+! Deliberately no ntp authentication-key: test fixture cannot sync authenticated time.
+snmp-server view READONLY iso included
+snmp-server group MONITORING v3 priv read READONLY access MGMT-SOURCES
+snmp-server host 192.0.2.30 version 3 priv MONITOR-USER
+! Deliberately no snmp-server user/auth/priv keys: SNMP polling cannot authenticate.
+!
+line con 0
+ exec-timeout 5 0
+ logging synchronous
+ login authentication default
+line vty 0 4
+ access-class MGMT-SOURCES in
+ exec-timeout 5 0
+ login authentication default
+ transport input ssh
+line vty 5 15
+ access-class MGMT-SOURCES in
+ exec-timeout 5 0
+ login authentication default
+ transport input ssh
+end

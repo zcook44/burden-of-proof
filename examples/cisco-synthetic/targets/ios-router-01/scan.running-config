@@ -1,0 +1,112 @@
+version 15.2
+!
+hostname ios-router-01
+!
+ip cef
+!
+interface Loopback0
+ description ROUTER-ID AND MANAGEMENT (DOCUMENTATION ONLY)
+ ip address 192.0.2.1 255.255.255.255
+ ip ospf 10 area 0
+!
+interface GigabitEthernet0/0
+ description TEST-ONLY UPLINK; NO REAL NEIGHBOR
+ ip address 198.51.100.1 255.255.255.252
+ ip ospf 10 area 0
+ no shutdown
+!
+interface GigabitEthernet0/1
+ description UNUSED LAB INTERFACE
+ no ip address
+ shutdown
+!
+router ospf 10
+ router-id 192.0.2.1
+ passive-interface default
+ no passive-interface GigabitEthernet0/0
+ log-adjacency-changes detail
+!
+ip route 203.0.113.0 255.255.255.0 Null0
+!
+!
+! SYNTHETIC EXAMPLE ONLY: documentation addresses, no operational credentials.
+! Type-9 strings are deliberately invalid; TACACS/NTP/SNMP keys are absent.
+! This file is incomplete operational evidence and is not a compliance determination.
+!
+no service pad
+service timestamps debug datetime msec localtime show-timezone
+service timestamps log datetime msec localtime show-timezone
+service password-encryption
+security passwords min-length 15
+no ip domain-lookup
+ip domain-name example.invalid
+ip ssh version 2
+ip ssh time-out 60
+ip ssh authentication-retries 3
+no ip http server
+no ip http secure-server
+no cdp run
+!
+aaa new-model
+tacacs-server host 192.0.2.40
+tacacs-server host 192.0.2.41
+aaa group server tacacs+ AUTH-SERVERS
+ server 192.0.2.40
+ server 192.0.2.41
+! No shared TACACS keys supplied: authentication is intentionally nonfunctional.
+aaa authentication login default group AUTH-SERVERS local
+aaa authorization exec default group AUTH-SERVERS local
+aaa accounting exec default start-stop group AUTH-SERVERS
+aaa accounting commands 15 default start-stop group AUTH-SERVERS
+username emergency-admin privilege 15 secret 9 $9$INTENTIONALLYINVALID$NOTAREALSCRYPTVALUE
+enable secret 9 $9$INTENTIONALLYINVALID$NOTAREALSCRYPTVALUE
+!
+ip access-list standard MGMT-SOURCES
+ permit 192.0.2.0 0.0.0.255
+ deny any log
+!
+login on-success log
+login on-failure log
+logging on
+logging buffered 32768 informational
+logging trap informational
+logging facility local6
+logging source-interface Loopback0
+logging host 192.0.2.10
+logging host 192.0.2.11
+archive
+ log config
+  logging enable
+  notify syslog
+  hidekeys
+!
+ntp authenticate
+ntp trusted-key 1
+ntp source Loopback0
+ntp server 192.0.2.20 key 1 prefer
+ntp server 192.0.2.21 key 1
+! Deliberately no ntp authentication-key: test fixture cannot sync authenticated time.
+snmp-server view READONLY iso included
+snmp-server group MONITORING v3 priv read READONLY access MGMT-SOURCES
+snmp-server host 192.0.2.30 version 3 priv MONITOR-USER
+! Deliberately no snmp-server user/auth/priv keys: SNMP polling cannot authenticate.
+!
+line con 0
+ exec-timeout 5 0
+ logging synchronous
+ login authentication default
+line vty 0 4
+ access-class MGMT-SOURCES in
+ exec-timeout 5 0
+ login authentication default
+ transport input ssh
+line vty 5 15
+ access-class MGMT-SOURCES in
+ exec-timeout 5 0
+ login authentication default
+ transport input ssh
+line aux 0
+ no exec
+ transport input none
+!
+end

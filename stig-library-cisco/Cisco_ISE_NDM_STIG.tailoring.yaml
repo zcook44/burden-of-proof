@@ -1,0 +1,157 @@
+schema_version: 1
+benchmark_id: Cisco_ISE_NDM_STIG
+benchmark_sha256: 6de5d5e38c323ab3ccb22b4906ba6aa8644b82724532994b2722203d0ab8cea5
+rules:
+  - stig_id: V-242607
+    sv_id: SV-242607r1026047_rule
+    status: auto
+  - stig_id: V-242608
+    sv_id: SV-242608r1018744_rule
+    status: auto
+  - stig_id: V-242609
+    sv_id: SV-242609r960777_rule
+    status: auto
+  - stig_id: V-242610
+    sv_id: SV-242610r960780_rule
+    status: auto
+  - stig_id: V-242611
+    sv_id: SV-242611r960783_rule
+    status: auto
+  - stig_id: V-242612
+    sv_id: SV-242612r960786_rule
+    status: auto
+  - stig_id: V-242613
+    sv_id: SV-242613r961290_rule
+    status: auto
+  - stig_id: V-242614
+    sv_id: SV-242614r1051115_rule
+    status: auto
+  - stig_id: V-242615
+    sv_id: SV-242615r961353_rule
+    status: auto
+  - stig_id: V-242616
+    sv_id: SV-242616r961362_rule
+    status: auto
+  - stig_id: V-242617
+    sv_id: SV-242617r960840_rule
+    status: auto
+  - stig_id: V-242618
+    sv_id: SV-242618r960843_rule
+    status: auto
+  - stig_id: V-242619
+    sv_id: SV-242619r960864_rule
+    status: auto
+  - stig_id: V-242620
+    sv_id: SV-242620r960885_rule
+    status: auto
+  - stig_id: V-242621
+    sv_id: SV-242621r961800_rule
+    status: auto
+  - stig_id: V-242622
+    sv_id: SV-242622r961812_rule
+    status: auto
+  - stig_id: V-242623
+    sv_id: SV-242623r961824_rule
+    status: auto
+  - stig_id: V-242624
+    sv_id: SV-242624r961827_rule
+    status: auto
+  - stig_id: V-242625
+    sv_id: SV-242625r961833_rule
+    status: auto
+  - stig_id: V-242626
+    sv_id: SV-242626r961392_rule
+    status: auto
+  - stig_id: V-242627
+    sv_id: SV-242627r961860_rule
+    status: auto
+  - stig_id: V-242628
+    sv_id: SV-242628r961401_rule
+    status: auto
+  - stig_id: V-242629
+    sv_id: SV-242629r1168433_rule
+    status: auto
+  - stig_id: V-242630
+    sv_id: SV-242630r1167990_rule
+    status: auto
+  - stig_id: V-242632
+    sv_id: SV-242632r961863_rule
+    status: auto
+  - stig_id: V-242633
+    sv_id: SV-242633r1137887_rule
+    status: auto
+  - stig_id: V-242634
+    sv_id: SV-242634r1207744_rule
+    status: auto
+  - stig_id: V-242636
+    sv_id: SV-242636r1207743_rule
+    status: auto
+  - stig_id: V-242638
+    sv_id: SV-242638r1026048_rule
+    status: auto
+  - stig_id: V-242639
+    sv_id: SV-242639r961863_rule
+    status: auto
+  - stig_id: V-242640
+    sv_id: SV-242640r1043177_rule
+    status: auto
+  - stig_id: V-242641
+    sv_id: SV-242641r1043177_rule
+    status: auto
+  - stig_id: V-242642
+    sv_id: SV-242642r960993_rule
+    status: auto
+  - stig_id: V-242643
+    sv_id: SV-242643r961506_rule
+    status: auto
+  - stig_id: V-242645
+    sv_id: SV-242645r1018746_rule
+    status: auto
+  - stig_id: V-242646
+    sv_id: SV-242646r1018747_rule
+    status: auto
+  - stig_id: V-242647
+    sv_id: SV-242647r1018748_rule
+    status: auto
+  - stig_id: V-242648
+    sv_id: SV-242648r1018749_rule
+    status: auto
+  - stig_id: V-242649
+    sv_id: SV-242649r1018750_rule
+    status: auto
+  - stig_id: V-242651
+    sv_id: SV-242651r961029_rule
+    status: auto
+  - stig_id: V-242653
+    sv_id: SV-242653r961050_rule
+    status: auto
+  - stig_id: V-242654
+    sv_id: SV-242654r961554_rule
+    status: auto
+  - stig_id: V-242655
+    sv_id: SV-242655r961554_rule
+    status: auto
+  - stig_id: V-242656
+    sv_id: SV-242656r961557_rule
+    status: auto
+  - stig_id: V-242657
+    sv_id: SV-242657r1167994_rule
+    status: auto
+  - stig_id: V-242658
+    sv_id: SV-242658r1043181_rule
+    status: auto
+  - stig_id: V-242659
+    sv_id: SV-242659r961128_rule
+    status: auto
+  - stig_id: V-242660
+    sv_id: SV-242660r1026050_rule
+    status: auto
+  - stig_id: V-242661
+    sv_id: SV-242661r1137890_rule
+    status: auto
+  - stig_id: V-242662
+    sv_id: SV-242662r960888_rule
+    status: auto
+  - stig_id: V-242663
+    sv_id: SV-242663r960909_rule
+    status: auto

@@ -1,0 +1,70 @@
+schema_version: 1
+benchmark_id: Cisco_IOS_Switch_L2S_STIG
+benchmark_sha256: 6ea04e54af46122495d50fe5810cf2021e5eec12b22c3b4bcad667d91dfc54c9
+rules:
+  - stig_id: V-220623
+    sv_id: SV-220623r863275_rule
+    status: auto
+  - stig_id: V-220624
+    sv_id: SV-220624r1188386_rule
+    status: auto
+  - stig_id: V-220625
+    sv_id: SV-220625r991847_rule
+    status: auto
+  - stig_id: V-220629
+    sv_id: SV-220629r856223_rule
+    status: auto
+  - stig_id: V-220630
+    sv_id: SV-220630r856224_rule
+    status: auto
+  - stig_id: V-220631
+    sv_id: SV-220631r856225_rule
+    status: auto
+  - stig_id: V-220632
+    sv_id: SV-220632r856226_rule
+    status: auto
+  - stig_id: V-220633
+    sv_id: SV-220633r929007_rule
+    status: auto
+  - stig_id: V-220634
+    sv_id: SV-220634r929009_rule
+    status: auto
+  - stig_id: V-220635
+    sv_id: SV-220635r929011_rule
+    status: auto
+  - stig_id: V-220636
+    sv_id: SV-220636r1205856_rule
+    status: auto
+  - stig_id: V-220637
+    sv_id: SV-220637r539671_rule
+    status: auto
+  - stig_id: V-220638
+    sv_id: SV-220638r539671_rule
+    status: auto
+  - stig_id: V-220639
+    sv_id: SV-220639r1188389_rule
+    status: auto
+  - stig_id: V-220640
+    sv_id: SV-220640r1188390_rule
+    status: auto
+  - stig_id: V-220641
+    sv_id: SV-220641r991848_rule
+    status: auto
+  - stig_id: V-220642
+    sv_id: SV-220642r991849_rule
+    status: auto
+  - stig_id: V-220643
+    sv_id: SV-220643r991850_rule
+    status: auto
+  - stig_id: V-220644
+    sv_id: SV-220644r991852_rule
+    status: auto
+  - stig_id: V-220645
+    sv_id: SV-220645r991853_rule
+    status: auto
+  - stig_id: V-220646
+    sv_id: SV-220646r991854_rule
+    status: auto
+  - stig_id: V-220647
+    sv_id: SV-220647r991855_rule
+    status: auto

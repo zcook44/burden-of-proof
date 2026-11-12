@@ -1,0 +1,94 @@
+schema_version: 1
+benchmark_id: Cisco_ISE_NAC_STIG
+benchmark_sha256: 92c4761b2a46c5da2fef63cf6e1121cef3df49e3d7f137b0b0ec9aeac9bf400f
+rules:
+  - stig_id: V-242575
+    sv_id: SV-242575r812732_rule
+    status: auto
+  - stig_id: V-242576
+    sv_id: SV-242576r1146387_rule
+    status: auto
+  - stig_id: V-242577
+    sv_id: SV-242577r1146387_rule
+    status: auto
+  - stig_id: V-242578
+    sv_id: SV-242578r1146387_rule
+    status: auto
+  - stig_id: V-242579
+    sv_id: SV-242579r1168085_rule
+    status: auto
+  - stig_id: V-242580
+    sv_id: SV-242580r1146387_rule
+    status: auto
+  - stig_id: V-242581
+    sv_id: SV-242581r1146389_rule
+    status: auto
+  - stig_id: V-242582
+    sv_id: SV-242582r1146391_rule
+    status: auto
+  - stig_id: V-242583
+    sv_id: SV-242583r1146392_rule
+    status: auto
+  - stig_id: V-242584
+    sv_id: SV-242584r1146394_rule
+    status: auto
+  - stig_id: V-242585
+    sv_id: SV-242585r1146395_rule
+    status: auto
+  - stig_id: V-242586
+    sv_id: SV-242586r1146396_rule
+    status: auto
+  - stig_id: V-242587
+    sv_id: SV-242587r1146397_rule
+    status: auto
+  - stig_id: V-242588
+    sv_id: SV-242588r1001248_rule
+    status: auto
+  - stig_id: V-242589
+    sv_id: SV-242589r812760_rule
+    status: auto
+  - stig_id: V-242590
+    sv_id: SV-242590r812762_rule
+    status: auto
+  - stig_id: V-242591
+    sv_id: SV-242591r812764_rule
+    status: auto
+  - stig_id: V-242594
+    sv_id: SV-242594r855855_rule
+    status: auto
+  - stig_id: V-242595
+    sv_id: SV-242595r855856_rule
+    status: auto
+  - stig_id: V-242596
+    sv_id: SV-242596r1001250_rule
+    status: auto
+  - stig_id: V-242597
+    sv_id: SV-242597r812776_rule
+    status: auto
+  - stig_id: V-242598
+    sv_id: SV-242598r1038960_rule
+    status: auto
+  - stig_id: V-242599
+    sv_id: SV-242599r1212025_rule
+    status: auto
+  - stig_id: V-242600
+    sv_id: SV-242600r812782_rule
+    status: auto
+  - stig_id: V-242601
+    sv_id: SV-242601r855858_rule
+    status: auto
+  - stig_id: V-242602
+    sv_id: SV-242602r855859_rule
+    status: auto
+  - stig_id: V-242603
+    sv_id: SV-242603r878130_rule
+    status: auto
+  - stig_id: V-242604
+    sv_id: SV-242604r971529_rule
+    status: auto
+  - stig_id: V-242605
+    sv_id: SV-242605r944370_rule
+    status: auto
+  - stig_id: V-242606
+    sv_id: SV-242606r944368_rule
+    status: auto

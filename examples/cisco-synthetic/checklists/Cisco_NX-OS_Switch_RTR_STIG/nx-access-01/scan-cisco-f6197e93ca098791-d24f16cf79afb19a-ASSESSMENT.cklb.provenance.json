@@ -1,0 +1,15 @@
+{
+  "benchmark": {
+    "path": "/home/zrc/.hermes/cache/scratch/cisco-fixtures.pEIDsbsO/library/U_Cisco_NX-OS_Switch_RTR_STIG_V3R4_Manual-xccdf.xml",
+    "sha256": "f6197e93ca098791202702bc104d88200c882e7d1c95e1a61e883c8ef042d3e3"
+  },
+  "benchmark_id": "Cisco_NX-OS_Switch_RTR_STIG",
+  "checklist_sha256": "8faf81df25e111f9d8a35d9c18e9494a44914eb563b49b6ac7e87aa34cbeadd8",
+  "config": {
+    "path": "/home/zrc/git/burden-of-proof/examples/cisco-synthetic/targets/nx-access-01/scan.running-config",
+    "sha256": "14e32fd444871f594a733bad16f6c9998b6eeb7de6fa2a9254faaedefde040c5"
+  },
+  "mapping_method": "config-only; no automated STIG assessment; all controls require human review",
+  "schema_version": 1,
+  "target": "nx-access-01"
+}

@@ -1,0 +1,127 @@
+schema_version: 1
+benchmark_id: Cisco_ASA_VPN_STIG
+benchmark_sha256: dee009540dc98a91f54ba312432d80528d157a343db249815d7f1f2dc9ccd097
+rules:
+  - stig_id: V-239945
+    sv_id: SV-239945r666241_rule
+    status: auto
+  - stig_id: V-239946
+    sv_id: SV-239946r666244_rule
+    status: auto
+  - stig_id: V-239947
+    sv_id: SV-239947r1001254_rule
+    status: auto
+  - stig_id: V-239948
+    sv_id: SV-239948r878129_rule
+    status: auto
+  - stig_id: V-239949
+    sv_id: SV-239949r666253_rule
+    status: auto
+  - stig_id: V-239951
+    sv_id: SV-239951r666259_rule
+    status: auto
+  - stig_id: V-239952
+    sv_id: SV-239952r666262_rule
+    status: auto
+  - stig_id: V-239953
+    sv_id: SV-239953r916122_rule
+    status: auto
+  - stig_id: V-239954
+    sv_id: SV-239954r916233_rule
+    status: auto
+  - stig_id: V-239955
+    sv_id: SV-239955r916125_rule
+    status: auto
+  - stig_id: V-239956
+    sv_id: SV-239956r916128_rule
+    status: auto
+  - stig_id: V-239957
+    sv_id: SV-239957r916149_rule
+    status: auto
+  - stig_id: V-239958
+    sv_id: SV-239958r916134_rule
+    status: auto
+  - stig_id: V-239959
+    sv_id: SV-239959r1005430_rule
+    status: auto
+  - stig_id: V-239960
+    sv_id: SV-239960r666286_rule
+    status: auto
+  - stig_id: V-239961
+    sv_id: SV-239961r666289_rule
+    status: auto
+  - stig_id: V-239962
+    sv_id: SV-239962r878134_rule
+    status: auto
+  - stig_id: V-239963
+    sv_id: SV-239963r1015263_rule
+    status: auto
+  - stig_id: V-239964
+    sv_id: SV-239964r1015264_rule
+    status: auto
+  - stig_id: V-239965
+    sv_id: SV-239965r666301_rule
+    status: auto
+  - stig_id: V-239966
+    sv_id: SV-239966r1001252_rule
+    status: auto
+  - stig_id: V-239967
+    sv_id: SV-239967r666307_rule
+    status: auto
+  - stig_id: V-239968
+    sv_id: SV-239968r954210_rule
+    status: auto
+  - stig_id: V-239969
+    sv_id: SV-239969r929014_rule
+    status: auto
+  - stig_id: V-239970
+    sv_id: SV-239970r666316_rule
+    status: auto
+  - stig_id: V-239971
+    sv_id: SV-239971r666319_rule
+    status: auto
+  - stig_id: V-239972
+    sv_id: SV-239972r666322_rule
+    status: auto
+  - stig_id: V-239973
+    sv_id: SV-239973r666325_rule
+    status: auto
+  - stig_id: V-239974
+    sv_id: SV-239974r666328_rule
+    status: auto
+  - stig_id: V-239975
+    sv_id: SV-239975r666331_rule
+    status: auto
+  - stig_id: V-239976
+    sv_id: SV-239976r769253_rule
+    status: auto
+  - stig_id: V-239977
+    sv_id: SV-239977r666337_rule
+    status: auto
+  - stig_id: V-239978
+    sv_id: SV-239978r916146_rule
+    status: auto
+  - stig_id: V-239979
+    sv_id: SV-239979r987747_rule
+    status: auto
+  - stig_id: V-239980
+    sv_id: SV-239980r916158_rule
+    status: auto
+  - stig_id: V-239981
+    sv_id: SV-239981r856175_rule
+    status: auto
+  - stig_id: V-239982
+    sv_id: SV-239982r1005432_rule
+    status: auto
+  - stig_id: V-239983
+    sv_id: SV-239983r666355_rule
+    status: auto
+  - stig_id: V-239984
+    sv_id: SV-239984r666358_rule
+    status: auto
+  - stig_id: V-239985
+    sv_id: SV-239985r878134_rule
+    status: auto
+  - stig_id: V-268314
+    sv_id: SV-268314r1015320_rule
+    status: auto

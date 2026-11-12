@@ -1,0 +1,97 @@
+schema_version: 1
+benchmark_id: Cisco_SNA_STIG
+benchmark_sha256: f725330374ee8cdbcd90ea62d54982312083a273ef9a7a0b2c4d39d2e5afb9f4
+rules:
+  - stig_id: V-284853
+    sv_id: SV-284853r1212030_rule
+    status: auto
+  - stig_id: V-284862
+    sv_id: SV-284862r1227142_rule
+    status: auto
+  - stig_id: V-284863
+    sv_id: SV-284863r1212037_rule
+    status: auto
+  - stig_id: V-284864
+    sv_id: SV-284864r1205360_rule
+    status: auto
+  - stig_id: V-284865
+    sv_id: SV-284865r1227148_rule
+    status: auto
+  - stig_id: V-284884
+    sv_id: SV-284884r1212060_rule
+    status: auto
+  - stig_id: V-284885
+    sv_id: SV-284885r1212063_rule
+    status: auto
+  - stig_id: V-284886
+    sv_id: SV-284886r1227140_rule
+    status: auto
+  - stig_id: V-284887
+    sv_id: SV-284887r1212067_rule
+    status: auto
+  - stig_id: V-284888
+    sv_id: SV-284888r1212069_rule
+    status: auto
+  - stig_id: V-284889
+    sv_id: SV-284889r1212071_rule
+    status: auto
+  - stig_id: V-284890
+    sv_id: SV-284890r1212073_rule
+    status: auto
+  - stig_id: V-284891
+    sv_id: SV-284891r1212075_rule
+    status: auto
+  - stig_id: V-284892
+    sv_id: SV-284892r1212078_rule
+    status: auto
+  - stig_id: V-284896
+    sv_id: SV-284896r1227141_rule
+    status: auto
+  - stig_id: V-284897
+    sv_id: SV-284897r1212085_rule
+    status: auto
+  - stig_id: V-284901
+    sv_id: SV-284901r1227145_rule
+    status: auto
+  - stig_id: V-284910
+    sv_id: SV-284910r1212103_rule
+    status: auto
+  - stig_id: V-284916
+    sv_id: SV-284916r1212111_rule
+    status: auto
+  - stig_id: V-284917
+    sv_id: SV-284917r1212114_rule
+    status: auto
+  - stig_id: V-284919
+    sv_id: SV-284919r1212118_rule
+    status: auto
+  - stig_id: V-284924
+    sv_id: SV-284924r1212125_rule
+    status: auto
+  - stig_id: V-284928
+    sv_id: SV-284928r1212129_rule
+    status: auto
+  - stig_id: V-284931
+    sv_id: SV-284931r1212136_rule
+    status: auto
+  - stig_id: V-284934
+    sv_id: SV-284934r1227151_rule
+    status: auto
+  - stig_id: V-284935
+    sv_id: SV-284935r1212214_rule
+    status: auto
+  - stig_id: V-284936
+    sv_id: SV-284936r1212147_rule
+    status: auto
+  - stig_id: V-284937
+    sv_id: SV-284937r1212207_rule
+    status: auto
+  - stig_id: V-284939
+    sv_id: SV-284939r1212154_rule
+    status: auto
+  - stig_id: V-284940
+    sv_id: SV-284940r1212209_rule
+    status: auto
+  - stig_id: V-284942
+    sv_id: SV-284942r1212160_rule
+    status: auto

@@ -1,0 +1,95 @@
+! SYNTHETIC TEST FIXTURE — not captured from a device; secrets are nonworking placeholders.
+! Cisco ASA routed firewall, NDM and FW illustration; NOT a STIG assessment.
+ASA Version 9.16(4)
+hostname asa-perimeter-01
+no names
+quota management-session 2
+password-policy minimum-length 15
+password-policy minimum-uppercase 1
+password-policy minimum-lowercase 1
+password-policy minimum-numeric 1
+password-policy minimum-special 1
+password-policy minimum-changes 8
+banner login Authorized test-lab access only. Activity may be monitored.
+username breakglass password NOT_A_REAL_PASSWORD_CHANGE_BEFORE_USE privilege 15
+!
+interface GigabitEthernet0/0
+ description Documentation-only external segment
+ nameif outside
+ security-level 0
+ ip address 198.51.100.2 255.255.255.0
+ no shutdown
+!
+interface GigabitEthernet0/1
+ description Documentation-only internal segment
+ nameif inside
+ security-level 100
+ ip address 192.0.2.1 255.255.255.0
+ no shutdown
+!
+interface GigabitEthernet0/2
+ description Documentation-only DMZ segment
+ nameif dmz
+ security-level 50
+ ip address 203.0.113.1 255.255.255.0
+ no shutdown
+!
+interface GigabitEthernet0/3
+ description Unused
+ shutdown
+!
+route outside 0.0.0.0 0.0.0.0 198.51.100.1 1
+!
+aaa-server RADIUS_GROUP protocol radius
+aaa-server RADIUS_GROUP (inside) host 192.0.2.20
+ key NOT_A_REAL_RADIUS_KEY
+aaa-server RADIUS_GROUP (inside) host 192.0.2.21
+ key NOT_A_REAL_RADIUS_KEY
+aaa authentication ssh console RADIUS_GROUP LOCAL
+aaa authentication serial console RADIUS_GROUP LOCAL
+ssh version 2
+ssh cipher encryption fips
+ssh key-exchange group dh-group14-sha256
+ssh 192.0.2.0 255.255.255.0 inside
+ssh timeout 5
+console timeout 5
+no telnet 0.0.0.0 0.0.0.0 outside
+!
+logging enable
+logging timestamp
+logging buffered informational
+logging queue 8192
+logging trap informational
+logging host inside 192.0.2.30 6/1514
+logging host inside 192.0.2.31 6/1514
+logging permit-hostdown
+!
+ntp authenticate
+ntp trusted-key 1
+ntp authentication-key 1 sha256 NOT_A_REAL_NTP_KEY
+ntp server 192.0.2.40 key 1 prefer
+ntp server 192.0.2.41 key 1
+!
+object network DMZ_WEB
+ host 203.0.113.10
+object network INSIDE_NET
+ subnet 192.0.2.0 255.255.255.0
+ nat (inside,outside) dynamic interface
+!
+access-list OUTSIDE_IN extended permit tcp any host 203.0.113.10 eq 443 log
+access-list OUTSIDE_IN extended deny ip any any log
+access-group OUTSIDE_IN in interface outside
+access-list INSIDE_IN extended deny tcp 192.0.2.0 255.255.255.0 any eq 22 log
+access-list INSIDE_IN extended deny udp 192.0.2.0 255.255.255.0 any eq 161 log
+access-list INSIDE_IN extended permit tcp 192.0.2.0 255.255.255.0 any eq 443 log
+access-list INSIDE_IN extended permit udp 192.0.2.0 255.255.255.0 any eq 53 log
+access-list INSIDE_IN extended deny ip any any log
+access-group INSIDE_IN in interface inside
+access-list DMZ_IN extended permit tcp host 203.0.113.10 host 192.0.2.53 eq 53 log
+access-list DMZ_IN extended deny ip any any log
+access-group DMZ_IN in interface dmz
+!
+ip verify reverse-path interface inside
+threat-detection basic-threat
+threat-detection scanning-threat
+!
