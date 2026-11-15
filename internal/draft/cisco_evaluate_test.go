@@ -16,7 +16,7 @@ func TestCiscoConfigEvaluatesDecidableSTPButNotOperationalTrunk(t *testing.T) {
 		t.Fatal(err)
 	}
 	rows := ciscoRules(t, doc)
-	for i, status := range []string{"not_a_finding", "not_a_finding", "not_reviewed"} {
+	for i, status := range []string{"not_a_finding", "not_reviewed", "not_reviewed"} {
 		row := rows[i].(map[string]any)
 		if row["status"] != status {
 			t.Fatalf("rule %v: got %v, want %s", row["group_id"], row["status"], status)
@@ -26,13 +26,13 @@ func TestCiscoConfigEvaluatesDecidableSTPButNotOperationalTrunk(t *testing.T) {
 			if text == "" || strings.Contains(text, "SENSITIVE_TEST_MARKER") {
 				t.Errorf("rule %v unsafe %s: %q", row["group_id"], field, text)
 			}
-			if i < 2 && !strings.Contains(strings.ToLower(text), "automated") {
+			if status == "not_a_finding" && field == "finding_details" && !strings.Contains(strings.ToLower(text), "automated") {
 				t.Errorf("rule %v lacks method in %s: %q", row["group_id"], field, text)
 			}
 		}
 	}
-	if !strings.Contains(doc["title"].(string), "AUTO") {
-		t.Fatal("auto-evaluated checklist still claims all rules are unreviewed")
+	if !strings.Contains(doc["title"].(string), "REVIEW CANDIDATE") {
+		t.Fatal("checklist title does not identify a review candidate")
 	}
 }
 
@@ -67,7 +67,29 @@ func TestCiscoConfigExplicitlyDisabledLoopGuardIsOpen(t *testing.T) {
 		t.Fatal(err)
 	}
 	row := ciscoRules(t, doc)[0].(map[string]any)
-	if row["status"] != "open" || !strings.Contains(row["finding_details"].(string), "explicitly disabled") || !strings.Contains(row["comments"].(string), "Finding") {
+	if row["status"] != "open" || !strings.Contains(row["finding_details"].(string), "explicitly disabled") || !strings.Contains(row["comments"].(string), "Open") {
 		t.Fatalf("explicitly disabled guard not identified: %+v", row)
+	}
+}
+
+func TestCiscoConfigIgnoresBannerDelimiterThatAppearsInMotd(t *testing.T) {
+	config := []byte("hostname switch1\nbanner motd d\nspanning-tree loopguard default\nd\nend\nversion 17.9\n")
+	doc, err := BuildCiscoConfig(config, "switch1", []byte(iosXEL2SFixture))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := ciscoRules(t, doc)[0].(map[string]any)["status"]; got != "open" {
+		t.Fatalf("banner motd d body was accepted as Loop Guard configuration: %v", got)
+	}
+}
+
+func TestCiscoConfigDoesNotPassLoopGuardWhenInterfaceDisablesIt(t *testing.T) {
+	config := []byte("version 17.9\nhostname switch1\nspanning-tree loopguard default\ninterface GigabitEthernet1/0/1\n spanning-tree guard none\nend\n")
+	doc, err := BuildCiscoConfig(config, "switch1", []byte(iosXEL2SFixture))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := ciscoRules(t, doc)[0].(map[string]any)["status"]; got != "not_reviewed" {
+		t.Fatalf("interface guard none still passed Loop Guard: %v", got)
 	}
 }

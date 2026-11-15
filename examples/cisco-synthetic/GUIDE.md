@@ -2,7 +2,7 @@
 
 These are **invented test inputs**, not exports from Cisco devices and **not compliance evidence**. They exercise IOS and IOS-XE routers/switches, an IOS-XR router, a NX-OS switch and an ASA firewall. Addresses use documentation-only ranges; any authentication strings are deliberately nonfunctional placeholders. The examples are intended to exercise benchmark pairing and STIG Viewer review, **not deployment on a device**. Platform-specific syntax is illustrative and has not been parser-validated on hardware.
 
-**No example is asserted to be 95% compliant.** The checked-in CKLBs here are historical **unscored converter fixtures** generated before the bounded native L2S evaluator; their provenance records that earlier converter version. Current `stig-evidence cisco-cklb` evaluates only the explicitly implemented IOS-XE Switch L2S V3R2 global STP checks (`V-220657`, `V-220664`) and leaves every unsupported or ambiguous control `not_reviewed`. Rerunning the current converter creates a separate versioned output; it does not overwrite these older examples. Official Cisco checks also include operational state, external services, topology and applicability a saved running configuration cannot prove. Review each official check and collect independent show-command/state evidence for remaining controls. Do not copy placeholder credentials into a real configuration.
+**No example is asserted to be compliant.** The checked-in CKLBs under `checklists/` are historical unscored fixtures. Current `stig-evidence cisco-batch` builds a separate review package from `review-manifest.json`, each `scan.running-config`, and the switch `port-roles.csv` files. Pinned checks can mark Open, Not a Finding, or Not Applicable. Every control without a matching pin stays Not Reviewed. Rerunning does not overwrite the historical fixtures. Do not copy placeholder credentials into a real configuration.
 
 ## Layout
 
@@ -33,3 +33,5 @@ python3 tests/test-cisco-examples.py
 ```
 
 The generator refuses unmarked configs, validates converter output hashes and exact benchmark IDs, stages each benchmark in a separate private directory, and never overwrites a different checklist. Keep operational benchmark copies, private scans and generated evidence out of Git; the tracked Cisco reference XML/policies are the stated exception. For Checkmate inventory, run its executable with `--root /path/to/checkmate/examples/cisco-synthetic/checklists --list`; opt-in `--validate --schema /path/to/checkmate/schemas/SV3_CKLB_1_0_JSON_SCHEMA.json` checks the JSON schema. **Schema validity is not a successful STIG Viewer GUI import or a compliance score.**
+
+`cisco-xccdf` can score these switch fixtures when the directory name matches the `hostname` command. The demo identity for FQDN, management IP, and a locally administered MAC is documented in [the admin walkthrough](../../docs/NETWORK-ADMIN-WALKTHROUGH.md).

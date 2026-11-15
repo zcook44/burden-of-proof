@@ -1,6 +1,6 @@
 # Burden of Proof
 
-An offline Go toolkit for turning saved OpenSCAP SSG results **or explicitly selected Cisco running configurations** into **private CKLB review candidates** and byte-bound provenance. This repository owns the review-conversion policy, reconciliation, CKLB generation, and evidence-side checks. It does **not** provision the lab, collect device configurations, or run a scan. The lab lives in a separate repository and supplies a versioned, non-secret [asset record](contracts/asset-record-v1.md) for the RHEL `asset-check` handoff. A checksum proves byte identity, not guest or device state.
+An offline Go toolkit for turning saved OpenSCAP SSG results, an explicitly selected Cisco running configuration, or a device-named network XCCDF result into **private CKLB review candidates** and byte-bound provenance. This repository owns the review-conversion policy, reconciliation, CKLB generation, and evidence-side checks. The Go CLI evaluates files it is given. `cisco-xccdf` scores a saved running configuration only when its `hostname` command matches the device name, writes an XCCDF result named for that device, and applies a tailoring file saved beside that configuration. `xccdf-cklb` copies the result into a checklist, fills the target page with the supplied hostname, FQDN, management IP, and management MAC, and writes a provenance sidecar. A collector outside this archive supplies the configuration. The RHEL lab lives in a separate repository and supplies a versioned, non-secret [asset record](contracts/asset-record-v1.md) for the RHEL `asset-check` handoff. A checksum proves byte identity, not guest or device state.
 
 ## Start here
 
@@ -8,7 +8,10 @@ An offline Go toolkit for turning saved OpenSCAP SSG results **or explicitly sel
 | --- | --- |
 | Build, convert, and understand the verification boundary | [Quick start](docs/README.md) |
 | Recursive RHEL scan pairing, benchmark selection, output and provenance rules | [Batch CKLB converter](docs/BATCH-CKLB.md) |
+| Illustrated RHEL path from the lab scan to the reviewer | [RHEL workflow](docs/RHEL-OSCAP-WORKFLOW.md) |
 | Cisco config evaluation, full auto-default tailoring inventory and review limits | [Cisco config candidates](docs/CISCO-CONFIG.md) |
+| Illustrated Cisco path from a saved configuration to a device-named checklist | [Cisco scan process](docs/CISCO-SCAN-PROCESS.md) |
+| Network scan: device-named XCCDF results and checklist identity | [Network scan](docs/NETWORK-SCAN.md) · [Admin walkthrough](docs/NETWORK-ADMIN-WALKTHROUGH.md) |
 | CLI commands and retired implementation scope | [Go-only converter](docs/GO-MIGRATION.md) |
 | Operational review and external verification | [Workflow](docs/WORKFLOW.md) |
 | Exact Ansible/OpenSCAP scan command, captured playbook and fetched artifacts | [Lab scan source](docs/OSCAP-SOURCE.md) |
@@ -23,21 +26,26 @@ Run `./scripts/package-disconnected.sh VERSION ./dist/releases` to test and buil
 
 ```mermaid
 flowchart LR
-    subgraph SOURCES["Collection outside this converter"]
+    subgraph SOURCES["Collection"]
         lab["Ansible lab: one OpenSCAP scan; fetch XCCDF and optional HTML/ARF"]
         config["Cisco running-config snapshot: collected separately"]
+        netscan["Saved running-config: hostname matches the device; cisco-xccdf writes the named result"]
     end
     subgraph CONVERSION["Burden of Proof: offline candidates"]
         rhel["Bash preflight, then batch-cklb: SSG references to official RHEL controls"]
         cisco["cisco-cklb: explicit benchmark; pinned config checks; others Not Reviewed"]
+        xccdf["xccdf-cklb: copy the device scan onto the checklist"]
         candidate["Private CKLB plus byte-bound provenance"]
         rhel --> candidate
         cisco --> candidate
+        xccdf --> candidate
     end
     lab --> rhel
     config --> cisco
+    netscan --> xccdf
     benchmark["Selected official manual XCCDF"] --> rhel
     benchmark --> cisco
+    benchmark --> xccdf
     osPolicy["Optional reviewed RHEL policy: auto or admin decision"] --> rhel
     ciscoPolicy["Complete Cisco policy: auto by default; admin change is explicit"] --> cisco
     candidate --> schema["Optional external CKLB schema validation"]

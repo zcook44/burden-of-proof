@@ -1,0 +1,26 @@
+---
+- name: Scan network devices to XCCDF results and review checklists
+  hosts: network_devices
+  gather_facts: false
+  roles:
+    - role: network_stig_scan
+
+- name: Write the review index
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    network_stig_work: "{{ playbook_dir | dirname | dirname }}/dist/network-stig-scan"
+  tasks:
+    - name: Find converted review pages
+      ansible.builtin.find:
+        paths: "{{ network_stig_work }}/checklists"
+        patterns: "*.review.html"
+        recurse: true
+      register: network_stig_pages
+
+    - name: Publish the review index
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../roles/network_stig_scan/templates/index.html.j2"
+        dest: "{{ network_stig_work }}/checklists/index.html"
+        mode: "0600"

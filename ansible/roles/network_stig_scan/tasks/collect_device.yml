@@ -1,0 +1,43 @@
+---
+- name: Read the live IOS or IOS-XE configuration
+  cisco.ios.ios_command:
+    commands:
+      - show running-config
+  register: network_stig_show
+  when: network_platform in ["ios", "ios-xe"]
+
+- name: Read the live NX-OS configuration
+  cisco.nxos.nxos_command:
+    commands:
+      - show running-config
+  register: network_stig_show_nx
+  when: network_platform == "nxos"
+
+- name: Store the collected running configuration
+  ansible.builtin.copy:
+    content: "{{ (network_stig_show.stdout[0] if network_platform != 'nxos' else network_stig_show_nx.stdout[0]) ~ '\n' }}"
+    dest: "{{ network_stig_work }}/evidence/{{ inventory_hostname }}/scan.running-config"
+    mode: "0600"
+
+- name: Read the management interface on IOS or IOS-XE
+  cisco.ios.ios_command:
+    commands:
+      - "show interfaces {{ network_mgmt_interface }}"
+  register: network_stig_iface
+  when:
+    - network_mgmt_interface | length > 0
+    - network_platform in ["ios", "ios-xe"]
+
+- name: Read the management interface on NX-OS
+  cisco.nxos.nxos_command:
+    commands:
+      - "show interface {{ network_mgmt_interface }}"
+  register: network_stig_iface_nx
+  when:
+    - network_mgmt_interface | length > 0
+    - network_platform == "nxos"
+
+- name: Keep the management MAC reported by the device
+  ansible.builtin.set_fact:
+    network_mac: "{{ ((network_stig_iface_nx if network_platform == 'nxos' else network_stig_iface).stdout[0] | regex_search('([0-9A-Fa-f]{4}\\.[0-9A-Fa-f]{4}\\.[0-9A-Fa-f]{4})')) | default('', true) }}"
+  when: network_mgmt_interface | length > 0

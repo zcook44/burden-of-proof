@@ -1,0 +1,47 @@
+---
+all:
+  vars:
+    ansible_connection: local
+    network_stig_transport: fixture
+    network_stig_repo: "{{ playbook_dir | dirname | dirname }}"
+    network_stig_work: "{{ network_stig_repo }}/dist/network-stig-scan"
+    network_stig_converter: "{{ network_stig_repo }}/dist/stig-evidence"
+  children:
+    network_devices:
+      hosts:
+        ios-xe-switch-01:
+          network_platform: ios-xe
+          network_fqdn: ios-xe-switch-01.example.test
+          network_ip: 192.0.2.4
+          network_mac: "02:00:00:00:00:04"
+          network_role: Access switch
+          network_target_type: Cisco IOS-XE switch
+          network_config_src: "{{ network_stig_repo }}/examples/cisco-synthetic/targets/ios-xe-switch-01/scan.running-config"
+          network_port_roles_src: "{{ network_stig_repo }}/examples/cisco-synthetic/targets/ios-xe-switch-01/port-roles.csv"
+          network_benchmarks:
+            - Cisco_IOS_XE_Switch_L2S_STIG
+            - Cisco_IOS_XE_Switch_NDM_STIG
+        nx-access-01:
+          network_platform: nxos
+          network_fqdn: nx-access-01.example.test
+          network_ip: 192.0.2.12
+          network_mac: "02:00:00:00:00:0c"
+          network_role: Access switch
+          network_target_type: Cisco NX-OS switch
+          network_config_src: "{{ network_stig_repo }}/examples/cisco-synthetic/targets/nx-access-01/scan.running-config"
+          network_port_roles_src: "{{ network_stig_repo }}/examples/cisco-synthetic/targets/nx-access-01/port-roles.csv"
+          network_benchmarks:
+            - Cisco_NX-OS_Switch_L2S_STIG
+            - Cisco_NX-OS_Switch_NDM_STIG
+        ios-switch-01:
+          network_platform: ios
+          network_fqdn: ios-switch-01.example.test
+          network_ip: 192.0.2.3
+          network_mac: "02:00:00:00:00:03"
+          network_role: Access switch
+          network_target_type: Cisco IOS switch
+          network_config_src: "{{ network_stig_repo }}/examples/cisco-synthetic/targets/ios-switch-01/scan.running-config"
+          network_port_roles_src: "{{ network_stig_repo }}/examples/cisco-synthetic/targets/ios-switch-01/port-roles.csv"
+          network_benchmarks:
+            - Cisco_IOS_Switch_L2S_STIG
+            - Cisco_IOS_Switch_NDM_STIG

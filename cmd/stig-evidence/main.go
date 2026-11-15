@@ -36,6 +36,15 @@ func run(args []string, out, stderr io.Writer) int {
 	if len(args) > 0 && args[0] == "cisco-cklb" {
 		return runCisco(args[1:], out, stderr)
 	}
+	if len(args) > 0 && args[0] == "cisco-batch" {
+		return runCiscoBatch(args[1:], out, stderr)
+	}
+	if len(args) > 0 && args[0] == "cisco-xccdf" {
+		return runCiscoXCCDF(args[1:], out, stderr)
+	}
+	if len(args) > 0 && args[0] == "xccdf-cklb" {
+		return runXCCDFCKLB(args[1:], out, stderr)
+	}
 	if len(args) > 0 && args[0] == "batch-cklb" {
 		return runBatch(args[1:], out, stderr)
 	}
@@ -46,7 +55,7 @@ func run(args []string, out, stderr io.Writer) int {
 		return runMapped(args[1:], true, out, stderr)
 	}
 	if len(args) == 0 || args[0] != "asset-check" {
-		fmt.Fprintln(stderr, "usage: stig-evidence {asset-check|reconcile|draft-cklb|batch-cklb|cisco-cklb} (read-only checks or private review candidates; not a CKLB release)")
+		fmt.Fprintln(stderr, "usage: stig-evidence {asset-check|reconcile|draft-cklb|batch-cklb|cisco-cklb|cisco-batch|cisco-xccdf|xccdf-cklb} (read-only checks or private review candidates; not a CKLB release)")
 		return 2
 	}
 	flags := flag.NewFlagSet("asset-check", flag.ContinueOnError)

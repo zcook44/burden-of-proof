@@ -132,6 +132,7 @@ func runCisco(args []string, out, stderr io.Writer) int {
 	libraryRoot := flags.String("library-root", "", "owner-private extracted benchmark library")
 	benchmarkID := flags.String("benchmark-id", "", "exact Cisco benchmark ID, required with --library-root")
 	target := flags.String("target", "", "device hostname matching config parent directory")
+	portRoles := flags.String("port-roles", "", "optional owner-private interface role CSV")
 	dryRun := flags.Bool("dry-run", false, "validate inputs and select benchmark without writing")
 	if err := flags.Parse(args); errors.Is(err, flag.ErrHelp) {
 		return 0
@@ -139,10 +140,10 @@ func runCisco(args []string, out, stderr io.Writer) int {
 		return 2
 	}
 	if flags.NArg() != 0 || *configPath == "" || *target == "" || !safeTarget.MatchString(*target) || strings.Contains(*target, "..") || (*benchmarkPath == "") == (*libraryRoot == "") || (*libraryRoot != "" && !ciscoID.MatchString(*benchmarkID)) || (*benchmarkPath != "" && *benchmarkID != "") {
-		fmt.Fprintln(stderr, "usage: stig-evidence cisco-cklb --config PATH --target HOST (--benchmark XCCDF | --library-root DIR --benchmark-id Cisco_*_STIG) [--dry-run]")
+		fmt.Fprintln(stderr, "usage: stig-evidence cisco-cklb --config PATH --target HOST (--benchmark XCCDF | --library-root DIR --benchmark-id Cisco_*_STIG) [--port-roles CSV] [--dry-run]")
 		return 2
 	}
-	for _, path := range []*string{configPath, benchmarkPath, libraryRoot} {
+	for _, path := range []*string{configPath, benchmarkPath, libraryRoot, portRoles} {
 		if *path != "" {
 			absolute, err := filepath.Abs(*path)
 			if err != nil {
@@ -202,12 +203,18 @@ func runCisco(args []string, out, stderr io.Writer) int {
 		return 2
 	}
 	fmt.Fprintf(out, "BENCHMARK %s: %s (sha256 %s)\n", *benchmarkID, *benchmarkPath, sha256Hex(benchmark))
-	doc, err := draft.BuildCiscoConfig(config, *target, benchmark)
+	roles, roleBytes, err := readPortRoles(*portRoles)
+	if err != nil {
+		fmt.Fprintf(stderr, "Cisco port roles: %v\n", err)
+		return 2
+	}
+	doc, err := draft.BuildCiscoReview(config, *target, benchmark, roles)
 	if err != nil {
 		fmt.Fprintf(stderr, "Cisco checklist: %v\n", err)
 		return 2
 	}
-	policyRules, policyPath, policyBytes, err := loadCiscoTailoring(filepath.Dir(*benchmarkPath), *benchmarkID, benchmark, doc)
+	policyDir := ciscoPolicyDirectory(filepath.Dir(*configPath), filepath.Dir(*benchmarkPath), *benchmarkID)
+	policyRules, policyPath, policyBytes, err := loadCiscoTailoring(policyDir, *benchmarkID, benchmark, doc)
 	if err != nil {
 		fmt.Fprintf(stderr, "Cisco tailoring: %v\n", err)
 		return 2
@@ -225,14 +232,14 @@ func runCisco(args []string, out, stderr io.Writer) int {
 		doc["id"] = draft.CiscoTailoredID(doc["id"].(string), sha256Hex(policyBytes))
 		adminOverrides = applyCiscoTailoring(doc, policyRules)
 	}
-	if *dryRun {
-		fmt.Fprintf(out, "CONFIG %s (sha256 %s); %d controls; no files written\n", *configPath, sha256Hex(config), len(doc["stigs"].([]any)[0].(map[string]any)["rules"].([]any)))
-		return 0
-	}
 	counts := map[string]int{}
 	for _, item := range doc["stigs"].([]any)[0].(map[string]any)["rules"].([]any) {
 		row := item.(map[string]any)
 		counts[row["status"].(string)]++
+	}
+	if *dryRun {
+		fmt.Fprintf(out, "CONFIG %s (sha256 %s); %d controls; open=%d not_a_finding=%d not_applicable=%d not_reviewed=%d; no files written\n", *configPath, sha256Hex(config), len(doc["stigs"].([]any)[0].(map[string]any)["rules"].([]any)), counts["open"], counts["not_a_finding"], counts["not_applicable"], counts["not_reviewed"])
+		return 0
 	}
 	body, err := json.MarshalIndent(doc, "", "  ")
 	if err != nil {
@@ -240,24 +247,31 @@ func runCisco(args []string, out, stderr io.Writer) int {
 		return 2
 	}
 	body = append(body, '\n')
-	digest := bundleDigest([]byte(draft.CiscoConfigEvaluatorVersion), config, benchmark, []byte(*target))
+	digestParts := [][]byte{[]byte(draft.CiscoConfigEvaluatorVersion), config, benchmark, []byte(*target)}
 	if policyPath != "" {
-		digest = bundleDigest([]byte(draft.CiscoConfigEvaluatorVersion+":tailoring-v1"), config, benchmark, []byte(*target), policyBytes)
+		digestParts = [][]byte{[]byte(draft.CiscoConfigEvaluatorVersion + ":tailoring-v1"), config, benchmark, []byte(*target), policyBytes}
 	}
+	if len(roleBytes) > 0 {
+		digestParts = append(digestParts, roleBytes)
+	}
+	digest := bundleDigest(digestParts...)
 	prefix := strings.TrimSuffix(filepath.Base(*configPath), ".running-config")
 	path := filepath.Join(filepath.Dir(*configPath), prefix+"-cisco-"+sha256Hex(benchmark)[:16]+"-"+digest[:16]+"-ASSESSMENT.cklb")
 	provenanceRecord := map[string]any{
 		"schema_version": 2, "checklist_sha256": sha256Hex(body),
-		"mapping_method":    "config-only pinned automatic rules; unsupported controls require human review",
+		"mapping_method":    "config-only pinned checks; port roles and show output required for topology controls; unsupported controls require human review",
 		"evaluator_version": draft.CiscoConfigEvaluatorVersion, "status_counts": counts,
 		"automated_controls": baselineAutomated,
 		"config":             evidenceInput{*configPath, sha256Hex(config)}, "benchmark": evidenceInput{*benchmarkPath, sha256Hex(benchmark)}, "target": *target, "benchmark_id": *benchmarkID,
 	}
 	if policyPath != "" {
 		provenanceRecord["schema_version"] = 3
-		provenanceRecord["mapping_method"] = "config-only pinned automatic rules; optional administrator tailoring"
+		provenanceRecord["mapping_method"] = "config-only pinned checks with optional administrator tailoring; unsupported controls require human review"
 		provenanceRecord["admin_overrides"] = adminOverrides
 		provenanceRecord["tailoring"] = evidenceInput{policyPath, sha256Hex(policyBytes)}
+	}
+	if len(roleBytes) > 0 {
+		provenanceRecord["port_roles"] = evidenceInput{*portRoles, sha256Hex(roleBytes)}
 	}
 	sidecar, err := json.MarshalIndent(provenanceRecord, "", "  ")
 	if err != nil {

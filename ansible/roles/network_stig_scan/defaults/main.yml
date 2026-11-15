@@ -1,0 +1,11 @@
+---
+network_stig_transport: fixture
+network_benchmarks: []
+network_port_roles_src: ""
+network_technology_area: Network
+network_fqdn: ""
+network_ip: ""
+network_mac: ""
+network_role: ""
+network_target_type: ""
+network_mgmt_interface: ""

@@ -43,6 +43,8 @@ for major in 7 8 9 10; do
 done
 env -u GOPATH -u GOROOT GOPROXY=off GOSUMDB=off "$tmp/extract/$name/bin/stig-evidence" batch-cklb --help >/dev/null
 env -u GOPATH -u GOROOT GOPROXY=off GOSUMDB=off "$tmp/extract/$name/bin/stig-evidence" cisco-cklb --help >/dev/null
+env -u GOPATH -u GOROOT GOPROXY=off GOSUMDB=off "$tmp/extract/$name/bin/stig-evidence" cisco-xccdf --help >/dev/null
+env -u GOPATH -u GOROOT GOPROXY=off GOSUMDB=off "$tmp/extract/$name/bin/stig-evidence" xccdf-cklb --help >/dev/null
 [[ $(file -b "$tmp/extract/$name/bin/stig-evidence") == *'statically linked'* ]]
 if "$repo/scripts/package-disconnected.sh" '../unsafe' "$tmp" >/dev/null 2>&1; then
   echo 'unsafe release name accepted' >&2

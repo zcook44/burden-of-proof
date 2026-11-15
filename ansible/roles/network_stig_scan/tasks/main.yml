@@ -1,0 +1,123 @@
+---
+- name: Require the evidence converter
+  ansible.builtin.stat:
+    path: "{{ network_stig_converter }}"
+  register: network_stig_converter_bin
+  delegate_to: localhost
+
+- name: Stop when the converter has not been built
+  ansible.builtin.assert:
+    that:
+      - network_stig_converter_bin.stat.exists
+      - network_stig_converter_bin.stat.executable
+    fail_msg: "Build dist/stig-evidence before running this playbook."
+
+- name: Prepare private scan directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0700"
+  loop:
+    - "{{ network_stig_work }}"
+    - "{{ network_stig_work }}/library"
+    - "{{ network_stig_work }}/evidence/{{ inventory_hostname }}"
+    - "{{ network_stig_work }}/scans/{{ inventory_hostname }}"
+    - "{{ network_stig_work }}/checklists"
+
+- name: Stage the official benchmark library once
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ network_stig_work }}/library/{{ item | basename }}"
+    mode: "0600"
+  loop: "{{ query('fileglob', network_stig_repo ~ '/stig-library-cisco/U_Cisco_*.xml') }}"
+  run_once: true
+  delegate_to: localhost
+
+- name: Collect a saved running configuration
+  ansible.builtin.copy:
+    src: "{{ network_config_src }}"
+    dest: "{{ network_stig_work }}/evidence/{{ inventory_hostname }}/scan.running-config"
+    mode: "0600"
+  when: network_stig_transport == "fixture"
+
+- name: Collect interface roles when the inventory supplies them
+  ansible.builtin.copy:
+    src: "{{ network_port_roles_src }}"
+    dest: "{{ network_stig_work }}/evidence/{{ inventory_hostname }}/port-roles.csv"
+    mode: "0600"
+  when:
+    - network_stig_transport == "fixture"
+    - network_port_roles_src | length > 0
+
+- name: Collect a live running configuration
+  ansible.builtin.include_tasks: collect_device.yml
+  when: network_stig_transport == "network"
+
+- name: Use the connection address as the management IP
+  ansible.builtin.set_fact:
+    network_ip: "{{ ansible_host }}"
+  when:
+    - network_stig_transport == "network"
+    - network_ip | length == 0
+    - ansible_host is defined
+    - ansible_host | length > 0
+
+- name: Require the device name, address, and role
+  ansible.builtin.assert:
+    that:
+      - network_fqdn is match('^' ~ inventory_hostname ~ '\\..+')
+      - network_ip | length > 0
+      - network_mac | length > 0
+      - network_role | length > 0
+      - network_target_type | length > 0
+    fail_msg: "Each device needs network_fqdn, network_ip, network_mac, network_role, and network_target_type. A live scan can fill network_mac from network_mgmt_interface."
+
+- name: List this device's previous results and checklists
+  ansible.builtin.set_fact:
+    network_stig_previous_outputs: "{{ network_stig_previous_outputs | default([]) + [network_stig_work ~ '/scans/' ~ inventory_hostname ~ '/' ~ item ~ '.results.xml', network_stig_work ~ '/scans/' ~ inventory_hostname ~ '/' ~ inventory_hostname ~ '.' ~ item ~ '.results.xml', network_stig_work ~ '/checklists/' ~ item ~ '/' ~ inventory_hostname ~ '/scan.cklb', network_stig_work ~ '/checklists/' ~ item ~ '/' ~ inventory_hostname ~ '/scan.review.html', network_stig_work ~ '/checklists/' ~ item ~ '/' ~ inventory_hostname ~ '/scan.tailoring.yaml', network_stig_work ~ '/checklists/' ~ item ~ '/' ~ inventory_hostname ~ '/' ~ inventory_hostname ~ '.cklb', network_stig_work ~ '/checklists/' ~ item ~ '/' ~ inventory_hostname ~ '/' ~ inventory_hostname ~ '.review.html', network_stig_work ~ '/checklists/' ~ item ~ '/' ~ inventory_hostname ~ '/' ~ inventory_hostname ~ '.tailoring.yaml'] }}"
+  loop: "{{ network_benchmarks }}"
+
+- name: Replace this device's previous results and checklists
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop: "{{ network_stig_previous_outputs }}"
+
+- name: Scan each selected benchmark to an XCCDF result
+  ansible.builtin.command:
+    argv: "{{ [network_stig_converter, 'cisco-xccdf', '--config', network_stig_work ~ '/evidence/' ~ inventory_hostname ~ '/scan.running-config', '--target', inventory_hostname, '--fqdn', network_fqdn, '--ip', network_ip, '--mac', network_mac, '--role', network_role, '--target-type', network_target_type, '--technology', network_technology_area, '--library-root', network_stig_work ~ '/library', '--benchmark-id', network_benchmark_id, '--port-roles', network_stig_work ~ '/evidence/' ~ inventory_hostname ~ '/port-roles.csv', '--out', network_stig_work ~ '/scans/' ~ inventory_hostname ~ '/' ~ inventory_hostname ~ '.' ~ network_benchmark_id ~ '.results.xml'] }}"
+  loop: "{{ network_benchmarks }}"
+  loop_control:
+    loop_var: network_benchmark_id
+  when: network_port_roles_src | length > 0
+  changed_when: true
+
+- name: Scan each selected benchmark to an XCCDF result without port roles
+  ansible.builtin.command:
+    argv: "{{ [network_stig_converter, 'cisco-xccdf', '--config', network_stig_work ~ '/evidence/' ~ inventory_hostname ~ '/scan.running-config', '--target', inventory_hostname, '--fqdn', network_fqdn, '--ip', network_ip, '--mac', network_mac, '--role', network_role, '--target-type', network_target_type, '--technology', network_technology_area, '--library-root', network_stig_work ~ '/library', '--benchmark-id', network_benchmark_id, '--out', network_stig_work ~ '/scans/' ~ inventory_hostname ~ '/' ~ inventory_hostname ~ '.' ~ network_benchmark_id ~ '.results.xml'] }}"
+  loop: "{{ network_benchmarks }}"
+  loop_control:
+    loop_var: network_benchmark_id
+  when: network_port_roles_src | length == 0
+  changed_when: true
+
+- name: Prepare one private checklist directory per benchmark
+  ansible.builtin.file:
+    path: "{{ network_stig_work }}/checklists/{{ item }}/{{ inventory_hostname }}"
+    state: directory
+    mode: "0700"
+  loop: "{{ network_benchmarks }}"
+
+- name: Convert each XCCDF result into a review checklist
+  ansible.builtin.command:
+    argv:
+      - "{{ network_stig_converter }}"
+      - xccdf-cklb
+      - --results
+      - "{{ network_stig_work }}/scans/{{ inventory_hostname }}/{{ inventory_hostname }}.{{ item }}.results.xml"
+      - --library-root
+      - "{{ network_stig_work }}/library"
+      - --out
+      - "{{ network_stig_work }}/checklists/{{ item }}/{{ inventory_hostname }}/{{ inventory_hostname }}.cklb"
+  loop: "{{ network_benchmarks }}"
+  changed_when: true

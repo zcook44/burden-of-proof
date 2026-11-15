@@ -1,0 +1,4 @@
+interface,role,user_facing,fiber
+GigabitEthernet0/1,uplink,no,no
+GigabitEthernet0/2,user,yes,no
+GigabitEthernet0/3,unused,no,no

@@ -85,6 +85,75 @@ func loadCiscoTailoring(directory, benchmarkID string, benchmark []byte, doc map
 	return policy.Rules, path, data, nil
 }
 
+// ciscoPolicyDirectory prefers a tailoring file in the device directory so one
+// host can be decided without changing the result for every other device.
+func ciscoPolicyDirectory(hostDir, benchmarkDir, benchmarkID string) string {
+	if hostDir != "" {
+		if _, err := os.Lstat(filepath.Join(hostDir, benchmarkID+".tailoring.yaml")); err == nil {
+			return hostDir
+		}
+	}
+	return benchmarkDir
+}
+
+// suggestCiscoTailoring is the editable per-device inventory. Scored controls
+// stay auto. Not Reviewed controls carry the reason an admin replaces.
+func suggestCiscoTailoring(benchmarkID string, benchmark []byte, doc map[string]any) ([]byte, error) {
+	rows := doc["stigs"].([]any)[0].(map[string]any)["rules"].([]any)
+	policy := ciscoTailoringFile{
+		SchemaVersion: 1, BenchmarkID: benchmarkID, BenchmarkSHA256: sha256Hex(benchmark),
+		Rules: make([]ciscoTailoringRule, 0, len(rows)),
+	}
+	for _, item := range rows {
+		row := item.(map[string]any)
+		rule := ciscoTailoringRule{STIGID: row["group_id"].(string), SVID: row["rule_id"].(string), Status: "auto"}
+		if status, comment, ok := administratorOverride(row["comments"].(string)); ok {
+			rule.Status = status
+			rule.Comment = comment
+		} else if row["status"] == "not_reviewed" {
+			rule.Status = "not_reviewed"
+			rule.Comment = strings.TrimSpace(row["comments"].(string))
+			if rule.Comment == "" {
+				rule.Comment = "Not Reviewed. Replace this comment with the local evidence and set status."
+			}
+			rule.Comment += " Tune this row by setting status to not_a_finding, open, or not_applicable and replacing this comment with the evidence used."
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
+	body, err := yaml.Marshal(policy)
+	if err != nil {
+		return nil, err
+	}
+	header := "# Per-device tailoring file suggestion for " + benchmarkID + ".\n" +
+		"# status auto keeps the running-config result.\n" +
+		"# Edit a not_reviewed row, then copy this tailoring file beside scan.running-config as " + benchmarkID + ".tailoring.yaml.\n" +
+		"# The next cisco-cklb, cisco-batch, or cisco-xccdf run for that device applies it.\n"
+	return append([]byte(header), body...), nil
+}
+
+func administratorOverride(comments string) (string, string, bool) {
+	const marker = "\nADMINISTRATOR OVERRIDE ("
+	index := strings.LastIndex(comments, marker)
+	if index < 0 {
+		return "", "", false
+	}
+	rest := comments[index+len(marker):]
+	end := strings.Index(rest, "): ")
+	if end < 0 {
+		return "", "", false
+	}
+	status, comment := rest[:end], strings.TrimSpace(rest[end+len("): "):])
+	switch status {
+	case "open", "not_a_finding", "not_applicable", "not_reviewed":
+		if comment == "" {
+			return "", "", false
+		}
+		return status, comment, true
+	default:
+		return "", "", false
+	}
+}
+
 func applyCiscoTailoring(doc map[string]any, rules []ciscoTailoringRule) []map[string]string {
 	rows := map[string]map[string]any{}
 	for _, item := range doc["stigs"].([]any)[0].(map[string]any)["rules"].([]any) {

@@ -21,5 +21,7 @@ approval-ledger.json
 
 # Raw lab scans and reports are private runtime artifacts.
 lab_results/
+# Generated Cisco review packages. Regenerate from review-manifest.json.
+examples/cisco-synthetic/review/
 # Local Go build output; rebuild from source instead of committing executables.
 dist/

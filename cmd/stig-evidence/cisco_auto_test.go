@@ -70,13 +70,13 @@ func TestCiscoCLIEmitsAutomaticVerdictWithoutOverwritingPriorCandidate(t *testin
 		t.Fatal(err)
 	}
 	sum := sha256.Sum256(body)
-	if sidecar["checklist_sha256"] != hex.EncodeToString(sum[:]) || sidecar["evaluator_version"] != "cisco-config-auto-v4" {
+	if sidecar["checklist_sha256"] != hex.EncodeToString(sum[:]) || sidecar["evaluator_version"] != "cisco-config-review-v9" {
 		t.Fatalf("unbound auto output: %+v", sidecar)
 	}
 	if controls, ok := sidecar["automated_controls"].([]any); !ok || len(controls) != 1 {
 		t.Fatalf("missing decision inventory: %+v", sidecar)
 	}
-	if !strings.Contains(doc["title"].(string), "AUTO") || bytes.Contains(append(body, raw...), []byte("SENSITIVE_TEST_MARKER")) {
+	if !strings.Contains(doc["title"].(string), "REVIEW CANDIDATE") || bytes.Contains(append(body, raw...), []byte("SENSITIVE_TEST_MARKER")) {
 		t.Fatal("missing auto label or secret leaked")
 	}
 	for _, p := range []string{path, path + ".provenance.json"} {

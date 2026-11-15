@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Network STIG scan review</title>
+<style>
+body { font: 16px/1.45 Georgia, serif; background: #f4f1ea; color: #1c1915; margin: 32px; }
+a { color: #1f4b3a; }
+</style>
+</head>
+<body>
+<h1>Network scan review</h1>
+<p>Each link is one device and one STIG. The file name is the device hostname. The page header shows that device's FQDN, management IP, and MAC address. Statuses come from the scan result named for that device.</p>
+<ul>
+{% for page in network_stig_pages.files | sort(attribute='path') %}
+  {% set rel = page.path | replace(network_stig_work ~ '/checklists/', '') %}
+  <li><a href="{{ rel }}">{{ rel | regex_replace('\\/[^/]+\\.review\\.html$', '') }}</a></li>
+{% endfor %}
+</ul>
+</body>
+</html>

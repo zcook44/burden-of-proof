@@ -7,6 +7,8 @@ import (
 	"io"
 	"regexp"
 	"strings"
+
+	"github.com/zcook44/burden-of-proof/internal/ciscoconfig"
 )
 
 var ciscoGroupID = regexp.MustCompile(`^V-([0-9]+)$`)
@@ -25,12 +27,21 @@ func officialRuleRow(stigUUID string, g group, r rule, status, details, comments
 }
 
 // BuildCiscoConfig renders a CKLB from a saved running-config and an exact Cisco
-// XCCDF. Only pinned, config-decidable checks receive automated verdicts; all
-// other checks remain not_reviewed. Raw config content is never copied into the
-// checklist; its byte hash binds the identity and finding details.
+// XCCDF. Pinned checks may set a status; every other control stays not_reviewed.
+// Raw config content is never copied into the checklist.
 func BuildCiscoConfig(config []byte, target string, benchmark []byte) (map[string]any, error) {
+	return BuildCiscoReview(config, target, benchmark, ciscoconfig.RoleTable{})
+}
+
+// BuildCiscoReview is BuildCiscoConfig plus an operator port-role table.
+// The table is what lets per-port and topology checks leave Not Reviewed.
+func BuildCiscoReview(config []byte, target string, benchmark []byte, roles ciscoconfig.RoleTable) (map[string]any, error) {
 	if len(bytes.TrimSpace(config)) == 0 || strings.TrimSpace(target) == "" {
 		return nil, fmt.Errorf("Cisco config and target are required")
+	}
+	parsed, err := ciscoconfig.Parse(config)
+	if err != nil {
+		return nil, err
 	}
 	if err := validateCiscoXML(benchmark); err != nil {
 		return nil, err
@@ -69,13 +80,15 @@ func BuildCiscoConfig(config []byte, target string, benchmark []byte) (map[strin
 			default:
 				return fmt.Errorf("invalid Cisco rule severity: %q", r.Severity)
 			}
-			status, observation, automatedComment := evaluateCiscoRule(b, g, r, config)
+			status, observation, automatedComment := evaluateCiscoRule(b, g, r, parsed, roles)
 			details := "Raw running config SHA-256: " + configHash + "\nOfficial Cisco benchmark SHA-256: " + benchHash
 			comments := automatedComment
 			if status == "" {
 				status = "not_reviewed"
+				observation, automatedComment = ciscoconfig.FallbackReason(r.Version, r.Title, r.Check.Content)
+				details += "\n" + observation
 				details += "\nRunning config alone does not verify this control's complete operational check; manual review required."
-				comments = "NOT REVIEWED — raw running config supplied for manual review; no automated pass, finding, or applicability decision asserted."
+				comments = automatedComment
 			} else {
 				details += "\n" + observation
 			}
@@ -99,8 +112,8 @@ func BuildCiscoConfig(config []byte, target string, benchmark []byte) (map[strin
 		}
 	}
 	return map[string]any{
-		"title":        "DRAFT - AUTO CONFIG VERDICTS - " + target + " - " + name,
-		"id":           uuid5(target + ":" + stigUUID + ":" + configHash + ":" + CiscoConfigEvaluatorVersion),
+		"title":        "DRAFT REVIEW CANDIDATE - " + target + " - " + name,
+		"id":           uuid5(target + ":" + stigUUID + ":" + configHash + ":" + CiscoConfigEvaluatorVersion + ":" + roles.Fingerprint()),
 		"cklb_version": "1.0", "target_data": map[string]any{"host_name": target},
 		"stigs": []any{map[string]any{"stig_name": name, "display_name": name, "stig_id": b.ID, "release_info": release, "uuid": stigUUID, "size": len(rows), "rules": rows}},
 	}, nil
