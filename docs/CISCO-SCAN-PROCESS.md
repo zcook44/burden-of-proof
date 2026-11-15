@@ -1,6 +1,8 @@
 # Cisco network scan
 
-The inventory supplies one switch's hostname, FQDN, management IP, and role. `cisco-xccdf` scores the pinned checks into an XCCDF result named for that switch, and `xccdf-cklb` copies those statuses onto a checklist whose target page carries the hostname, FQDN, management IP, and MAC.
+Install and the command table are in [install and run](README.md). This page is the picture of the scan row: one saved configuration in, one device-named checklist out.
+
+The collector, which is not this binary, supplies the switch's hostname, FQDN, management IP, and role. `cisco-xccdf` scores the pinned checks into an XCCDF result named for that switch, and `xccdf-cklb` copies those statuses onto a checklist whose target page carries the hostname, FQDN, management IP, and MAC.
 
 The sample run on 15 Nov 2026 covered **3** switches, **6** checklists, **33** open rules, and **44** rules that still need a person.
 
@@ -42,21 +44,18 @@ Scoring happens once, inside `cisco-xccdf`, through `BuildCiscoReview`. `xccdf-c
 
 Mapping is `netxccdf.ChecklistStatus`. Counts below are the sample inventory on 15 Nov 2026.
 
-## Implementation steps
+## What the binary does
+
+A collector outside the archive saves `scan.running-config` in a directory named for the hostname. The repository contains an example Ansible role for that collection. It is not the install, and the release archive does not run it.
 
 | Step | Where it lives | What it does |
 | --- | --- | --- |
-| 1. Playbook | `ansible/playbooks/network_stig_scan.yml` | Applies the role to every inventory host, then writes `checklists/index.html` |
-| 2. Stage inputs | `roles/network_stig_scan/tasks/main.yml` | Copies the official library and the host's `scan.running-config` into mode `0700` directories and mode `0600` files |
-| 3. Live collection | `tasks/collect_device.yml` | On transport `network`, saves `show running-config` and reads the MAC from `show interfaces` on `network_mgmt_interface` |
-| 4. Identity gate | `netxccdf.Identity.Normalize` and the hostname check in `cisco-xccdf` | Requires an FQDN beginning with the hostname, a management IP, a MAC, a role, and a target type. The configuration's `hostname` command must equal `--target` |
-| 5. Name gate | `RequireResultsPath` | The result must be `scans/<host>/<host>.<benchmark>.results.xml` |
-| 6. Score | `draft.BuildCiscoReview` and `ciscoconfig.Evaluate` | Pinned IOS, IOS-XE, and NX-OS checks set a status. Anything unproved stays Not reviewed. Evaluator `cisco-config-review-v9`. A tailoring file beside `scan.running-config` is applied before the result is written |
-| 7. Write the scan | `netxccdf.FromChecklist` | XCCDF 1.2 TestResult: `target` is the hostname, `target-address` is the IP, asset facts hold FQDN and MAC, and `config-complete` records whether the snapshot is complete |
-| 8. Convert | `draft.BuildFromNetworkScan` | Joins each rule-result to the official SV id and fills `target_data` from those facts |
-| 9. Package | `writeReviewBundle` | Writes `<host>.cklb`, `<host>.cklb.provenance.json`, `<host>.review.html`, and `<host>.tailoring.yaml` inside `checklists/<benchmark>/<host>/` |
-
-Collection of a live switch can live outside this archive. The converter still requires the saved file, the identity flags, and the hostname match.
+| 1. Identity gate | `netxccdf.Identity.Normalize` and the hostname check in `cisco-xccdf` | Requires an FQDN beginning with the hostname, a management IP, a MAC, a role, and a target type. The configuration's `hostname` command must equal `--target` |
+| 2. Name gate | `RequireResultsPath` | The result must be `scans/<host>/<host>.<benchmark>.results.xml` |
+| 3. Score | `draft.BuildCiscoReview` and `ciscoconfig.Evaluate` | Pinned IOS, IOS-XE, and NX-OS checks set a status. Anything unproved stays Not reviewed. Evaluator `cisco-config-review-v9`. A tailoring file beside `scan.running-config` is applied before the result is written |
+| 4. Write the scan | `netxccdf.FromChecklist` | XCCDF 1.2 TestResult: `target` is the hostname, `target-address` is the IP, asset facts hold FQDN and MAC, and `config-complete` records whether the snapshot is complete |
+| 5. Convert | `draft.BuildFromNetworkScan` | Joins each rule-result to the official SV id and fills `target_data` from those facts |
+| 6. Package | `writeReviewBundle` | Writes `<host>.cklb`, `<host>.cklb.provenance.json`, `<host>.review.html`, and `<host>.tailoring.yaml` inside `checklists/<benchmark>/<host>/` |
 
 ## Rule statuses on the six sample checklists
 

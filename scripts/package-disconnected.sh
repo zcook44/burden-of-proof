@@ -5,7 +5,7 @@ umask 077
 
 usage() {
   printf 'Usage: %s VERSION OUTPUT_DIRECTORY\n' "$0" >&2
-  printf 'Example: %s 1.0.0 ./dist/releases\n' "$0" >&2
+  printf 'Example: %s 1.0.1 ./dist/releases\n' "$0" >&2
   exit 2
 }
 [[ $# -eq 2 ]] || usage

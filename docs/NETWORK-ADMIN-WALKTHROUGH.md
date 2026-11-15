@@ -1,5 +1,7 @@
 # How a switch becomes a checklist
 
+The install, the library, and which command to run are in [install and run](README.md). This page is the demo, for the ten minutes when the flags are not the point.
+
 This is the walkthrough for the demo. It uses ordinary names for the files a network admin already has, and it shows where each one goes.
 
 A **STIG** is the rulebook for one kind of device. A Cisco switch has a separate rulebook for switch features (Layer 2) and for device management. A **checklist** is that rulebook filled in for one switch: each rule is marked met, not met, not applicable, or still needs a person. The file the security team opens is a **CKLB**. A **scan result** is the intermediate file that records those marks. It is the same kind of file OpenSCAP writes for a Linux host, so the rest of the review process can treat a switch and a server the same way.

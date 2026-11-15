@@ -1,50 +1,102 @@
-# Quick start: private review conversion
+# Install and run
 
-Burden of Proof owns the evidence-side policy and review conversion: it checks a versioned, non-secret [lab asset record](../contracts/asset-record-v1.md), reconciles saved SSG results against official manual XCCDF controls, and evaluates only a **small pinned subset** of [Cisco running-config checks](CISCO-CONFIG.md) from an explicitly selected benchmark. Unimplemented Cisco controls remain Not Reviewed. The RHEL lab and its provisioning live in a separate repository. No lab path is compiled into this CLI, and conversion does not attest the lab's assertions. The CLI reads files it is given. `cisco-xccdf` and `xccdf-cklb` turn one saved running configuration into a device-named scan result and a checklist with a provenance sidecar. The CLI does not sign off findings or deliver evidence. It knows precisely where its remit ends; an unusual trait for software.
+One binary converts RHEL OpenSCAP results and Cisco running configurations into private CKLB review candidates. It does not scan a guest, log into a switch, approve a finding, or deliver evidence. Those jobs remain with people, which is inconvenient and also the point.
 
-[Repository overview](../README.md) · [Batch rules](BATCH-CKLB.md) · [RHEL workflow](RHEL-OSCAP-WORKFLOW.md) · [Cisco config candidates](CISCO-CONFIG.md) · [Cisco scan process](CISCO-SCAN-PROCESS.md) · [Network scan](NETWORK-SCAN.md) · [Admin walkthrough](NETWORK-ADMIN-WALKTHROUGH.md) · [Commands and scope](GO-MIGRATION.md) · [Review workflow](WORKFLOW.md) · [Lab scan command and playbook snapshot](OSCAP-SOURCE.md) · [Disconnected release](DISCONNECTED-RELEASE.md)
+[Repository overview](../README.md) · [RHEL picture](RHEL-OSCAP-WORKFLOW.md) · [Cisco picture](CISCO-SCAN-PROCESS.md) · [Batch rules](BATCH-CKLB.md) · [Cisco checks](CISCO-CONFIG.md) · [Network scan fields](NETWORK-SCAN.md) · [Commands](GO-MIGRATION.md) · [Review workflow](WORKFLOW.md) · [Disconnected release](DISCONNECTED-RELEASE.md)
 
-## Build and convert
+## 1. Install the same binary either way
 
-From the repository root on Linux with Go 1.22+ (vendored dependency; no runtime network access):
+On a disconnected host, verify and extract the 1.0.1 archive, then use `./bin/stig-evidence`. The [release page](DISCONNECTED-RELEASE.md) has the checksum steps. The archive does not contain official benchmarks. It is a converter, not a STIG library that fell off a truck.
+
+From a source checkout that includes `vendor/`, build with the same flags the release script uses:
 
 ```sh
+export GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local GOWORK=off CGO_ENABLED=0 GOFLAGS=-mod=vendor
+go test ./...
 install -d -m 700 dist
-GOPROXY=off GOSUMDB=off go build -mod=vendor -o dist/stig-evidence ./cmd/stig-evidence
-./dist/stig-evidence batch-cklb --input-root /private/inventory --library-root /private/extracted-stig-library --dry-run
-./dist/stig-evidence batch-cklb --input-root /private/inventory --library-root /private/extracted-stig-library
+go build -trimpath -ldflags='-s -w' -o dist/stig-evidence ./cmd/stig-evidence
 ```
 
-The caller supplies the inventory root; no lab path is compiled in. Each scan's SSG XCCDF Benchmark ID selects its RHEL 7, 8, 9, or 10 family, and the library selects the newest eligible **extracted manual DISA XCCDF for that family** on each invocation. A library of ZIPs alone is insufficient. An optional [per-OS YAML](BATCH-CKLB.md#per-os-checklist-tailoring) in that private library at mode 0600 adds administrator comments and decisions. **Do not copy the packaged examples into an operational library as approved policy**: the RHEL 9 example includes a lab-specific `not_a_finding` override. Review and authorize every status/comment for all hosts of that OS, or omit the policy. Use `--benchmark /private/official.xml` instead of `--library-root` only for a pinned, single-OS conversion. For the offline archive and initial-deployment Bash preflight, see [disconnected release](DISCONNECTED-RELEASE.md).
+A shorter build command will usually produce a binary. It will not be the binary this release claims to be.
 
-Place `<prefix>.results.xml` or `<prefix>.results.xccdf.xml` in a directory whose basename equals the XCCDF target host. Same-prefix `<prefix>.report.html` enriches executed checks and item comparisons; `<prefix>.results.arf.xml` adds collected host values when HTML also exists. XCCDF-only results are accepted, but no unobserved values are invented. The application writes `-ASSESSMENT.cklb` plus a byte-bound `.cklb.provenance.json` beside each run in owner-private storage. It never silently overwrites changed output. Numeric V/SV mapping uses explicit newer SSG `V-…` or older SSG `SV-…` references; it is a mapping convention, not proof of semantic equivalence. Missing or ambiguous controls remain Not Reviewed unless an administrator explicitly tailors their checklist status. See [batch converter](BATCH-CKLB.md) for all input, permission, and output rules.
+## 2. Stage one private library
 
-**Verification status:** The offline-built Linux/amd64 executable passed the Go suite and converted copied real XCCDF/HTML/ARF bundles from RHEL 7, 8, 9 and 10 using extracted official benchmarks and all four bundled YAML templates. A four-bundle dry run wrote nothing; conversion created four CKLB/provenance pairs; an unchanged rerun skipped all four. Independent readback checked the per-OS policy and checklist hashes, and the RHEL 9 passwordless-sudo admin decision remained distinguishable from its Open automated candidate. STIG Viewer GUI import has not been exercised by this CLI. See [batch converter](BATCH-CKLB.md) for historical output versions and limitations.
+Use one owner-owned mode `0700` directory, for example `/private/stig-library`. Copy authorized manual XCCDF files into it at mode `0600`. RHEL and Cisco benchmarks may share that directory. The CLI selects a RHEL file from the scan's OS, and a Cisco file only when you pass its exact `--benchmark-id` or `--benchmark` path. It will not guess. It has met people.
 
-## Cisco: stage a private library, then select the benchmark
+A Git checkout of `stig-library-cisco/` is mode `0644` and is not an operational library. Stage a private copy. Do not point the CLI at the checkout and hope.
 
-This private source checkout includes 25 Cisco manual XCCDF files and 25 complete all-`auto` tailoring inventories under `stig-library-cisco/`. Git checkout permissions do **not** meet the CLI's private-input contract. Stage owner-private copies first; the generic offline archive does not ship these inputs. Replace `/private/...` with paths you own and control before running the example. Choose a **new, absent** library destination: repeating the `install` commands over an administrator-edited policy would erase that decision.
+Tailoring files are optional and dangerous when copied casually:
+
+| Family | File | Who it applies to |
+| --- | --- | --- |
+| RHEL | `RHEL_<major>_STIG.tailoring.yaml` at the library root | Every host of that OS |
+| Cisco | `<benchmark-id>.tailoring.yaml` beside that benchmark | Every device that does not have its own copy |
+| Cisco, one device | `<benchmark-id>.tailoring.yaml` beside that device's `scan.running-config` | That device only |
+
+`auto` keeps the tool's status. Any other status needs a nonempty comment. The packaged RHEL examples are not site policy. The RHEL 9 example contains a lab-specific `not_a_finding`. Installing it unchanged is how a joke becomes a finding.
+
+## 3. Name the asset the same way on disk
+
+| Family | Directory name | Must also match |
+| --- | --- | --- |
+| RHEL | The XCCDF `TestResult/target`, usually the FQDN | The scan file lives in that directory |
+| Cisco | The short `hostname` command | `--target` is that same string |
+
+The scan commands add the rest of the checklist target page, and only there: `--fqdn` must begin with `<hostname>.`, plus `--ip`, `--mac`, `--role`, and `--target-type`. `cisco-cklb` records the target you pass and checks the directory name. `cisco-batch` and `cisco-xccdf` also refuse a configuration whose `hostname` command disagrees. Nicknames are not a feature.
+
+Inputs are owner-private: directories `0700`, files `0600`, no symlinks.
+
+## 4. Pick one command
+
+| You have | Command | Preview | Checklist lands |
+| --- | --- | --- | --- |
+| A tree of RHEL OpenSCAP results | `batch-cklb` | `preflight-offline.sh`, then `--dry-run` | Beside each scan: `<prefix>-disa-…-ASSESSMENT.cklb` and `.cklb.provenance.json` |
+| One Cisco configuration and one benchmark | `cisco-cklb` | `--dry-run` | Beside the configuration: `<prefix>-cisco-…-ASSESSMENT.cklb` and provenance |
+| Many Cisco devices | `cisco-batch` | `--dry-run` | `--output-root/<benchmark-id>/<host>/`, plus `index.html` |
+| A Cisco result that must carry IP, FQDN, and MAC | `cisco-xccdf`, then `xccdf-cklb` | No dry-run. The first command writes the result. | `checklists/<benchmark-id>/<host>/<host>.cklb`, provenance, review page, and tailoring worksheet |
+
+`cisco-xccdf` has no dry-run because a result file is the point of the command. Read the path twice.
 
 ```sh
-install -d -m 700 "$HOME/private"
-LIB="$HOME/private/stig-library-cisco-new"  # choose a destination that does not exist
-[ ! -e "$LIB" ] || { printf 'Library already exists: %s\n' "$LIB" >&2; exit 1; }
-install -d -m 700 "$LIB"
-install -m 600 stig-library-cisco/*.xml "$LIB/"
-install -m 600 stig-library-cisco/*.tailoring.yaml "$LIB/"
+# RHEL. Omit --dry-run only after the printed benchmark is the one you meant.
+./dist/stig-evidence batch-cklb \
+  --input-root /private/inventory \
+  --library-root /private/stig-library \
+  --dry-run
+
+# One switch. --target is the hostname command, not a friendly alias.
 ./dist/stig-evidence cisco-cklb \
-  --config /private/configs/switch1.example.test/scan.running-config \
-  --target switch1.example.test \
-  --library-root "$LIB" \
+  --config /private/configs/ios-xe-switch-01/scan.running-config \
+  --target ios-xe-switch-01 \
+  --library-root /private/stig-library \
   --benchmark-id Cisco_IOS_XE_Switch_L2S_STIG \
   --dry-run
-# Confirm the exact device platform and role, then omit --dry-run to write.
+
+# Device-named result, then the checklist.
+./dist/stig-evidence cisco-xccdf \
+  --config /private/configs/ios-xe-switch-01/scan.running-config \
+  --target ios-xe-switch-01 \
+  --fqdn ios-xe-switch-01.example.test \
+  --ip 192.0.2.4 \
+  --mac 02:00:00:00:00:04 \
+  --role "Access switch" \
+  --target-type "Cisco IOS-XE switch" \
+  --library-root /private/stig-library \
+  --benchmark-id Cisco_IOS_XE_Switch_L2S_STIG \
+  --out /private/scans/ios-xe-switch-01/ios-xe-switch-01.Cisco_IOS_XE_Switch_L2S_STIG.results.xml
+
+./dist/stig-evidence xccdf-cklb \
+  --results /private/scans/ios-xe-switch-01/ios-xe-switch-01.Cisco_IOS_XE_Switch_L2S_STIG.results.xml \
+  --library-root /private/stig-library \
+  --out /private/checklists/Cisco_IOS_XE_Switch_L2S_STIG/ios-xe-switch-01/ios-xe-switch-01.cklb
 ```
 
-The config itself must be owner-private `0600` in a `0700` directory named exactly for the target. `cisco-batch` is the review package: one CKLB and HTML page per benchmark, with pinned IOS, IOS-XE, and NX-OS switch checks and Not Reviewed everywhere else. A status override in the benchmark YAML affects every target using that library, so a host-specific exception needs its own private library. [Cisco rules and evidence boundary](CISCO-CONFIG.md). The Bash `preflight-offline.sh` checks RHEL `batch-cklb` inputs; it is not a Cisco preflight. Cisco batch has its own `--dry-run`, which prints status counts and writes nothing.
+On a first RHEL deployment, run `scripts/preflight-offline.sh` before the write. The example without Checkmate is the one that matches this archive. Add Checkmate only when that separate tool is actually installed. Details and the with-Checkmate form are in the [release notes](DISCONNECTED-RELEASE.md).
 
-## Network scan: one result file per device
+A repeated run with the same bytes skips. A different result is never silently overwritten. If that feels stubborn, it is the feature.
 
-`cisco-xccdf` writes `scans/<host>/<host>.<benchmark-id>.results.xml` from a saved configuration whose `hostname` command equals `--target`. `xccdf-cklb` writes `checklists/<benchmark-id>/<host>/<host>.cklb`, the review page, the tailoring worksheet, and `<host>.cklb.provenance.json`. The checklist target page receives the FQDN, management IP, management MAC, role, and technology area passed into the scan. A tailoring file beside `scan.running-config` is applied by the next `cisco-xccdf` run for that device. [Command and field reference](NETWORK-SCAN.md). [Step-by-step demo for network admins](NETWORK-ADMIN-WALKTHROUGH.md).
+## 5. Read the candidate, then stop
 
-The legacy signed-release workflow is retired, not ported; the new per-OS YAML is a simpler checklist decision input, not a signature or release gate. **No signed-release, signature verification, or evidence-publication command exists here.** The separate Checkmate tool can inventory, optionally validate, or edit existing CKLBs; it does not convert scans or approve findings, and editing leaves the converter's provenance hash stale. See the [Go workflow](WORKFLOW.md) and [asset contract](../contracts/asset-record-v1.md); a separate authorized process must handle signoff and delivery. Keep raw scans, approvals, generated checklists, keys, and host evidence private and out of Git; `.gitignore` is not a security boundary.
+Review Open, then Not Reviewed, then Not Applicable, then a sample of Not a Finding. Import a representative checklist into STIG Viewer before anyone calls it adopted. Checkmate, when supplied separately, can list or schema-check existing CKLBs. Editing one there makes the provenance hash stale, which is the tool's way of refusing to cosign your edits.
+
+RHEL details: [batch converter](BATCH-CKLB.md) and the [picture](RHEL-OSCAP-WORKFLOW.md). Cisco check behavior: [Cisco config](CISCO-CONFIG.md). Scan fields: [network scan](NETWORK-SCAN.md). The demo script for people who do not want a flag reference: [admin walkthrough](NETWORK-ADMIN-WALKTHROUGH.md).

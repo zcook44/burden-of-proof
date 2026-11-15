@@ -1,5 +1,7 @@
 # RHEL OpenSCAP review workflow
 
+Install, the shared library, and the command table are in [install and run](README.md). This page is the picture of what happens after that.
+
 The lab scans a RHEL guest once with OpenSCAP. This tool never runs that scan. It joins the saved SSG result to the newest official DISA manual benchmark for that RHEL major and writes a private checklist plus a provenance sidecar.
 
 Accepted majors are **RHEL 7 through 10**. The lab playbook performs **one** scan. Untailored conversion uses provenance **v10**. A per-OS tailoring file uses provenance **v11**.

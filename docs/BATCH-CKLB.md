@@ -6,24 +6,19 @@ This is evidence-side conversion of saved scans, not lab provisioning or an offi
 
 This command is **RHEL OpenSCAP only**. Cisco saved running configurations use [`cisco-cklb`](CISCO-CONFIG.md), an explicit platform/role benchmark and a separate private-input workflow; the Bash batch preflight does not validate Cisco configs. The source checkout tracks Cisco XML and all-`auto` inventories under `stig-library-cisco/`, but the generic archive excludes them.
 
-Build the standalone Go CLI from the repository root (Go 1.22+; dependency is vendored for offline builds):
-
-```sh
-install -d -m 700 dist
-GOPROXY=off GOSUMDB=off go build -mod=vendor -o dist/stig-evidence ./cmd/stig-evidence
-```
+Build the CLI with the environment in [install and run](README.md). Go 1.22+ and the vendored tree are enough; a creative subset of the flags is not.
 
 Run from **any working directory** by using the built executable's path. In the example below, run from the repository root; replace the private paths with your own. Supply the saved-scan tree via `--input-root`; there is no compiled-in lab path. Keep extracted official manual XCCDFs in a stable, owner-private `--library-root` (subdirectories are searched):
 
 ```sh
 ./dist/stig-evidence batch-cklb \
   --input-root /private/inventory \
-  --library-root /private/extracted-stig-library \
+  --library-root /private/stig-library \
   --dry-run
 
 ./dist/stig-evidence batch-cklb \
   --input-root /private/inventory \
-  --library-root /private/extracted-stig-library
+  --library-root /private/stig-library
 ```
 
 The October library ZIP contains nested RHEL 9 and 10 product ZIPs; extract each required product ZIP too, so the library root contains `U_RHEL_<OS>_STIG_V<version>R<release>_Manual-xccdf.xml` files. Supply separately obtained RHEL 7 and 8 benchmarks for those families. Library directories must be owner-owned/private (0700), the XCCDF files owner-private (0600), and no symlinks are accepted. For **each scan OS**, every invocation selects the highest **numeric version, then numeric release**, cross-checking filename against the official benchmark ID, XML namespace, version and `release-info`. It prints the selected path and SHA-256, including during `--dry-run`; malformed candidates and equal highest releases in different paths fail closed. SSG result version `0.1.82` is *not* an official DISA release number. No download or ZIP extraction occurs during conversion.

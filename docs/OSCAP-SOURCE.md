@@ -1,5 +1,7 @@
 # Lab OpenSCAP scan source and converter handoff
 
+What you do with the files after they land is [install and run](README.md). This page is only how the lab creates them.
+
 The **live scan playbook** is `/scratch/ansible/playbooks/oscap_scan.yml` in the operator's Ansible lab. This evidence repository does not run it. [Verbatim playbook snapshot](snapshots/oscap_scan.yml) (SHA-256 `b01edc8aa583668f1b67188c340315250e1ae3235bfba59a4ea132a1ce74ebc0`) and [verbatim wrapper snapshot](snapshots/run-lab-oscap.sh) (SHA-256 `9a24c91e7302e97a5be06c3d8d2d284c0c882fafcfc4e29f0cdb9d63ea77fb9b`) are included for offline review. Both hashes match their live counterparts as checked during this documentation audit; compare again before a later run because the external lab may change. The lab files remain authoritative; these non-executable snapshots are **not** deployment scripts. The disconnected archive includes both snapshots for inspection, not the live executable wrapper.
 
 ## Exact scan command in the playbook

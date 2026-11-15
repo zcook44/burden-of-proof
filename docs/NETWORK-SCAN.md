@@ -1,5 +1,7 @@
 # Network STIG scan
 
+This is the field reference for the scan row of the [install and run](README.md) command table. `cisco-xccdf` has no dry-run. The result file is the preview.
+
 `cisco-xccdf` scores one saved running configuration into an XCCDF 1.2 TestResult named for that host. `xccdf-cklb` converts that result into a CKLB, a review page, a tailoring worksheet, and a provenance sidecar. The checklist `target_data` carries the hostname, FQDN, management IP, management MAC, role, target type, and technology area from the scan. The configuration is collected outside this archive. [Plain-language walkthrough](NETWORK-ADMIN-WALKTHROUGH.md). [Cisco config checks](CISCO-CONFIG.md).
 
 ## Names
