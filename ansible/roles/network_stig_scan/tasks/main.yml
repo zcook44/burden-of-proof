@@ -10,7 +10,7 @@
     that:
       - network_stig_converter_bin.stat.exists
       - network_stig_converter_bin.stat.executable
-    fail_msg: "Build dist/stig-evidence before running this playbook."
+    fail_msg: "Build dist/docket before running this playbook."
 
 - name: Prepare private scan directories
   ansible.builtin.file:

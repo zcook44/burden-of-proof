@@ -78,7 +78,7 @@ func runCiscoBatch(args []string, out, stderr io.Writer) int {
 		return 2
 	}
 	if flags.NArg() != 0 || *manifestPath == "" || *evidenceRoot == "" || *libraryRoot == "" || *outputRoot == "" {
-		fmt.Fprintln(stderr, "usage: stig-evidence cisco-batch --manifest FILE --evidence-root DIR --library-root DIR --output-root DIR [--dry-run]")
+		fmt.Fprintln(stderr, "usage: docket cisco-batch --manifest FILE --evidence-root DIR --library-root DIR --output-root DIR [--dry-run]")
 		return 2
 	}
 	for _, path := range []*string{manifestPath, evidenceRoot, libraryRoot, outputRoot} {

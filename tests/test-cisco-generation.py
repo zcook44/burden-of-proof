@@ -28,8 +28,8 @@ def main():
         bench = library / "U_Cisco_IOS_Router_NDM_STIG_V1R1_Manual-xccdf.xml"
         bench.write_bytes(XML)
         bench.chmod(0o600)
-        binary = root / "stig-evidence"
-        subprocess.run(["go", "build", "-mod=vendor", "-o", str(binary), "./cmd/stig-evidence"], cwd=REPO, check=True, env={**os.environ, "GOPROXY": "off", "GOSUMDB": "off"})
+        binary = root / "docket"
+        subprocess.run(["go", "build", "-mod=vendor", "-o", str(binary), "./cmd/docket"], cwd=REPO, check=True, env={**os.environ, "GOPROXY": "off", "GOSUMDB": "off"})
         script = REPO / "scripts/generate-cisco-examples.py"
         assert script.is_file(), "Cisco example generator missing"
         command = ["python3", str(script), "--converter", str(binary), "--library-root", str(library), "--source-root", str(source), "--output-root", str(output)]

@@ -40,7 +40,7 @@ A missing hostname, FQDN, IP, MAC, role, or target type stops the scan before a 
 ## Commands
 
 ```sh
-stig-evidence cisco-xccdf \
+docket cisco-xccdf \
   --config /private/evidence/ios-xe-switch-01/scan.running-config \
   --target ios-xe-switch-01 \
   --fqdn ios-xe-switch-01.example.test \
@@ -53,7 +53,7 @@ stig-evidence cisco-xccdf \
   --port-roles /private/evidence/ios-xe-switch-01/port-roles.csv \
   --out /private/scans/ios-xe-switch-01/ios-xe-switch-01.Cisco_IOS_XE_Switch_L2S_STIG.results.xml
 
-stig-evidence xccdf-cklb \
+docket xccdf-cklb \
   --results /private/scans/ios-xe-switch-01/ios-xe-switch-01.Cisco_IOS_XE_Switch_L2S_STIG.results.xml \
   --library-root /private/stig-library \
   --out /private/checklists/Cisco_IOS_XE_Switch_L2S_STIG/ios-xe-switch-01/ios-xe-switch-01.cklb

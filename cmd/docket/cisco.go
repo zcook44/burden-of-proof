@@ -140,7 +140,7 @@ func runCisco(args []string, out, stderr io.Writer) int {
 		return 2
 	}
 	if flags.NArg() != 0 || *configPath == "" || *target == "" || !safeTarget.MatchString(*target) || strings.Contains(*target, "..") || (*benchmarkPath == "") == (*libraryRoot == "") || (*libraryRoot != "" && !ciscoID.MatchString(*benchmarkID)) || (*benchmarkPath != "" && *benchmarkID != "") {
-		fmt.Fprintln(stderr, "usage: stig-evidence cisco-cklb --config PATH --target HOST (--benchmark XCCDF | --library-root DIR --benchmark-id Cisco_*_STIG) [--port-roles CSV] [--dry-run]")
+		fmt.Fprintln(stderr, "usage: docket cisco-cklb --config PATH --target HOST (--benchmark XCCDF | --library-root DIR --benchmark-id Cisco_*_STIG) [--port-roles CSV] [--dry-run]")
 		return 2
 	}
 	for _, path := range []*string{configPath, benchmarkPath, libraryRoot, portRoles} {

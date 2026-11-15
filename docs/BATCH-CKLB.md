@@ -11,12 +11,12 @@ Build the CLI with the environment in [install and run](README.md). Go 1.22+ and
 Run from **any working directory** by using the built executable's path. In the example below, run from the repository root; replace the private paths with your own. Supply the saved-scan tree via `--input-root`; there is no compiled-in lab path. Keep extracted official manual XCCDFs in a stable, owner-private `--library-root` (subdirectories are searched):
 
 ```sh
-./dist/stig-evidence batch-cklb \
+./dist/docket batch-cklb \
   --input-root /private/inventory \
   --library-root /private/stig-library \
   --dry-run
 
-./dist/stig-evidence batch-cklb \
+./dist/docket batch-cklb \
   --input-root /private/inventory \
   --library-root /private/stig-library
 ```

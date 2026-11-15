@@ -35,7 +35,7 @@ After scanning, the playbook delegates directory creation and file-mode restrict
 | `<prefix>_XCCDF_Results.xml` | No | `--stig-viewer` export, retained separately |
 | `<prefix>_Scan.log` | No | Raw scanner output and diagnostics |
 
-The playbook removes its guest temporary staging **only after** successful fetch and permission restriction, then reports the controller evidence path. A failure earlier in the block can leave guest temporary files for investigation. The Go converter never fetches results or runs OpenSCAP: it reads the first three matching files from owner-private host directories via `stig-evidence batch-cklb --input-root ... --library-root ...`. See [pairing and output](BATCH-CKLB.md#pairing-and-output). The official DISA manual XCCDF library and per-OS checklist tailoring are separate converter inputs; the SSG datastream in the `oscap` command is **not** that manual benchmark.
+The playbook removes its guest temporary staging **only after** successful fetch and permission restriction, then reports the controller evidence path. A failure earlier in the block can leave guest temporary files for investigation. The Go converter never fetches results or runs OpenSCAP: it reads the first three matching files from owner-private host directories via `docket batch-cklb --input-root ... --library-root ...`. See [pairing and output](BATCH-CKLB.md#pairing-and-output). The official DISA manual XCCDF library and per-OS checklist tailoring are separate converter inputs; the SSG datastream in the `oscap` command is **not** that manual benchmark.
 
 ## Invocation boundary
 

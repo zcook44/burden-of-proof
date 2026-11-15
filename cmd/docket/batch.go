@@ -85,7 +85,7 @@ func runBatch(args []string, out, stderr io.Writer) int {
 		return 2
 	}
 	if flags.NArg() != 0 || *root == "" || (*benchmarkPath == "") == (*libraryRoot == "") {
-		fmt.Fprintln(stderr, "usage: stig-evidence batch-cklb --input-root PATH (--library-root DIR | --benchmark XCCDF) [--dry-run]")
+		fmt.Fprintln(stderr, "usage: docket batch-cklb --input-root PATH (--library-root DIR | --benchmark XCCDF) [--dry-run]")
 		return 2
 	}
 	// Resolve caller-relative inputs once before discovery or benchmark selection.

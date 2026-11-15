@@ -5,7 +5,7 @@ all:
     network_stig_transport: fixture
     network_stig_repo: "{{ playbook_dir | dirname | dirname }}"
     network_stig_work: "{{ network_stig_repo }}/dist/network-stig-scan"
-    network_stig_converter: "{{ network_stig_repo }}/dist/stig-evidence"
+    network_stig_converter: "{{ network_stig_repo }}/dist/docket"
   children:
     network_devices:
       hosts:

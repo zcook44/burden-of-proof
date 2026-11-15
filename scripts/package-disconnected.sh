@@ -5,7 +5,7 @@ umask 077
 
 usage() {
   printf 'Usage: %s VERSION OUTPUT_DIRECTORY\n' "$0" >&2
-  printf 'Example: %s 1.0.1 ./dist/releases\n' "$0" >&2
+  printf 'Example: %s 2.0.0 ./dist/releases\n' "$0" >&2
   exit 2
 }
 [[ $# -eq 2 ]] || usage
@@ -35,7 +35,7 @@ output=$(cd -- "$output" && pwd -P)
 [[ $(stat -c %u "$output") -eq $(id -u) && $(stat -c %a "$output") == 700 ]] || {
   echo "Output directory must be owned by this user and mode 0700: $output" >&2; exit 1;
 }
-name="stig-evidence-${version}-linux-amd64"
+name="docket-${version}-linux-amd64"
 [[ ! -e $output/$name.tar.gz && ! -e $output/$name.tar.gz.sha256 ]] || {
   echo "Refusing to overwrite an existing release: $name" >&2; exit 1;
 }
@@ -43,8 +43,10 @@ stage=$(mktemp -d "$output/.package.XXXXXXXX")
 trap 'rm -rf -- "$stage"' EXIT
 package="$stage/$name"
 install -d -m 700 "$package" "$package/bin" "$package/scripts" "$package/templates" "$package/docs" "$package/docs/snapshots" "$package/contracts" "$package/schemas"
-(cd "$root" && go build -trimpath -ldflags='-s -w' -o "$package/bin/stig-evidence" ./cmd/stig-evidence)
+(cd "$root" && go build -trimpath -ldflags='-s -w' -o "$package/bin/docket" ./cmd/docket)
 install -m 755 "$root/scripts/preflight-offline.sh" "$package/scripts/preflight-offline.sh"
+install -m 755 "$root/scripts/install-docket.sh" "$package/scripts/install-docket.sh"
+install -m 644 "$root/scripts/docket-completion.bash" "$package/scripts/docket-completion.bash"
 install -m 755 "$root/scripts/generate-cisco-tailoring.py" "$package/scripts/generate-cisco-tailoring.py"
 install -m 644 "$root/README.md" "$package/README.md"
 install -m 644 "$root/LICENSE" "$package/LICENSE"
@@ -65,15 +67,15 @@ if git -C "$root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   [[ -z $(git -C "$root" status --porcelain --untracked-files=normal) ]] || source_state=dirty
 fi
 {
-  printf 'Product: stig-evidence\nVersion: %s\nTarget: linux/amd64 (CGO_ENABLED=0)\n' "$version"
+  printf 'Product: docket\nVersion: %s\nTarget: linux/amd64 (CGO_ENABLED=0)\n' "$version"
   printf 'Go: %s\nSource commit: %s\nSource worktree: %s\n' "$(go version)" "$commit" "$source_state"
   printf 'Build: GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local GOFLAGS=-mod=vendor\n'
-  printf 'Contents: CLI (RHEL batch-cklb, Cisco cisco-cklb/cisco-batch, and device-named cisco-xccdf/xccdf-cklb), Bash RHEL preflight, Python 3 Cisco tailoring generator, four per-OS YAML examples, DISA CKLB schema, documentation and file checksums.\n'
+  printf 'Contents: docket CLI, Bash installer and completion, RHEL preflight, Python 3 Cisco tailoring generator, four per-OS YAML examples, DISA CKLB schema, documentation and file checksums.\n'
   printf 'Not included: official DISA benchmarks, SSG scan inputs, Cisco running configs, device collectors, private evidence, credentials, signatures.\n'
 } > "$package/RELEASE.txt"
 (
   cd "$package"
-  sha256sum bin/stig-evidence scripts/preflight-offline.sh scripts/generate-cisco-tailoring.py README.md LICENSE RELEASE.txt \
+  sha256sum bin/docket scripts/preflight-offline.sh scripts/install-docket.sh scripts/docket-completion.bash scripts/generate-cisco-tailoring.py README.md LICENSE RELEASE.txt \
     docs/*.md docs/snapshots/oscap_scan.yml docs/snapshots/run-lab-oscap.sh contracts/*.md templates/*.yaml schemas/*.json schemas/*.md > SHA256SUMS
 )
 source_date_epoch=${SOURCE_DATE_EPOCH:-0}

@@ -4,7 +4,7 @@ The shared install, library, and command choice are in [install and run](README.
 
 The repository tracks `stig-library-cisco/`: 25 official manual XCCDF XMLs and 25 complete, hash-bound, all-`auto` YAML inventories covering 1,096 controls. Inventory is not assessment; a well-filled filing cabinet is still a filing cabinet. These files are **not** included in the generic offline archive. A Git checkout does not preserve the converter's required private modes: copy only authorized XML/policies into an owner-owned `0700` library, set each file to `0600`, and verify source authenticity and benchmark applicability independently. Do not run conversion against the checkout's ordinary `0755`/`0644` files or commit operational configs/decisions.
 
-`stig-evidence cisco-cklb` scores one saved running configuration against one official Cisco manual benchmark. `stig-evidence cisco-batch` does that for every device and benchmark in a manifest and writes a separate review folder for each, plus an HTML index a reviewer can open. Pinned checks cover IOS and IOS-XE switch NDM controls that are decided by global commands, and IOS, IOS-XE, and NX-OS switch L2S controls that can be decided from the configuration together with a port-role table. Every other control stays `not_reviewed`. The tool does not connect to a device, infer platform or role from the configuration, or copy raw configuration lines into the checklist.
+`docket cisco-cklb` scores one saved running configuration against one official Cisco manual benchmark. `docket cisco-batch` does that for every device and benchmark in a manifest and writes a separate review folder for each, plus an HTML index a reviewer can open. Pinned checks cover IOS and IOS-XE switch NDM controls that are decided by global commands, and IOS, IOS-XE, and NX-OS switch L2S controls that can be decided from the configuration together with a port-role table. Every other control stays `not_reviewed`. The tool does not connect to a device, infer platform or role from the configuration, or copy raw configuration lines into the checklist.
 
 ```mermaid
 flowchart TD
@@ -26,7 +26,7 @@ flowchart TD
 Use an owner-owned, mode-`0700` directory named exactly for the device. Place an owner-owned, mode-`0600` UTF-8 snapshot ending in `.running-config` inside it. The CLI requires an explicit `--target` matching that directory. Supply either one owner-private Cisco manual XCCDF XML with `--benchmark` or an owner-private library and **exact** `--benchmark-id`, for example `Cisco_IOS_Router_NDM_STIG`. A router may require separate NDM and RTR benchmarks; use a separate invocation for each. The library selector chooses the newest V/R pair for that exact ID, refuses equal-version duplicates, and checks XCCDF identity and release metadata against the file name. It does **not** guess IOS vs IOS-XE, router vs switch, or NDM vs RTR from config text. Never use a benchmark for a different platform or role merely because it was in the same ZIP.
 
 ```sh
-stig-evidence cisco-cklb \
+docket cisco-cklb \
   --config /private/configs/router1.example.test/scan.running-config \
   --target router1.example.test \
   --library-root /private/stig-library \
@@ -34,7 +34,7 @@ stig-evidence cisco-cklb \
   --dry-run
 # Remove --dry-run only after independently confirming device identity and benchmark applicability.
 
-stig-evidence cisco-batch \
+docket cisco-batch \
   --manifest /private/configs/review-manifest.json \
   --evidence-root /private/configs \
   --library-root /private/stig-library \

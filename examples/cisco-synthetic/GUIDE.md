@@ -2,7 +2,7 @@
 
 These are **invented test inputs**, not exports from Cisco devices and **not compliance evidence**. They exercise IOS and IOS-XE routers/switches, an IOS-XR router, a NX-OS switch and an ASA firewall. Addresses use documentation-only ranges; any authentication strings are deliberately nonfunctional placeholders. The examples are intended to exercise benchmark pairing and STIG Viewer review, **not deployment on a device**. Platform-specific syntax is illustrative and has not been parser-validated on hardware.
 
-**No example is asserted to be compliant.** The checked-in CKLBs under `checklists/` are historical unscored fixtures. Current `stig-evidence cisco-batch` builds a separate review package from `review-manifest.json`, each `scan.running-config`, and the switch `port-roles.csv` files. Pinned checks can mark Open, Not a Finding, or Not Applicable. Every control without a matching pin stays Not Reviewed. Rerunning does not overwrite the historical fixtures. Do not copy placeholder credentials into a real configuration.
+**No example is asserted to be compliant.** The checked-in CKLBs under `checklists/` are historical unscored fixtures. Current `docket cisco-batch` builds a separate review package from `review-manifest.json`, each `scan.running-config`, and the switch `port-roles.csv` files. Pinned checks can mark Open, Not a Finding, or Not Applicable. Every control without a matching pin stays Not Reviewed. Rerunning does not overwrite the historical fixtures. Do not copy placeholder credentials into a real configuration.
 
 ## Layout
 
@@ -19,13 +19,13 @@ This repository now tracks 25 official manual XCCDF XMLs and 25 all-`auto` inven
 
 ```sh
 umask 077
-GOPROXY=off GOSUMDB=off go build -mod=vendor -o "$HOME/private/stig-evidence" ./cmd/stig-evidence
+GOPROXY=off GOSUMDB=off go build -mod=vendor -o "$HOME/private/docket" ./cmd/docket
 # Git does not preserve the required private modes on a fresh checkout:
 chmod 700 examples/cisco-synthetic/targets/*
 chmod 600 examples/cisco-synthetic/targets/*/scan.running-config
 install -d -m 700 examples/cisco-synthetic/checklists
 python3 scripts/generate-cisco-examples.py \
-  --converter "$HOME/private/stig-evidence" \
+  --converter "$HOME/private/docket" \
   --library-root "$HOME/private/stig-library" \
   --source-root "$PWD/examples/cisco-synthetic" \
   --output-root "$PWD/examples/cisco-synthetic/checklists"

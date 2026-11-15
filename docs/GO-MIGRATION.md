@@ -1,19 +1,19 @@
 # Go-only review converter
 
-`stig-evidence` is the sole tracked application. Build it with the environment in [install and run](README.md); the packaged static Linux/amd64 CLI needs no Go or Python runtime. Paths below use that page's `/private/stig-library`. A simple per-OS YAML supplies checklist comments and decisions, but the retired *signed-release* tailoring implementation was **not** ported. No command here verifies an approval signature, releases an official assessment, or delivers evidence. The lab, inconveniently, still lives somewhere else. See [disconnected release](DISCONNECTED-RELEASE.md), [workflow](WORKFLOW.md), and the [asset record contract](../contracts/asset-record-v1.md).
+`docket` is the command. The repository is still burden-of-proof. Build it with the environment in [install and run](README.md); the packaged static Linux/amd64 CLI needs no Go or Python runtime. Paths below use that page's `/private/stig-library`. A simple per-OS YAML supplies checklist comments and decisions, but the retired *signed-release* tailoring implementation was **not** ported. No command here verifies an approval signature, releases an official assessment, or delivers evidence. The lab, inconveniently, still lives somewhere else. See [disconnected release](DISCONNECTED-RELEASE.md), [workflow](WORKFLOW.md), and the [asset record contract](../contracts/asset-record-v1.md).
 
 ## Commands
 
 ```sh
 # Build with the install-page environment, then:
-./dist/stig-evidence asset-check --asset /private/asset.json --pre /private/pre.xml --host node.example.test
-./dist/stig-evidence reconcile --scan /private/ssg-results.xml --benchmark /private/official.xml --out /private/candidates.json
-./dist/stig-evidence draft-cklb --scan /private/ssg-results.xml --benchmark /private/official.xml --out /private/review.cklb
-./dist/stig-evidence batch-cklb --input-root /private/inventory --library-root /private/stig-library
-./dist/stig-evidence cisco-cklb --config /private/configs/ios-xe-switch-01/scan.running-config --target ios-xe-switch-01 --library-root /private/stig-library --benchmark-id Cisco_IOS_XE_Switch_L2S_STIG --dry-run
-./dist/stig-evidence cisco-batch --manifest /private/cisco-manifest.json --evidence-root /private/configs --library-root /private/stig-library --output-root /private/cisco-review --dry-run
-./dist/stig-evidence cisco-xccdf --config /private/evidence/ios-xe-switch-01/scan.running-config --target ios-xe-switch-01 --fqdn ios-xe-switch-01.example.test --ip 192.0.2.4 --mac 02:00:00:00:00:04 --role "Access switch" --target-type "Cisco IOS-XE switch" --library-root /private/stig-library --benchmark-id Cisco_IOS_XE_Switch_L2S_STIG --out /private/scans/ios-xe-switch-01/ios-xe-switch-01.Cisco_IOS_XE_Switch_L2S_STIG.results.xml
-./dist/stig-evidence xccdf-cklb --results /private/scans/ios-xe-switch-01/ios-xe-switch-01.Cisco_IOS_XE_Switch_L2S_STIG.results.xml --library-root /private/stig-library --out /private/checklists/Cisco_IOS_XE_Switch_L2S_STIG/ios-xe-switch-01/ios-xe-switch-01.cklb
+./dist/docket asset-check --asset /private/asset.json --pre /private/pre.xml --host node.example.test
+./dist/docket reconcile --scan /private/ssg-results.xml --benchmark /private/official.xml --out /private/candidates.json
+./dist/docket draft-cklb --scan /private/ssg-results.xml --benchmark /private/official.xml --out /private/review.cklb
+./dist/docket batch-cklb --input-root /private/inventory --library-root /private/stig-library
+./dist/docket cisco-cklb --config /private/configs/ios-xe-switch-01/scan.running-config --target ios-xe-switch-01 --library-root /private/stig-library --benchmark-id Cisco_IOS_XE_Switch_L2S_STIG --dry-run
+./dist/docket cisco-batch --manifest /private/cisco-manifest.json --evidence-root /private/configs --library-root /private/stig-library --output-root /private/cisco-review --dry-run
+./dist/docket cisco-xccdf --config /private/evidence/ios-xe-switch-01/scan.running-config --target ios-xe-switch-01 --fqdn ios-xe-switch-01.example.test --ip 192.0.2.4 --mac 02:00:00:00:00:04 --role "Access switch" --target-type "Cisco IOS-XE switch" --library-root /private/stig-library --benchmark-id Cisco_IOS_XE_Switch_L2S_STIG --out /private/scans/ios-xe-switch-01/ios-xe-switch-01.Cisco_IOS_XE_Switch_L2S_STIG.results.xml
+./dist/docket xccdf-cklb --results /private/scans/ios-xe-switch-01/ios-xe-switch-01.Cisco_IOS_XE_Switch_L2S_STIG.results.xml --library-root /private/stig-library --out /private/checklists/Cisco_IOS_XE_Switch_L2S_STIG/ios-xe-switch-01/ios-xe-switch-01.cklb
 ```
 
 - `asset-check` verifies a v1 asset record against the supplied pre-scan bytes. It does **not** attest lab provenance, baseline state, or authorization.

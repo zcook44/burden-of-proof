@@ -43,7 +43,7 @@ func runCiscoXCCDF(args []string, out, stderr io.Writer) int {
 		return 2
 	}
 	if flags.NArg() != 0 || *configPath == "" || *outPath == "" || (*benchmarkPath == "") == (*libraryRoot == "") || (*libraryRoot != "" && !ciscoID.MatchString(*benchmarkID)) {
-		fmt.Fprintln(stderr, "usage: stig-evidence cisco-xccdf --config PATH --target HOST --fqdn FQDN --ip ADDR --mac ADDR --role ROLE --target-type TYPE (--benchmark XCCDF | --library-root DIR --benchmark-id Cisco_*_STIG) --out HOST.BENCHMARK.results.xml [--technology AREA] [--port-roles CSV]")
+		fmt.Fprintln(stderr, "usage: docket cisco-xccdf --config PATH --target HOST --fqdn FQDN --ip ADDR --mac ADDR --role ROLE --target-type TYPE (--benchmark XCCDF | --library-root DIR --benchmark-id Cisco_*_STIG) --out HOST.BENCHMARK.results.xml [--technology AREA] [--port-roles CSV]")
 		return 2
 	}
 	for _, path := range []*string{configPath, benchmarkPath, libraryRoot, portRoles, outPath} {
@@ -132,7 +132,7 @@ func runXCCDFCKLB(args []string, out, stderr io.Writer) int {
 		return 2
 	}
 	if flags.NArg() != 0 || *resultsPath == "" || *outPath == "" || !strings.HasSuffix(*outPath, ".cklb") || (*benchmarkPath == "") == (*libraryRoot == "") {
-		fmt.Fprintln(stderr, "usage: stig-evidence xccdf-cklb --results HOST/HOST.BENCHMARK.results.xml (--benchmark XCCDF | --library-root DIR) --out HOST/HOST.cklb")
+		fmt.Fprintln(stderr, "usage: docket xccdf-cklb --results HOST/HOST.BENCHMARK.results.xml (--benchmark XCCDF | --library-root DIR) --out HOST/HOST.cklb")
 		return 2
 	}
 	for _, path := range []*string{resultsPath, benchmarkPath, libraryRoot, outPath} {

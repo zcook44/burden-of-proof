@@ -6,7 +6,7 @@ One binary converts RHEL OpenSCAP results and Cisco running configurations into 
 
 ## 1. Install the same binary either way
 
-On a disconnected host, verify and extract the 1.0.1 archive, then use `./bin/stig-evidence`. The [release page](DISCONNECTED-RELEASE.md) has the checksum steps. The archive does not contain official benchmarks. It is a converter, not a STIG library that fell off a truck.
+After `scripts/package-disconnected.sh` writes a tarball, `scripts/install-docket.sh` checks its checksum, unpacks it, and installs `docket` onto `~/.local/bin`. If that directory is not already on `PATH`, the script adds it to `~/.profile` and `~/.bashrc` or stops. The same script installs bash completion for every account at `/usr/share/bash-completion/completions/docket`. That write needs sudo, and the install stops if sudo cannot do it. `scripts/install-docket.sh --from-source` builds from this checkout and fails when Go is missing, older than 1.22, or unable to build from `vendor/` with the network turned off. The archive does not contain official benchmarks. It is a converter, not a STIG library that fell off a truck.
 
 From a source checkout that includes `vendor/`, build with the same flags the release script uses:
 
@@ -14,7 +14,7 @@ From a source checkout that includes `vendor/`, build with the same flags the re
 export GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local GOWORK=off CGO_ENABLED=0 GOFLAGS=-mod=vendor
 go test ./...
 install -d -m 700 dist
-go build -trimpath -ldflags='-s -w' -o dist/stig-evidence ./cmd/stig-evidence
+go build -trimpath -ldflags='-s -w' -o dist/docket ./cmd/docket
 ```
 
 A shorter build command will usually produce a binary. It will not be the binary this release claims to be.
@@ -59,13 +59,13 @@ Inputs are owner-private: directories `0700`, files `0600`, no symlinks.
 
 ```sh
 # RHEL. Omit --dry-run only after the printed benchmark is the one you meant.
-./dist/stig-evidence batch-cklb \
+./dist/docket batch-cklb \
   --input-root /private/inventory \
   --library-root /private/stig-library \
   --dry-run
 
 # One switch. --target is the hostname command, not a friendly alias.
-./dist/stig-evidence cisco-cklb \
+./dist/docket cisco-cklb \
   --config /private/configs/ios-xe-switch-01/scan.running-config \
   --target ios-xe-switch-01 \
   --library-root /private/stig-library \
@@ -73,7 +73,7 @@ Inputs are owner-private: directories `0700`, files `0600`, no symlinks.
   --dry-run
 
 # Device-named result, then the checklist.
-./dist/stig-evidence cisco-xccdf \
+./dist/docket cisco-xccdf \
   --config /private/configs/ios-xe-switch-01/scan.running-config \
   --target ios-xe-switch-01 \
   --fqdn ios-xe-switch-01.example.test \
@@ -85,7 +85,7 @@ Inputs are owner-private: directories `0700`, files `0600`, no symlinks.
   --benchmark-id Cisco_IOS_XE_Switch_L2S_STIG \
   --out /private/scans/ios-xe-switch-01/ios-xe-switch-01.Cisco_IOS_XE_Switch_L2S_STIG.results.xml
 
-./dist/stig-evidence xccdf-cklb \
+./dist/docket xccdf-cklb \
   --results /private/scans/ios-xe-switch-01/ios-xe-switch-01.Cisco_IOS_XE_Switch_L2S_STIG.results.xml \
   --library-root /private/stig-library \
   --out /private/checklists/Cisco_IOS_XE_Switch_L2S_STIG/ios-xe-switch-01/ios-xe-switch-01.cklb

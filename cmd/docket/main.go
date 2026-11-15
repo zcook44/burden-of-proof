@@ -1,4 +1,4 @@
-// stig-evidence creates private review candidates; signed release is unsupported.
+// docket creates private review candidates; signed release is unsupported.
 package main
 
 import (
@@ -55,7 +55,7 @@ func run(args []string, out, stderr io.Writer) int {
 		return runMapped(args[1:], true, out, stderr)
 	}
 	if len(args) == 0 || args[0] != "asset-check" {
-		fmt.Fprintln(stderr, "usage: stig-evidence {asset-check|reconcile|draft-cklb|batch-cklb|cisco-cklb|cisco-batch|cisco-xccdf|xccdf-cklb} (read-only checks or private review candidates; not a CKLB release)")
+		fmt.Fprintln(stderr, "usage: docket {asset-check|reconcile|draft-cklb|batch-cklb|cisco-cklb|cisco-batch|cisco-xccdf|xccdf-cklb} (read-only checks or private review candidates; not a CKLB release)")
 		return 2
 	}
 	flags := flag.NewFlagSet("asset-check", flag.ContinueOnError)
@@ -76,7 +76,7 @@ func run(args []string, out, stderr io.Writer) int {
 		}
 	}
 	if err != nil {
-		fmt.Fprintf(stderr, "stig-evidence: %v\n", err)
+		fmt.Fprintf(stderr, "docket: %v\n", err)
 		return 2
 	}
 	fmt.Fprintln(out, "asset record valid against supplied pre-scan bytes; provenance and baseline cleanliness not attested")
@@ -107,31 +107,31 @@ func runMapped(args []string, asDraft bool, out, stderr io.Writer) int {
 		}
 		absolute, err := filepath.Abs(*input)
 		if err != nil {
-			fmt.Fprintf(stderr, "stig-evidence: input path: %v\n", err)
+			fmt.Fprintf(stderr, "docket: input path: %v\n", err)
 			return 2
 		}
 		*input = absolute
 	}
 	scan, err := readPrivate(*scanPath)
 	if err != nil {
-		fmt.Fprintf(stderr, "stig-evidence: %v\n", err)
+		fmt.Fprintf(stderr, "docket: %v\n", err)
 		return 2
 	}
 	benchmark, err := readPrivate(*benchmarkPath)
 	if err != nil {
-		fmt.Fprintf(stderr, "stig-evidence: %v\n", err)
+		fmt.Fprintf(stderr, "docket: %v\n", err)
 		return 2
 	}
 	report, err := reconcile.Convert(scan, benchmark)
 	if err != nil {
-		fmt.Fprintf(stderr, "stig-evidence: %v\n", err)
+		fmt.Fprintf(stderr, "docket: %v\n", err)
 		return 2
 	}
 	var value any = report
 	var htmlReport, arfBytes []byte
 	if asDraft {
 		if filepath.Ext(*outPath) != ".cklb" {
-			fmt.Fprintln(stderr, "stig-evidence: draft output must have .cklb extension")
+			fmt.Fprintln(stderr, "docket: draft output must have .cklb extension")
 			return 2
 		}
 		if *arfPath != "" {
@@ -159,13 +159,13 @@ func runMapped(args []string, asDraft bool, out, stderr io.Writer) int {
 			value, err = draft.BuildMapped(report, benchmark)
 		}
 		if err != nil {
-			fmt.Fprintf(stderr, "stig-evidence: draft rejected: %v\n", err)
+			fmt.Fprintf(stderr, "docket: draft rejected: %v\n", err)
 			return 2
 		}
 	}
 	body, err := json.MarshalIndent(value, "", "  ")
 	if err != nil {
-		fmt.Fprintf(stderr, "stig-evidence: %v\n", err)
+		fmt.Fprintf(stderr, "docket: %v\n", err)
 		return 2
 	}
 	body = append(body, '\n')
@@ -173,30 +173,30 @@ func runMapped(args []string, asDraft bool, out, stderr io.Writer) int {
 	if asDraft && *assessmentView {
 		provenance, err = assessmentProvenance(body, report, *scanPath, *benchmarkPath, *htmlPath, *arfPath, htmlReport, arfBytes)
 		if err != nil {
-			fmt.Fprintf(stderr, "stig-evidence: provenance rejected: %v\n", err)
+			fmt.Fprintf(stderr, "docket: provenance rejected: %v\n", err)
 			return 2
 		}
 	}
 	parent := filepath.Dir(*outPath)
 	parentFD, err := syscall.Open(parent, syscall.O_RDONLY|syscall.O_DIRECTORY|syscall.O_NOFOLLOW|syscall.O_CLOEXEC, 0)
 	if err != nil {
-		fmt.Fprintf(stderr, "stig-evidence: private output directory unavailable: %v\n", err)
+		fmt.Fprintf(stderr, "docket: private output directory unavailable: %v\n", err)
 		return 2
 	}
 	defer syscall.Close(parentFD)
 	var info syscall.Stat_t
 	if err = syscall.Fstat(parentFD, &info); err != nil || info.Uid != uint32(os.Geteuid()) || info.Mode&077 != 0 {
-		fmt.Fprintln(stderr, "stig-evidence: output parent must be owner-private")
+		fmt.Fprintln(stderr, "docket: output parent must be owner-private")
 		return 2
 	}
 	name := filepath.Base(*outPath)
 	if name == "." || name == ".." || name == "" {
-		fmt.Fprintln(stderr, "stig-evidence: invalid output name")
+		fmt.Fprintln(stderr, "docket: invalid output name")
 		return 2
 	}
 	fd, err := syscall.Openat(parentFD, name, syscall.O_WRONLY|syscall.O_CREAT|syscall.O_EXCL|syscall.O_NOFOLLOW|syscall.O_CLOEXEC, 0600)
 	if err != nil {
-		fmt.Fprintf(stderr, "stig-evidence: output must not exist: %v\n", err)
+		fmt.Fprintf(stderr, "docket: output must not exist: %v\n", err)
 		return 2
 	}
 	file := os.NewFile(uintptr(fd), name)
@@ -205,12 +205,12 @@ func runMapped(args []string, asDraft bool, out, stderr io.Writer) int {
 		err = closeErr
 	}
 	if err != nil {
-		fmt.Fprintf(stderr, "stig-evidence: incomplete output, inspect before retrying: %v\n", err)
+		fmt.Fprintf(stderr, "docket: incomplete output, inspect before retrying: %v\n", err)
 		return 2
 	}
 	if provenance != nil {
 		if _, err := writeBatchResult(*outPath+".provenance.json", provenance); err != nil {
-			fmt.Fprintf(stderr, "stig-evidence: provenance sidecar failed: %v (checklist retained for safe inspection)\n", err)
+			fmt.Fprintf(stderr, "docket: provenance sidecar failed: %v (checklist retained for safe inspection)\n", err)
 			return 2
 		}
 	}
