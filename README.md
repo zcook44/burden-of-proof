@@ -61,3 +61,27 @@ The live scanner remains in `/scratch/ansible`; [its exact command and snapshot]
 For RHEL, the converter joins explicit SSG `V-…` or historical `SV-…` references to official DISA manual XCCDF controls by numeric ID. That produces **candidate** statuses, not an official DISA scan or proof that the SSG and DISA checks have equivalent semantics. Missing or ambiguous controls remain Not Reviewed unless an administrator explicitly supplies a per-OS checklist decision in the tailoring YAML. For Cisco, the same evaluator (`cisco-config-review-v9`) scores pinned IOS, IOS-XE, and NX-OS switch checks when the benchmark ID, rule IDs, and official check phrases still match. You still name the benchmark. The tool will not infer IOS from a confident reading of `version`. Anything it cannot prove stays Not Reviewed. A complete all-`auto` policy accounts for every rule without manufacturing findings. It records allowlisted non-secret observations and byte hashes, not raw device configuration. See the [Cisco guide](docs/CISCO-CONFIG.md). Generated CKLB files and their provenance sidecars are review artifacts: their hashes bind bytes, but neither a hash nor an asset record attests guest or device state, operator approval, or scan authenticity.
 
 There is no signed-release, signature-verification, or evidence-publication command here. Schema validation, human review, STIG Viewer import, approval, and delivery require separate authorized steps. [Checkmate](docs/WORKFLOW.md#checkmate-is-a-separate-tool), when supplied separately, inventories, optionally validates, and edits existing CKLBs; editing invalidates the converter's byte-bound sidecar. It is not the converter or an approval gate. This **private source repository** currently tracks 25 Cisco manual XCCDF files and their 25 all-`auto` tailoring inventories under `stig-library-cisco/`; a Git checkout gives them ordinary repository permissions, so stage operational copies in an owner-private library before CLI use. The generic offline archive deliberately omits those benchmarks and policies. Keep actual scans, device snapshots, generated assessments, approval records and keys in owner-private storage outside Git. `.gitignore` is housekeeping, not access control.
+
+## TODO: disconnected deployment notes
+
+Open items found during the first air-gapped end-to-end deployment of `docket` v2.0.0.
+
+### Install / packaging
+
+- [ ] ...
+
+### Configuration
+
+- [ ] ...
+
+### Usage / workflow
+
+- [ ] ...
+
+### Docs fixes
+
+- [ ] ...
+
+### Bugs / follow-ups
+
+- [ ] ...
