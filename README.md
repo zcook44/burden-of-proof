@@ -76,7 +76,7 @@ Open items found during the first air-gapped end-to-end deployment of `docket` v
 
 ### Usage / workflow
 
-- [ ] ...
+- [ ] Clarify or integrate tailoring process. Cisco: `scripts/generate-cisco-tailoring.py` (Python script, not a docket subcommand) creates initial all-auto tailoring files; `cisco-batch` generates per-device worksheets with Not Reviewed items that users edit and copy back. RHEL: manual creation only—no generator exists, just example templates in `templates/RHEL_{7,8,9,10}_STIG.tailoring.yaml`. Docs scattered across CISCO-CONFIG.md, BATCH-CKLB.md, NETWORK-ADMIN-WALKTHROUGH.md. Missing: integrated `docket generate-tailoring` command, RHEL tailoring generator, standalone tailoring file validation, consolidated workflow guide for first-time users.
 
 ### Docs fixes
 
