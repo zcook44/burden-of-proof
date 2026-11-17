@@ -68,7 +68,7 @@ Open items found during the first air-gapped end-to-end deployment of `docket` v
 
 ### Install / packaging
 
-- [ ] ...
+- [ ] Verify Cisco config collection automation is included or documented. Ansible playbooks exist in `ansible/playbooks/network_stig_scan.yml` and `ansible/roles/network_stig_scan/` that can collect running-configs from live Cisco devices (IOS, IOS-XE, NX-OS) via `show running-config`, but `docs/DISCONNECTED-RELEASE.md` states the archive does not contain "the live `/scratch/ansible` playbook/wrapper". Need to confirm whether Ansible automation should be in the disconnected bundle, or if external config collection process needs separate documentation.
 
 ### Configuration
 
