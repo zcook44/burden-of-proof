@@ -1,4 +1,4 @@
-schema_version: 1
+schema_version: 2
 benchmark_id: Cisco_ASA_VPN_STIG
 benchmark_sha256: dee009540dc98a91f54ba312432d80528d157a343db249815d7f1f2dc9ccd097
 rules:

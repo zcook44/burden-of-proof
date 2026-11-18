@@ -1,4 +1,4 @@
-schema_version: 1
+schema_version: 2
 benchmark_id: Cisco_IOS_Router_NDM_STIG
 benchmark_sha256: b92cccf9a63b08507cc8f96c80c7e7976634036a5677a5b151e9aea4a180ef13
 rules:

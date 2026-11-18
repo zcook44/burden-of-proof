@@ -1,4 +1,4 @@
-schema_version: 1
+schema_version: 2
 benchmark_id: Cisco_IOS-XR_Router_RTR_STIG
 benchmark_sha256: b61d3acf092c40bed15b5ef81c69c66c49476a70de4a4d530cf582aed2fb7356
 rules:

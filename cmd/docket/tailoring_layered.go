@@ -228,11 +228,16 @@ func loadTailoringLayer(path, benchmarkID string, benchmarkBytes []byte, report 
 		comment := strings.TrimSpace(rule.Comment)
 
 		if layer == "root" {
-			// For new format (schema v2), enforce strict comment rules
-			// For old format (schema v1/implicit), be lenient (backward compat)
-			if !isOldFormat && rule.Status != "auto" && comment == "" {
-				return nil, nil, fmt.Errorf("%s tailoring %s: comment required for non-auto override %s", layer, path, rule.STIGID)
+			if !isOldFormat {
+				// Schema v2: strict comment rules
+				if rule.Status != "auto" && comment == "" {
+					return nil, nil, fmt.Errorf("%s tailoring %s: comment required for non-auto override %s", layer, path, rule.STIGID)
+				}
+				if rule.Status == "auto" && comment != "" {
+					return nil, nil, fmt.Errorf("%s tailoring %s: auto entries must not have comments (schema v2); use status override with comment for policy decisions; rule %s", layer, path, rule.STIGID)
+				}
 			}
+			// Old format: lenient, any comment allowed for backward compat
 		} else { // host layer
 			if comment == "" {
 				return nil, nil, fmt.Errorf("%s tailoring %s: comment required for all host overrides (including auto reverts) for %s", layer, path, rule.STIGID)

@@ -1,4 +1,4 @@
-schema_version: 1
+schema_version: 2
 benchmark_id: Cisco_ACI_NDM_STIG
 benchmark_sha256: 1ea44a0597225e1de9d7988da1983a72b537fac3b5c8b2e7c137b94a8d02d789
 rules:

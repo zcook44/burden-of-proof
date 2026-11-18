@@ -1,4 +1,4 @@
-schema_version: 1
+schema_version: 2
 benchmark_id: Cisco_IOS_XE_Switch_L2S_STIG
 benchmark_sha256: e0dd8c7bf54a46474d09cc23186d5a7c12d883421d2c187fc8025d4ddbf0297f
 rules:

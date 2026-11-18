@@ -35,7 +35,8 @@ rules:
 - **`not_reviewed`**: Requires human review
 
 ### Comment Requirements
-- **Root layer**: Non-`auto` overrides MUST have a comment. `auto` rows MAY have an explanatory comment (old templates have comments on `auto`, which is allowed for backward compatibility).
+- **Root layer (schema v2)**: Non-`auto` overrides MUST have a comment. `auto` rows MUST NOT have comments (use status override with comment for policy decisions).
+- **Root layer (schema v1/implicit, backward compat)**: Any comment allowed on `auto` rows (old RHEL templates).
 - **Host layer**: ALL rows MUST have a comment, including `auto` (which documents why the root override is being reverted).
 
 ## RHEL Tailoring
@@ -51,18 +52,20 @@ schema_version: 2
 benchmark_id: RHEL_9_STIG
 benchmark_sha256: a1b2c3d4...
 rules:
-  - rule_name: xwindows_remove_packages
-    stig_id: V-257837
-    sv_id: SV-257837r1268251_rule
-    status: auto
-    comment: "Graphical environment required; verify per-host applicability"
-  
   - rule_name: sudo_remove_nopasswd
     stig_id: V-258106
     sv_id: SV-258106r1102061_rule
     status: not_a_finding
     comment: "Passwordless sudo required for automation; documented and approved"
+  
+  - rule_name: mount_option_tmp_noexec
+    stig_id: V-257867
+    sv_id: SV-257867r958804_rule
+    status: not_applicable
+    comment: "Site requires execution from /tmp for legacy application support"
 ```
+
+**Note**: In schema v2, `auto` entries have no comment. To document site context for rules you're NOT overriding, use documentation outside the tailoring file or create a commented template as reference.
 
 ### Host Layer (Per-Host Override)
 - **Location**: `<scan-dir>/<benchmark-id>.tailoring.yaml` (beside the `.results.xccdf.xml`)
@@ -220,17 +223,26 @@ Host override files **must** use `schema_version: 2` with `benchmark_id` and `be
 ## Workflow Suggestions
 
 ### Initial Deployment
-1. Create root-layer tailoring for each benchmark (full inventory for Cisco, partial for RHEL)
+
+**For RHEL:**
+1. Start from templates (old format) or create schema v2 root files with only site overrides
 2. Deploy to library root
 3. Run `docket tailoring check --library-root /library` to validate
-4. Run batch commands with `--dry-run` to verify behavior
+4. Run `batch-cklb --dry-run` to verify behavior
+5. Generate checklists
+
+**For Cisco:**
+1. Use `scripts/generate-cisco-tailoring.py --library-root /library` to create full-inventory root files (all `auto`)
+2. Edit root files to add site-wide overrides (change `auto` to override + comment)
+3. Run `docket tailoring check --library-root /library` to validate
+4. Run `cisco-batch --dry-run` to verify behavior
 5. Generate checklists
 
 ### Host-Specific Exception
-1. Run batch processing (generates suggested tailoring worksheets)
-2. Review `.tailoring.yaml` worksheet beside each checklist
+1. Run batch processing (generates suggested tailoring worksheets beside each checklist)
+2. Review `.tailoring.yaml` worksheet beside each generated checklist
 3. Edit worksheet: keep only rules that differ from root, ensure all rows have comments
-4. Copy edited worksheet to host directory (beside scan files)
+4. Copy edited worksheet to host directory (RHEL: beside `.results.xccdf.xml`; Cisco: beside `scan.running-config`)
 5. Re-run batch processing; host overrides now apply
 6. Run `docket tailoring check --scan-root /scans` to validate host files
 
@@ -243,12 +255,18 @@ Host override files **must** use `schema_version: 2` with `benchmark_id` and `be
 
 ## Disconnected Deployment
 
-Ensure the following are staged for offline use:
-- Root-layer tailoring files in the library root (one per benchmark)
-- RHEL templates (if used as starting points)
-- Cisco benchmark inventories (one per benchmark, all in library root)
+The `scripts/package-disconnected.sh` script includes:
+- **RHEL templates** (4): Schema v1/implicit format, in `templates/` directory
+- **Cisco root inventories** (25): Schema v2 full inventories, in `cisco-library/` directory
+- **Cisco tailoring generator**: `scripts/generate-cisco-tailoring.py` for creating additional root files
+- **Documentation**: Including `docs/TAILORING.md`
 
-The `scripts/package-disconnected.sh` script includes templates but not private tailoring files. Stage root tailoring separately on the disconnected network.
+After unpacking the release archive:
+1. **RHEL**: RHEL templates are examples. Copy to library root and edit for site policy, or create new schema v2 files.
+2. **Cisco**: Cisco root inventories are in `cisco-library/`. Copy to your library root (beside benchmarks). All are `auto` by default; edit to add site overrides.
+3. **Validation**: Run `docket tailoring check --library-root /library` before first use.
+
+The package does NOT include: official DISA benchmarks, private scans, device configs, or site-specific tailoring edits.
 
 ## Troubleshooting
 

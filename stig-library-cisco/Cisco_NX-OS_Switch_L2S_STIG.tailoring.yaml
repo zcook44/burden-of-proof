@@ -1,4 +1,4 @@
-schema_version: 1
+schema_version: 2
 benchmark_id: Cisco_NX-OS_Switch_L2S_STIG
 benchmark_sha256: b486140695ff298cf04f1060b6593728cb49694efba73e3cbed60fae3a9ada75
 rules:

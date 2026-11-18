@@ -1,4 +1,4 @@
-schema_version: 1
+schema_version: 2
 benchmark_id: Cisco_ACI_RTR_STIG
 benchmark_sha256: d126a0967e05401641535328599395617a89dcdd6fa8a925b47aa72089e72f15
 rules:

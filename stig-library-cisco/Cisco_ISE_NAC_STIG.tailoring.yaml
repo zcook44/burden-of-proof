@@ -1,4 +1,4 @@
-schema_version: 1
+schema_version: 2
 benchmark_id: Cisco_ISE_NAC_STIG
 benchmark_sha256: 92c4761b2a46c5da2fef63cf6e1121cef3df49e3d7f137b0b0ec9aeac9bf400f
 rules:

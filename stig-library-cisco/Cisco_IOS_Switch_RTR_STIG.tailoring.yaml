@@ -1,4 +1,4 @@
-schema_version: 1
+schema_version: 2
 benchmark_id: Cisco_IOS_Switch_RTR_STIG
 benchmark_sha256: 90dfb2d1999ae3f3b6cc09350ff02a0ba306a53dadf6f4171394e819ecc966f2
 rules:

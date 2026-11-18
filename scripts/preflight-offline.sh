@@ -60,11 +60,36 @@ check_tree() {
 check_tree "$input"
 check_tree "$library"
 if [[ -n $checklist && $checklist != "$input" && $checklist != "$library" ]]; then check_tree "$checklist"; fi
-# The converter may auto-select matching tailoring YAML from this library.
-# Detect examples but never modify, approve, or silently install them.
-if find -P "$library" -type f -name 'RHEL_*_STIG.tailoring.yaml' -print -quit | grep -q .; then
-  printf 'WARNING: library contains tailoring YAML. Example tailoring is not approved site policy; review converter selections before any write.\n' >&2
+
+# Layered tailoring: root at library root, host in scan/device dirs.
+# Use docket tailoring check to validate files that will be loaded.
+printf 'TAILORING VALIDATION:\n'
+if "$converter" tailoring check --library-root "$library" --scan-root "$input" 2>&1; then
+  printf 'Tailoring files validated (if present).\n'
+else
+  printf 'WARNING: Tailoring validation found issues. Review output above before conversion.\n' >&2
 fi
+
+# Warn about misplaced tailoring files (these will be ignored)
+misplaced=0
+while IFS= read -r -d '' path; do
+  # Tailoring files must be at library root or in immediate subdirs of input root (host dirs)
+  # Any nested deeper than one level under input root will be ignored
+  relative=${path#"$input"/}
+  if [[ $relative != "$path" ]]; then
+    # It's under input root - check depth
+    depth=$(echo "$relative" | tr -cd '/' | wc -c)
+    if ((depth > 1)); then
+      printf 'WARNING: Nested tailoring file will be ignored (not in a host directory): %s\n' "$path" >&2
+      ((misplaced++))
+    fi
+  fi
+done < <(find "$input" -name '*.tailoring.yaml' -type f -print0 2>/dev/null || true)
+
+if ((misplaced > 0)); then
+  printf 'WARNING: %d tailoring file(s) are misplaced and will be ignored.\n' "$misplaced" >&2
+fi
+
 printf 'CONVERTER DRY RUN (no files written):\n'
 "$converter" batch-cklb --input-root "$input" --library-root "$library" --dry-run
 if [[ -n $checkmate ]]; then
