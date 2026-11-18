@@ -269,8 +269,12 @@ func TestBatchCLIRecursesConvertsAndSkipsOnlyMatchingOutput(t *testing.T) {
 	}
 	out.Reset()
 	errs.Reset()
-	if code := run(args, &out, &errs); code == 0 || !strings.Contains(errs.String(), "differs") {
-		t.Fatalf("tampered provenance accepted: %d %s", code, errs.String())
+	// With new behavior, invalid/tampered provenance causes a warning and overwrite rather than failure
+	if code := run(args, &out, &errs); code != 0 {
+		t.Fatalf("should warn and overwrite with tampered provenance: %d %s %s", code, out.String(), errs.String())
+	}
+	if !strings.Contains(out.String(), "WARNING") {
+		t.Fatalf("expected overwrite warning for tampered provenance, got: %s", out.String())
 	}
 	if err := os.WriteFile(outputs[0]+".provenance.json", provenance, 0600); err != nil {
 		t.Fatal(err)
