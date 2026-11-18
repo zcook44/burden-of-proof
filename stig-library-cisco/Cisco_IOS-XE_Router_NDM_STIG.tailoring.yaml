@@ -1,4 +1,4 @@
-schema_version: 1
+schema_version: 2
 benchmark_id: Cisco_IOS-XE_Router_NDM_STIG
 benchmark_sha256: 748fab27a38ba2e980250338c8140bdc0eb00fc19cc269bc326a60185b8dd956
 rules:

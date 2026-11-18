@@ -1,4 +1,4 @@
-schema_version: 1
+schema_version: 2
 benchmark_id: Cisco_NX-OS_Switch_NDM_STIG
 benchmark_sha256: 78ef8994694f1f0f2529c8aaa4942d24d01b7db8cf7ec9592c1dfbfb595b4846
 rules:

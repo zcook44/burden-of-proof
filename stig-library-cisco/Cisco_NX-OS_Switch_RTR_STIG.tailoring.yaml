@@ -1,4 +1,4 @@
-schema_version: 1
+schema_version: 2
 benchmark_id: Cisco_NX-OS_Switch_RTR_STIG
 benchmark_sha256: f6197e93ca098791202702bc104d88200c882e7d1c95e1a61e883c8ef042d3e3
 rules:

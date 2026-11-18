@@ -1,4 +1,4 @@
-schema_version: 1
+schema_version: 2
 benchmark_id: Cisco_ISE_NDM_STIG
 benchmark_sha256: 6de5d5e38c323ab3ccb22b4906ba6aa8644b82724532994b2722203d0ab8cea5
 rules:

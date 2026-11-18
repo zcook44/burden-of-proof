@@ -8,3 +8,19 @@
 The upstream ZIP contains only the JSON file and no license or redistribution notice. This file is third-party DISA material, **not covered by this repository's license**. Its presence in this private repository does not establish permission to redistribute it publicly. Confirm the applicable terms with your organization before distributing a release beyond authorized recipients. A SHA-256 comparison verifies byte identity, not publisher authentication; obtain the expected value through an independently trusted channel.
 
 The converter does not use this schema to create CKLBs; validation is external. The read-only Bash preflight can pass it explicitly to a separately supplied Checkmate executable with `--schema schemas/SV3_CKLB_1_0_JSON_SCHEMA.json`. The separate `checkmate` repository carries an identical copy.
+
+## Assessment provenance schema versions
+
+The `.cklb.provenance.json` sidecars use these schema versions:
+
+- **Schema v1**: Initial provenance with single tailoring file
+- **Schema v2**: Layered RHEL tailoring (root + host files with per-rule layer attribution)
+- **Schema v3**: Cisco single-layer tailoring
+- **Schema v4**: Layered Cisco tailoring (root + host files with per-rule layer attribution)
+
+Schema v2 and v4 provenance sidecars include:
+- `tailoring_root`: Root layer file path and SHA-256
+- `tailoring_host`: Host layer file path and SHA-256 (when present)
+- `tailoring_rule_layer`: Per-rule origin map showing which layer defined each tailored rule
+
+See [TAILORING.md](../docs/TAILORING.md) for layered tailoring documentation.

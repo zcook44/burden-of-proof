@@ -14,6 +14,7 @@ import (
 	"github.com/zcook44/burden-of-proof/internal/ciscoconfig"
 	"github.com/zcook44/burden-of-proof/internal/draft"
 	"github.com/zcook44/burden-of-proof/internal/netxccdf"
+	"github.com/zcook44/burden-of-proof/internal/reconcile"
 )
 
 func runCiscoXCCDF(args []string, out, stderr io.Writer) int {
@@ -88,17 +89,38 @@ func runCiscoXCCDF(args []string, out, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "cisco-xccdf: %v\n", err)
 		return 2
 	}
-	policyDir := ciscoPolicyDirectory(filepath.Dir(*configPath), filepath.Dir(resolvedBenchmark), id)
-	policyRules, policyPath, policyBytes, err := loadCiscoTailoring(policyDir, id, benchmark, doc)
+	
+	// Build report for tailoring validation
+	draftReport := buildCiscoReportForXCCDF(doc, id, benchmark)
+	
+	// Load layered tailoring
+	// Cisco root layer requires full inventory (all controls)
+	libraryDir := filepath.Dir(resolvedBenchmark)
+	hostDir := filepath.Dir(*configPath)
+	policyRules, rootPath, rootBytes, hostPath, hostBytes, err := loadLayeredTailoring(
+		libraryDir, hostDir, id, benchmark, draftReport, true)
 	if err != nil {
 		fmt.Fprintf(stderr, "cisco-xccdf: %v\n", err)
 		return 2
 	}
+	
 	tailoringSHA := ""
-	if policyPath != "" {
-		applyCiscoTailoring(doc, policyRules)
-		tailoringSHA = sha256Hex(policyBytes)
-		fmt.Fprintf(out, "TAILORING %s (sha256 %s)\n", policyPath, tailoringSHA)
+	if len(policyRules) > 0 {
+		applyCiscoLayeredTailoring(doc, policyRules, rootPath, hostPath)
+		// Compute combined hash for metadata
+		if rootPath != "" && hostPath != "" {
+			tailoringSHA = sha256Hex(append(rootBytes, hostBytes...))
+		} else if rootPath != "" {
+			tailoringSHA = sha256Hex(rootBytes)
+		} else if hostPath != "" {
+			tailoringSHA = sha256Hex(hostBytes)
+		}
+		if rootPath != "" {
+			fmt.Fprintf(out, "TAILORING ROOT %s (sha256 %s)\n", rootPath, sha256Hex(rootBytes))
+		}
+		if hostPath != "" {
+			fmt.Fprintf(out, "TAILORING HOST %s (sha256 %s)\n", hostPath, sha256Hex(hostBytes))
+		}
 	}
 	body, err := netxccdf.FromChecklist(identity, id, netxccdf.ResultMeta{
 		ConfigSHA256: sha256Hex(config), ConfigComplete: parsed.Complete(ciscoconfig.Family(id)), TailoringSHA256: tailoringSHA,
@@ -220,6 +242,24 @@ func loadCiscoScanInputs(configPath, benchmarkPath, libraryRoot, benchmarkID, po
 		return nil, nil, "", "", ciscoconfig.RoleTable{}, err
 	}
 	return config, benchmark, benchmarkPath, benchmarkID, roles, nil
+}
+
+func buildCiscoReportForXCCDF(doc map[string]any, benchmarkID string, benchmark []byte) reconcile.Report {
+	// Build a minimal reconcile.Report for tailoring validation
+	rows := doc["stigs"].([]any)[0].(map[string]any)["rules"].([]any)
+	controls := make([]reconcile.Control, len(rows))
+	for i, item := range rows {
+		row := item.(map[string]any)
+		controls[i] = reconcile.Control{
+			GroupID: row["group_id"].(string),
+			RuleID:  row["rule_id"].(string),
+			Status:  row["status"].(string),
+		}
+	}
+	return reconcile.Report{
+		DISABenchmark: benchmarkID,
+		Controls:      controls,
+	}
 }
 
 func writeReviewBundle(outPath string, doc map[string]any, benchmarkPath string, benchmark []byte, resultsPath string, results []byte, scan netxccdf.Scan) error {

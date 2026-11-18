@@ -1,4 +1,4 @@
-schema_version: 1
+schema_version: 2
 benchmark_id: Cisco_ACI_L2S_STIG
 benchmark_sha256: 0fc05a230810bd462d22c4b96971abcfadea8b115435907f1fa864e8ea0eb39a
 rules:

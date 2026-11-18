@@ -1,4 +1,4 @@
-schema_version: 1
+schema_version: 2
 benchmark_id: Cisco_ASA_FW_STIG
 benchmark_sha256: 8ee8f9c7792fcd12ad232e1a24b7206178257094a2bc4d64fc8dfd746e8e3b40
 rules:

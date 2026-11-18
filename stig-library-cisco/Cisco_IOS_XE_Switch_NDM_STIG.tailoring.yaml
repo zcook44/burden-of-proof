@@ -1,4 +1,4 @@
-schema_version: 1
+schema_version: 2
 benchmark_id: Cisco_IOS_XE_Switch_NDM_STIG
 benchmark_sha256: e23e97f7a66d77a6d477e770c709749c7a5e6d1207a585bc089fc1026dc89e40
 rules:

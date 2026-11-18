@@ -1,4 +1,4 @@
-schema_version: 1
+schema_version: 2
 benchmark_id: Cisco_ASA_IPS_STIG
 benchmark_sha256: 034231b01dc97269d1d30674ae7041bee1a5da2f4457d159274834ac172255ab
 rules:

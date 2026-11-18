@@ -1,4 +1,4 @@
-schema_version: 1
+schema_version: 2
 benchmark_id: Cisco_SNA_STIG
 benchmark_sha256: f725330374ee8cdbcd90ea62d54982312083a273ef9a7a0b2c4d39d2e5afb9f4
 rules:

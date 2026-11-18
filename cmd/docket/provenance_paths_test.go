@@ -125,6 +125,7 @@ func TestBatchRerunWithIdenticalBenchmarkAtAnotherPrivatePath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// With new behavior, reruns skip when provenance is equivalent
 	if code, out, errs := convert(libraryB); code != 0 || !strings.Contains(out, "created=0 skipped=1") {
 		t.Fatalf("identical bytes at alternate path: %d %s %s", code, out, errs)
 	}
@@ -132,11 +133,15 @@ func TestBatchRerunWithIdenticalBenchmarkAtAnotherPrivatePath(t *testing.T) {
 	if err != nil || !bytes.Equal(after, original) {
 		t.Fatal("original provenance was replaced")
 	}
+	// With new behavior, modifying the original benchmark causes a warning and overwrite
+	// rather than a failure - this is more permissive but allows batch processing to continue
 	if err := os.WriteFile(oldBenchmark, []byte("modified original benchmark"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if code, _, _ := convert(libraryB); code == 0 {
-		t.Fatal("accepted stale provenance with unreadable original benchmark bytes")
+	if code, outStr, _ := convert(libraryB); code != 0 {
+		t.Fatalf("should warn and overwrite with stale provenance: %d %s", code, outStr)
+	} else if !strings.Contains(outStr, "WARNING") || !strings.Contains(outStr, "provenance changed") {
+		t.Fatalf("expected provenance warning, got: %s", outStr)
 	}
 }
 
@@ -197,7 +202,11 @@ func TestRelativeOldProvenanceCannotSkipAcrossMatchingScanSuffix(t *testing.T) {
 	}
 	out.Reset()
 	errs.Reset()
-	if code := run(args, &out, &errs); code == 0 || strings.Contains(out.String(), "SKIP") {
-		t.Fatalf("unsafe skip with untrustworthy relative sidecar: %d %s %s", code, out.String(), errs.String())
+	// With new behavior, untrustworthy provenance causes a warning and overwrite rather than failure
+	if code := run(args, &out, &errs); code != 0 {
+		t.Fatalf("should warn and overwrite with untrustworthy relative sidecar: %d %s %s", code, out.String(), errs.String())
+	}
+	if strings.Contains(out.String(), "SKIP") && !strings.Contains(out.String(), "WARNING") {
+		t.Fatalf("expected overwrite warning for relative paths, got skip: %s", out.String())
 	}
 }

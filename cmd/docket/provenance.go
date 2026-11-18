@@ -28,8 +28,22 @@ type assessmentRecord struct {
 	Benchmark       evidenceInput    `json:"benchmark"`
 	HTML            *evidenceInput   `json:"html,omitempty"`
 	ARF             *evidenceInput   `json:"arf,omitempty"`
-	Tailoring       *evidenceInput   `json:"tailoring,omitempty"`
+	Tailoring       *evidenceInput   `json:"tailoring,omitempty"` // Legacy single-file tailoring
 	Reconciliation  reconcile.Report `json:"reconciliation"`
+}
+
+type assessmentRecordLayered struct {
+	SchemaVersion      int                  `json:"schema_version"`
+	ChecklistSHA256    string               `json:"checklist_sha256"`
+	MappingMethod      string               `json:"mapping_method"`
+	Scan               evidenceInput        `json:"scan"`
+	Benchmark          evidenceInput        `json:"benchmark"`
+	HTML               *evidenceInput       `json:"html,omitempty"`
+	ARF                *evidenceInput       `json:"arf,omitempty"`
+	TailoringRoot      *evidenceInput       `json:"tailoring_root,omitempty"`
+	TailoringHost      *evidenceInput       `json:"tailoring_host,omitempty"`
+	TailoringRuleLayer map[string]string    `json:"tailoring_rule_layer,omitempty"` // STIG_ID -> "root" or "host"
+	Reconciliation     reconcile.Report     `json:"reconciliation"`
 }
 
 // equivalentProvenance accepts an old sidecar only when its sole difference
@@ -95,6 +109,41 @@ func assessmentProvenance(body []byte, report reconcile.Report, scanPath, benchm
 	}
 	if len(tailoring) == 1 {
 		record.Tailoring = tailoring[0]
+	}
+	data, err := json.MarshalIndent(record, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	return append(data, '\n'), nil
+}
+
+// assessmentProvenanceLayered binds exact checklist bytes with layered tailoring provenance.
+// This supports separate root and host tailoring files with per-rule layer tracking.
+func assessmentProvenanceLayered(body []byte, report reconcile.Report, scanPath, benchmarkPath, htmlPath, arfPath string, html, arf []byte, tailoring *tailoringProvenance) ([]byte, error) {
+	record := assessmentRecordLayered{
+		SchemaVersion:   2, // Schema v2 for layered tailoring
+		ChecklistSHA256: sha256Hex(body),
+		MappingMethod:   "numeric V/SV mapping from explicit source vulnerability V references or legacy STIG SV references; semantic check equivalence not independently verified; layered tailoring (root + host override)",
+		Scan:            evidenceInput{scanPath, report.ScanSHA256},
+		Benchmark:       evidenceInput{benchmarkPath, report.BenchmarkSHA256},
+		Reconciliation:  report,
+	}
+	if htmlPath != "" {
+		record.HTML = &evidenceInput{htmlPath, sha256Hex(html)}
+	}
+	if arfPath != "" {
+		record.ARF = &evidenceInput{arfPath, sha256Hex(arf)}
+	}
+	if tailoring != nil {
+		if tailoring.RootFile != "" {
+			record.TailoringRoot = &evidenceInput{tailoring.RootFile, tailoring.RootSHA256}
+		}
+		if tailoring.HostFile != "" {
+			record.TailoringHost = &evidenceInput{tailoring.HostFile, tailoring.HostSHA256}
+		}
+		if len(tailoring.RuleOrigins) > 0 {
+			record.TailoringRuleLayer = tailoring.RuleOrigins
+		}
 	}
 	data, err := json.MarshalIndent(record, "", "  ")
 	if err != nil {

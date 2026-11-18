@@ -9,6 +9,7 @@ An offline Go toolkit for turning saved OpenSCAP SSG results, an explicitly sele
 | Install once, then run RHEL or Cisco the same way | [Install and run](docs/README.md) |
 | Recursive RHEL scan pairing, benchmark selection, output and provenance rules | [Batch CKLB converter](docs/BATCH-CKLB.md) |
 | Illustrated RHEL path from the lab scan to the reviewer | [RHEL workflow](docs/RHEL-OSCAP-WORKFLOW.md) |
+| Layered tailoring: site-wide defaults + per-host overrides with provenance | [Tailoring guide](docs/TAILORING.md) |
 | Cisco config evaluation, full auto-default tailoring inventory and review limits | [Cisco config candidates](docs/CISCO-CONFIG.md) |
 | Illustrated Cisco path from a saved configuration to a device-named checklist | [Cisco scan process](docs/CISCO-SCAN-PROCESS.md) |
 | Network scan: device-named XCCDF results and checklist identity | [Network scan](docs/NETWORK-SCAN.md) · [Admin walkthrough](docs/NETWORK-ADMIN-WALKTHROUGH.md) |
@@ -46,15 +47,15 @@ flowchart LR
     benchmark["Selected official manual XCCDF"] --> rhel
     benchmark --> cisco
     benchmark --> xccdf
-    osPolicy["Optional reviewed RHEL policy: auto or admin decision"] --> rhel
-    ciscoPolicy["Complete Cisco policy: auto by default; admin change is explicit"] --> cisco
+    osPolicy["Optional RHEL layered tailoring: root defaults + host overrides"] --> rhel
+    ciscoPolicy["Cisco layered tailoring: root defaults + host overrides"] --> cisco
     candidate --> schema["Optional external CKLB schema validation"]
     candidate --> editor["Checkmate: optional in-place review; sidecar hash then stale"]
     schema --> human["Human review, approval and delivery outside both tools"]
     editor --> human
 ```
 
-The live scanner remains in `/scratch/ansible`; [its exact command and snapshot](docs/OSCAP-SOURCE.md) are for audit, not a scan entry point in this repository. This playbook performs **one scan** and package updates; it does not generate/apply remediation or automatically produce a post-remediation recheck. If a separate authorized remediation workflow is used, its ignore rules exclude selected fixes, **not** checklist findings; obtain a fresh post-change scan and do not mix runs. Per-OS YAML in the private STIG library applies comments and optional status decisions to **every host of that OS**; `auto` retains the scan-derived status. The bundled RHEL examples, including a lab-specific `not_a_finding` override, are **not approved site policy**. The converter preserves raw candidates even when a manual decision differs; ARF adds observations only with matching HTML. Cisco's complete, hash-bound tailoring inventory has `auto` for every check until an administrator changes a rule and supplies a comment. See [batch converter](docs/BATCH-CKLB.md) and [Cisco guide](docs/CISCO-CONFIG.md).
+The live scanner remains in `/scratch/ansible`; [its exact command and snapshot](docs/OSCAP-SOURCE.md) are for audit, not a scan entry point in this repository. This playbook performs **one scan** and package updates; it does not generate/apply remediation or automatically produce a post-remediation recheck. If a separate authorized remediation workflow is used, its ignore rules exclude selected fixes, **not** checklist findings; obtain a fresh post-change scan and do not mix runs. **Layered tailoring** uses site-wide root defaults (one file per OS at library root) plus optional per-host overrides (in scan directories); rules merge per-rule with host overrides winning. Root YAML applies to **every host of that OS**; `auto` retains the scan-derived status. The bundled RHEL examples, including a lab-specific `not_a_finding` override, are **not approved site policy**. The converter preserves raw candidates even when a manual decision differs; ARF adds observations only with matching HTML. Cisco tailoring also uses the two-layer architecture with `auto` by default until an administrator changes a rule and supplies a comment. See [tailoring guide](docs/TAILORING.md), [batch converter](docs/BATCH-CKLB.md) and [Cisco guide](docs/CISCO-CONFIG.md).
 
 ## What the output means
 

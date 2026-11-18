@@ -1,4 +1,4 @@
-schema_version: 1
+schema_version: 2
 benchmark_id: Cisco_IOS_Router_RTR_STIG
 benchmark_sha256: be7b76e01ac1552507d597bc518d3f8e7b15b5dd161c599fed26853b3dad2bcf
 rules:

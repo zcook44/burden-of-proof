@@ -130,7 +130,10 @@ func TestCiscoXCCDFAppliesDeviceTailoring(t *testing.T) {
 		t.Fatal(err)
 	}
 	policy := filepath.Join(filepath.Dir(cfg), "Cisco_IOS_Router_NDM_STIG.tailoring.yaml")
-	if err := os.WriteFile(policy, []byte(ciscoPolicyBody(benchmark, "not_applicable", "Site accepts this session limit.", false)), 0600); err != nil {
+	// Host-layer tailoring file with schema v2 and comments on all overrides
+	benchSum := sha256.Sum256(benchmark)
+	hostPolicy := "schema_version: 2\nbenchmark_id: Cisco_IOS_Router_NDM_STIG\nbenchmark_sha256: " + hex.EncodeToString(benchSum[:]) + "\nrules:\n  - stig_id: V-215662\n    sv_id: SV-215662r1269385_rule\n    status: not_applicable\n    comment: Site accepts this session limit.\n"
+	if err := os.WriteFile(policy, []byte(hostPolicy), 0600); err != nil {
 		t.Fatal(err)
 	}
 	var out, errs bytes.Buffer
@@ -152,9 +155,9 @@ func TestCiscoXCCDFAppliesDeviceTailoring(t *testing.T) {
 	if row["group_id"] != "V-215662" || row["status"] != "not_applicable" || !strings.Contains(row["comments"].(string), "ADMINISTRATOR OVERRIDE") {
 		t.Fatalf("override was not applied: %#v", row)
 	}
-	sum := sha256.Sum256([]byte(ciscoPolicyBody(benchmark, "not_applicable", "Site accepts this session limit.", false)))
+	policySum := sha256.Sum256([]byte(hostPolicy))
 	sidecar, err := os.ReadFile(checklist + ".provenance.json")
-	if err != nil || !bytes.Contains(sidecar, []byte(hex.EncodeToString(sum[:]))) {
+	if err != nil || !bytes.Contains(sidecar, []byte(hex.EncodeToString(policySum[:]))) {
 		t.Fatalf("tailoring hash missing: %s %v", sidecar, err)
 	}
 	suggestion, err := os.ReadFile(strings.TrimSuffix(checklist, ".cklb") + ".tailoring.yaml")
