@@ -25,11 +25,20 @@ The October library ZIP contains nested RHEL 9 and 10 product ZIPs; extract each
 
 Adding a new quarterly release to that root makes the **next invocation** use it, including for old scans. That is a deliberate current-benchmark reinterpretation, not a reconstruction of the benchmark in force when the scan ran; compare changed controls before compliance use. Different benchmark bytes produce distinct output filenames and do not overwrite earlier files. For a pinned historical conversion of a **single-OS tree**, use `--benchmark /private/official.xml` **instead of** `--library-root`; a mismatched OS fails. Change only `--input-root` to process a different tree (including deeply nested folders). The input directory must contain host-named leaf directories; each XCCDF `TestResult/target` must equal its containing directory's basename. The scanner needs no VM access for conversion. Run `batch-cklb --help` for flags. No global `--operator-approved` is offered: approval of one run cannot be silently extended to every scan found recursively.
 
-## Per-OS checklist tailoring
+## Layered checklist tailoring (root + host)
 
-Put an owner-private `RHEL_<major>_STIG.tailoring.yaml` at the `--library-root` directory (for example `RHEL_9_STIG.tailoring.yaml`) **only after authorization**. The file applies to **every host and saved scan of that OS**; do not put a host-specific decision here. `--benchmark` mode also looks beside its benchmark file. An absent OS file leaves its checklists unchanged; `rules: []` is a valid, tracked empty policy that changes no statuses (but its bytes still affect output identity). The packaged templates are **unapproved examples**: RHEL 8 V2R9 illustrates twelve `auto` entries from `rh8-r2v9-ignore-rules`; RHEL 9 V2R10 illustrates thirteen entries from `rh9-r2v10-ignore-rules` (twelve `auto` and an explicit lab-specific `not_a_finding` for passwordless sudo). RHEL 7 V3R15 and RHEL 10 V1R3 examples use empty policies because no matching remediation ignore lists were available. These ignore lists are external remediation inputs, not converter configuration or authorization. An excluded remediation alone does not establish a checklist outcome.
+Tailoring uses a **two-layer architecture**: site-wide defaults at the library root (one file per benchmark), plus optional per-host/device overrides in scan directories. Rules from both layers merge per-rule (not whole-file replacement); host overrides win when both define the same rule.
+
+**Root layer (site-wide):** Put an owner-private `RHEL_<major>_STIG.tailoring.yaml` at the `--library-root` directory (for example `RHEL_9_STIG.tailoring.yaml`) **only after authorization**. This applies to **every host of that OS**. `--benchmark` mode also looks beside its benchmark file. An absent root file leaves checklists unchanged; `rules: []` is a valid empty policy. Root files may be partial inventories (only the rules you're tailoring) or complete. The packaged templates are **unapproved examples**: RHEL 8 V2R9 illustrates twelve `auto` entries from `rh8-r2v9-ignore-rules`; RHEL 9 V2R10 illustrates thirteen entries from `rh9-r2v10-ignore-rules` (twelve `auto` and an explicit lab-specific `not_a_finding` for passwordless sudo). RHEL 7 V3R15 and RHEL 10 V1R3 examples use empty policies. These ignore lists are external remediation inputs, not converter configuration or authorization.
+
+**Host layer (per-host overrides):** Put `RHEL_<major>_STIG.tailoring.yaml` in the host's scan directory (same directory as `*.results.xml`) for host-specific decisions. Host files must use schema version 2 and are always partial (only the rules differing from root). Host overrides replace the root's decision for that rule on that host only.
+
+**Schema version 2 format** (recommended for all new files; old files still accepted for root layer):
 
 ```yaml
+schema_version: 2
+benchmark_id: RHEL_9_STIG
+benchmark_sha256: 2d61d198272dedbf273307daea9f4ab409840ceaaa0ac192d84d194ecd7f1690
 rules:
   - rule_name: sudo_remove_nopasswd  # SSG rule name from the ignore file
     stig_id: V-258106               # DISA group ID
@@ -38,7 +47,9 @@ rules:
     comment: "Remediation excluded; verify the privilege policy for this control."
 ```
 
-`auto` retains the scan-derived checklist status and adds the note to Comments. To answer a Not Reviewed item or correct a false positive, change `status` to the desired checklist value **only after authorization** and write the administrator's reason in `comment`. The original automated candidate and host observations remain in the checklist/provenance; the comment labels a manual decision, not approval of it. The exact V/SV pair, allowed status, nonempty comment, duplicates, unknown YAML fields, and file privacy are checked before output; none of those checks validates policy approval. Editing the policy creates a **new** versioned checklist and sidecar, which record its path and SHA-256; reruns with unchanged inputs verify and skip. Existing checklists are never overwritten. For initial deployment use the [Bash preflight](DISCONNECTED-RELEASE.md) to review benchmark and policy selections before writing.
+`auto` retains the scan-derived checklist status and adds the note to Comments. To answer a Not Reviewed item or correct a false positive, change `status` to the desired checklist value **only after authorization** and write the administrator's reason in `comment`. The original automated candidate and host observations remain in the checklist/provenance; the comment labels a manual decision, not approval of it. **Schema v2 comment rules**: root-layer `auto` entries must NOT have comments; non-auto overrides require comments. Host-layer files always require comments for all overrides including `auto` (to explain why this host differs).
+
+The exact V/SV pair, allowed status, comment requirements, duplicates, unknown YAML fields, and file privacy are checked before output; none of those checks validates policy approval. Editing either layer creates a **new** versioned checklist and sidecar, which record both files' paths and SHA-256s, plus per-rule layer provenance; reruns with unchanged inputs verify and skip. When provenance doesn't match (tailoring, benchmark, or inputs changed), the tool warns and overwrites both files to allow batch processing to continue. For initial deployment use the [Bash preflight](DISCONNECTED-RELEASE.md) with `docket tailoring check` to review benchmark and policy selections before writing. See [TAILORING.md](TAILORING.md) for complete layered tailoring documentation.
 
 ## Pairing and output
 
