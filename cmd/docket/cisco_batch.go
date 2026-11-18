@@ -14,6 +14,7 @@ import (
 
 	"github.com/zcook44/burden-of-proof/internal/ciscoconfig"
 	"github.com/zcook44/burden-of-proof/internal/draft"
+	"github.com/zcook44/burden-of-proof/internal/reconcile"
 )
 
 type reviewManifest struct {
@@ -47,6 +48,24 @@ func ensurePrivateDir(path string) error {
 		return err
 	}
 	return os.Chmod(path, 0700)
+}
+
+func buildCiscoReport(doc map[string]any, benchmarkID string, benchmark []byte) reconcile.Report {
+	// Build a minimal reconcile.Report for tailoring validation
+	rows := doc["stigs"].([]any)[0].(map[string]any)["rules"].([]any)
+	controls := make([]reconcile.Control, len(rows))
+	for i, item := range rows {
+		row := item.(map[string]any)
+		controls[i] = reconcile.Control{
+			GroupID: row["group_id"].(string),
+			RuleID:  row["rule_id"].(string),
+			Status:  row["status"].(string),
+		}
+	}
+	return reconcile.Report{
+		DISABenchmark: benchmarkID,
+		Controls:      controls,
+	}
 }
 
 func platformAllowsBenchmark(platform, benchmarkID string) bool {
@@ -172,20 +191,40 @@ func runCiscoBatch(args []string, out, stderr io.Writer) int {
 				fmt.Fprintf(stderr, "Cisco batch: %s %s: %v\n", device.Host, benchmarkID, err)
 				return 2
 			}
-			suggestion, err := suggestCiscoTailoring(benchmarkID, benchmark, doc)
-			if err != nil {
-				fmt.Fprintf(stderr, "Cisco tailoring suggestion: %v\n", err)
-				return 2
-			}
-			policyDir := ciscoPolicyDirectory(hostDir, filepath.Dir(benchmarkPath), benchmarkID)
-			policyRules, policyPath, policyBytes, err := loadCiscoTailoring(policyDir, benchmarkID, benchmark, doc)
+			// Build draft report for tailoring inspection (needed to get reconcile.Report-like structure)
+			draftReport := buildCiscoReport(doc, benchmarkID, benchmark)
+			
+			// Load layered tailoring: root at library, host at device dir
+			// Cisco root layer requires full inventory (all controls)
+			libraryDir := filepath.Dir(benchmarkPath)
+			policyRules, rootPath, rootBytes, hostPath, hostBytes, err := loadLayeredTailoring(
+				libraryDir, hostDir, benchmarkID, benchmark, draftReport, true)
 			if err != nil {
 				fmt.Fprintf(stderr, "Cisco tailoring: %v\n", err)
 				return 2
 			}
-			if policyPath != "" {
-				doc["id"] = draft.CiscoTailoredID(doc["id"].(string), sha256Hex(policyBytes))
-				_ = applyCiscoTailoring(doc, policyRules)
+			
+			var ruleOrigins map[string]string
+			if len(policyRules) > 0 {
+				// Compute combined hash for tailored ID
+				combinedHash := ""
+				if rootPath != "" && hostPath != "" {
+					combinedHash = sha256Hex(append(rootBytes, hostBytes...))
+				} else if rootPath != "" {
+					combinedHash = sha256Hex(rootBytes)
+				} else if hostPath != "" {
+					combinedHash = sha256Hex(hostBytes)
+				}
+				if combinedHash != "" {
+					doc["id"] = draft.CiscoTailoredID(doc["id"].(string), combinedHash)
+				}
+				_, ruleOrigins = applyCiscoLayeredTailoring(doc, policyRules, rootPath, hostPath)
+			}
+			
+			suggestion, err := suggestCiscoTailoring(benchmarkID, benchmark, doc)
+			if err != nil {
+				fmt.Fprintf(stderr, "Cisco tailoring suggestion: %v\n", err)
+				return 2
 			}
 			counts := map[string]int{}
 			for _, item := range doc["stigs"].([]any)[0].(map[string]any)["rules"].([]any) {
@@ -205,8 +244,11 @@ func runCiscoBatch(args []string, out, stderr io.Writer) int {
 			if len(roleBytes) > 0 {
 				digestParts = append(digestParts, roleBytes)
 			}
-			if len(policyBytes) > 0 {
-				digestParts = append(digestParts, policyBytes)
+			if len(rootBytes) > 0 {
+				digestParts = append(digestParts, rootBytes)
+			}
+			if len(hostBytes) > 0 {
+				digestParts = append(digestParts, hostBytes)
 			}
 			digest := bundleDigest(digestParts...)
 			dir := filepath.Join(*outputRoot, benchmarkID, device.Host)
@@ -224,9 +266,17 @@ func runCiscoBatch(args []string, out, stderr io.Writer) int {
 			if len(roleBytes) > 0 {
 				record["port_roles"] = evidenceInput{rolePath, sha256Hex(roleBytes)}
 			}
-			if policyPath != "" {
-				record["schema_version"] = 3
-				record["tailoring"] = evidenceInput{policyPath, sha256Hex(policyBytes)}
+			if rootPath != "" || hostPath != "" {
+				record["schema_version"] = 4 // New schema for layered tailoring
+				if rootPath != "" {
+					record["tailoring_root"] = evidenceInput{rootPath, sha256Hex(rootBytes)}
+				}
+				if hostPath != "" {
+					record["tailoring_host"] = evidenceInput{hostPath, sha256Hex(hostBytes)}
+				}
+				if len(ruleOrigins) > 0 {
+					record["tailoring_rule_layer"] = ruleOrigins
+				}
 			}
 			sidecar, err := json.MarshalIndent(record, "", "  ")
 			if err != nil {

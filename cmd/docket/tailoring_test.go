@@ -58,9 +58,10 @@ func TestBatchAppliesPerOSTailoringAndVersionsChanges(t *testing.T) {
 	if err := json.Unmarshal(sidecar, &provenance); err != nil {
 		t.Fatal(err)
 	}
-	tailored, ok := provenance["tailoring"].(map[string]any)
+	// Check for new layered tailoring provenance structure
+	tailored, ok := provenance["tailoring_root"].(map[string]any)
 	if !ok || tailored["path"] != policy || tailored["sha256"] == "" {
-		t.Fatalf("missing policy provenance: %v", provenance["tailoring"])
+		t.Fatalf("missing policy provenance: %v", provenance)
 	}
 	out.Reset()
 	errs.Reset()
@@ -122,7 +123,8 @@ func TestBatchAcceptsEmptyPerOSPolicy(t *testing.T) {
 			if err := json.Unmarshal(sidecar, &provenance); err != nil {
 				t.Fatal(err)
 			}
-			if provenance["tailoring"] == nil {
+			// Check for new layered tailoring provenance structure
+			if provenance["tailoring_root"] == nil {
 				t.Fatal("empty policy was not recorded in provenance")
 			}
 		})

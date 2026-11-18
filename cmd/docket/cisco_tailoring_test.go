@@ -13,7 +13,7 @@ import (
 
 func ciscoPolicyBody(bench []byte, firstStatus, firstComment string, omitSecond bool) string {
 	sum := sha256.Sum256(bench)
-	body := "schema_version: 1\nbenchmark_id: Cisco_IOS_Router_NDM_STIG\nbenchmark_sha256: " + hex.EncodeToString(sum[:]) + "\nrules:\n  - stig_id: V-215662\n    sv_id: SV-215662r1269385_rule\n    status: " + firstStatus + "\n"
+	body := "schema_version: 2\nbenchmark_id: Cisco_IOS_Router_NDM_STIG\nbenchmark_sha256: " + hex.EncodeToString(sum[:]) + "\nrules:\n  - stig_id: V-215662\n    sv_id: SV-215662r1269385_rule\n    status: " + firstStatus + "\n"
 	if firstComment != "" {
 		body += "    comment: " + firstComment + "\n"
 	}
@@ -66,9 +66,10 @@ func TestCiscoTailoringFullAutoPreservesLogicAndAdminOverrideIsVersioned(t *test
 	if err := json.Unmarshal(sideBytes, &side); err != nil {
 		t.Fatal(err)
 	}
-	tailored, ok := side["tailoring"].(map[string]any)
-	if !ok || tailored["sha256"] != sha256Hex([]byte(ciscoPolicyBody(benchmark, "auto", "", false))) {
-		t.Fatalf("tailoring hash absent: %+v", side)
+	// Check for new layered tailoring provenance structure
+	tailoredRoot, ok := side["tailoring_root"].(map[string]any)
+	if !ok || tailoredRoot["sha256"] != sha256Hex([]byte(ciscoPolicyBody(benchmark, "auto", "", false))) {
+		t.Fatalf("tailoring_root hash absent or incorrect: %+v", side)
 	}
 	out.Reset()
 	errs.Reset()

@@ -16,6 +16,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/zcook44/burden-of-proof/internal/draft"
+	"github.com/zcook44/burden-of-proof/internal/reconcile"
 )
 
 var ciscoID = regexp.MustCompile(`^Cisco_[A-Za-z0-9_-]+_STIG$`)
@@ -124,6 +125,24 @@ func selectCiscoBenchmark(root, id string) (string, []byte, error) {
 	return chosen, content, nil
 }
 
+func buildCiscoReportForCLI(doc map[string]any, benchmarkID string, benchmark []byte) reconcile.Report {
+	// Build a minimal reconcile.Report for tailoring validation
+	rows := doc["stigs"].([]any)[0].(map[string]any)["rules"].([]any)
+	controls := make([]reconcile.Control, len(rows))
+	for i, item := range rows {
+		row := item.(map[string]any)
+		controls[i] = reconcile.Control{
+			GroupID: row["group_id"].(string),
+			RuleID:  row["rule_id"].(string),
+			Status:  row["status"].(string),
+		}
+	}
+	return reconcile.Report{
+		DISABenchmark: benchmarkID,
+		Controls:      controls,
+	}
+}
+
 func runCisco(args []string, out, stderr io.Writer) int {
 	flags := flag.NewFlagSet("cisco-cklb", flag.ContinueOnError)
 	flags.SetOutput(stderr)
@@ -213,8 +232,16 @@ func runCisco(args []string, out, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "Cisco checklist: %v\n", err)
 		return 2
 	}
-	policyDir := ciscoPolicyDirectory(filepath.Dir(*configPath), filepath.Dir(*benchmarkPath), *benchmarkID)
-	policyRules, policyPath, policyBytes, err := loadCiscoTailoring(policyDir, *benchmarkID, benchmark, doc)
+	
+	// Build report for tailoring validation
+	draftReport := buildCiscoReportForCLI(doc, *benchmarkID, benchmark)
+	
+	// Load layered tailoring
+	// Cisco root layer requires full inventory (all controls)
+	libraryDir := filepath.Dir(*benchmarkPath)
+	hostDir := filepath.Dir(*configPath)
+	policyRules, rootPath, rootBytes, hostPath, hostBytes, err := loadLayeredTailoring(
+		libraryDir, hostDir, *benchmarkID, benchmark, draftReport, true)
 	if err != nil {
 		fmt.Fprintf(stderr, "Cisco tailoring: %v\n", err)
 		return 2
@@ -226,11 +253,29 @@ func runCisco(args []string, out, stderr io.Writer) int {
 			baselineAutomated = append(baselineAutomated, map[string]string{"group_id": row["group_id"].(string), "rule_id": row["rule_id"].(string), "status": row["status"].(string)})
 		}
 	}
-	adminOverrides := []map[string]string{}
-	if policyPath != "" {
-		fmt.Fprintf(out, "TAILORING %s (sha256 %s; %d controls)\n", policyPath, sha256Hex(policyBytes), len(policyRules))
-		doc["id"] = draft.CiscoTailoredID(doc["id"].(string), sha256Hex(policyBytes))
-		adminOverrides = applyCiscoTailoring(doc, policyRules)
+	var adminOverrides []map[string]string
+	var ruleOrigins map[string]string
+	hasTailoring := (rootPath != "" || hostPath != "")
+	if hasTailoring {
+		// Compute combined hash for tailored ID
+		combinedHash := ""
+		if rootPath != "" && hostPath != "" {
+			combinedHash = sha256Hex(append(rootBytes, hostBytes...))
+		} else if rootPath != "" {
+			combinedHash = sha256Hex(rootBytes)
+		} else if hostPath != "" {
+			combinedHash = sha256Hex(hostBytes)
+		}
+		if combinedHash != "" {
+			doc["id"] = draft.CiscoTailoredID(doc["id"].(string), combinedHash)
+		}
+		if rootPath != "" {
+			fmt.Fprintf(out, "TAILORING ROOT %s (sha256 %s; %d rules)\n", rootPath, sha256Hex(rootBytes), len(policyRules))
+		}
+		if hostPath != "" {
+			fmt.Fprintf(out, "TAILORING HOST %s (sha256 %s)\n", hostPath, sha256Hex(hostBytes))
+		}
+		adminOverrides, ruleOrigins = applyCiscoLayeredTailoring(doc, policyRules, rootPath, hostPath)
 	}
 	counts := map[string]int{}
 	for _, item := range doc["stigs"].([]any)[0].(map[string]any)["rules"].([]any) {
@@ -247,9 +292,16 @@ func runCisco(args []string, out, stderr io.Writer) int {
 		return 2
 	}
 	body = append(body, '\n')
-	digestParts := [][]byte{[]byte(draft.CiscoConfigEvaluatorVersion), config, benchmark, []byte(*target)}
-	if policyPath != "" {
-		digestParts = [][]byte{[]byte(draft.CiscoConfigEvaluatorVersion + ":tailoring-v1"), config, benchmark, []byte(*target), policyBytes}
+	digestVersion := draft.CiscoConfigEvaluatorVersion
+	if hasTailoring {
+		digestVersion = draft.CiscoConfigEvaluatorVersion + ":layered-tailoring-v2"
+	}
+	digestParts := [][]byte{[]byte(digestVersion), config, benchmark, []byte(*target)}
+	if rootPath != "" {
+		digestParts = append(digestParts, rootBytes)
+	}
+	if hostPath != "" {
+		digestParts = append(digestParts, hostBytes)
 	}
 	if len(roleBytes) > 0 {
 		digestParts = append(digestParts, roleBytes)
@@ -257,18 +309,30 @@ func runCisco(args []string, out, stderr io.Writer) int {
 	digest := bundleDigest(digestParts...)
 	prefix := strings.TrimSuffix(filepath.Base(*configPath), ".running-config")
 	path := filepath.Join(filepath.Dir(*configPath), prefix+"-cisco-"+sha256Hex(benchmark)[:16]+"-"+digest[:16]+"-ASSESSMENT.cklb")
+	schemaVersion := 2
+	mappingMethod := "config-only pinned checks; port roles and show output required for topology controls; unsupported controls require human review"
+	if hasTailoring {
+		schemaVersion = 4
+		mappingMethod = "config-only pinned checks with layered administrator tailoring (root + host override); unsupported controls require human review"
+	}
 	provenanceRecord := map[string]any{
-		"schema_version": 2, "checklist_sha256": sha256Hex(body),
-		"mapping_method":    "config-only pinned checks; port roles and show output required for topology controls; unsupported controls require human review",
+		"schema_version": schemaVersion, "checklist_sha256": sha256Hex(body),
+		"mapping_method":    mappingMethod,
 		"evaluator_version": draft.CiscoConfigEvaluatorVersion, "status_counts": counts,
 		"automated_controls": baselineAutomated,
 		"config":             evidenceInput{*configPath, sha256Hex(config)}, "benchmark": evidenceInput{*benchmarkPath, sha256Hex(benchmark)}, "target": *target, "benchmark_id": *benchmarkID,
 	}
-	if policyPath != "" {
-		provenanceRecord["schema_version"] = 3
-		provenanceRecord["mapping_method"] = "config-only pinned checks with optional administrator tailoring; unsupported controls require human review"
+	if hasTailoring {
 		provenanceRecord["admin_overrides"] = adminOverrides
-		provenanceRecord["tailoring"] = evidenceInput{policyPath, sha256Hex(policyBytes)}
+		if rootPath != "" {
+			provenanceRecord["tailoring_root"] = evidenceInput{rootPath, sha256Hex(rootBytes)}
+		}
+		if hostPath != "" {
+			provenanceRecord["tailoring_host"] = evidenceInput{hostPath, sha256Hex(hostBytes)}
+		}
+		if len(ruleOrigins) > 0 {
+			provenanceRecord["tailoring_rule_layer"] = ruleOrigins
+		}
 	}
 	if len(roleBytes) > 0 {
 		provenanceRecord["port_roles"] = evidenceInput{*portRoles, sha256Hex(roleBytes)}

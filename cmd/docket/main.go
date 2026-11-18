@@ -54,8 +54,11 @@ func run(args []string, out, stderr io.Writer) int {
 	if len(args) > 0 && args[0] == "draft-cklb" {
 		return runMapped(args[1:], true, out, stderr)
 	}
+	if len(args) > 0 && args[0] == "tailoring" && len(args) > 1 && args[1] == "check" {
+		return runTailoringCheck(args[2:], out, stderr)
+	}
 	if len(args) == 0 || args[0] != "asset-check" {
-		fmt.Fprintln(stderr, "usage: docket {asset-check|reconcile|draft-cklb|batch-cklb|cisco-cklb|cisco-batch|cisco-xccdf|xccdf-cklb} (read-only checks or private review candidates; not a CKLB release)")
+		fmt.Fprintln(stderr, "usage: docket {asset-check|reconcile|draft-cklb|batch-cklb|cisco-cklb|cisco-batch|cisco-xccdf|xccdf-cklb|tailoring check} (read-only checks or private review candidates; not a CKLB release)")
 		return 2
 	}
 	flags := flag.NewFlagSet("asset-check", flag.ContinueOnError)
@@ -127,6 +130,23 @@ func runMapped(args []string, asDraft bool, out, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "docket: %v\n", err)
 		return 2
 	}
+	
+	// Load layered tailoring for draft-cklb (reconcile doesn't need it)
+	var tailoring []layeredTailoringRule
+	var rootPath, hostPath string
+	var rootBytes, hostBytes []byte
+	if asDraft {
+		libraryDir := filepath.Dir(*benchmarkPath)
+		hostDir := filepath.Dir(*scanPath)
+		// RHEL root layer is partial (only overrides), not full inventory
+		tailoring, rootPath, rootBytes, hostPath, hostBytes, err = loadLayeredTailoring(
+			libraryDir, hostDir, report.DISABenchmark, benchmark, report, false)
+		if err != nil {
+			fmt.Fprintf(stderr, "docket: tailoring: %v\n", err)
+			return 2
+		}
+	}
+	
 	var value any = report
 	var htmlReport, arfBytes []byte
 	if asDraft {
@@ -162,6 +182,16 @@ func runMapped(args []string, asDraft bool, out, stderr io.Writer) int {
 			fmt.Fprintf(stderr, "docket: draft rejected: %v\n", err)
 			return 2
 		}
+		
+		// Apply layered tailoring to draft
+		if len(tailoring) > 0 {
+			doc := value.(map[string]any)
+			_, err = applyLayeredTailoring(doc, report, tailoring, rootPath, hostPath)
+			if err != nil {
+				fmt.Fprintf(stderr, "docket: tailoring application: %v\n", err)
+				return 2
+			}
+		}
 	}
 	body, err := json.MarshalIndent(value, "", "  ")
 	if err != nil {
@@ -171,7 +201,30 @@ func runMapped(args []string, asDraft bool, out, stderr io.Writer) int {
 	body = append(body, '\n')
 	var provenance []byte
 	if asDraft && *assessmentView {
-		provenance, err = assessmentProvenance(body, report, *scanPath, *benchmarkPath, *htmlPath, *arfPath, htmlReport, arfBytes)
+		// Use layered provenance if tailoring was applied
+		if len(tailoring) > 0 {
+			// Extract rule origins from applied tailoring
+			ruleOrigins := make(map[string]string)
+			for _, rule := range tailoring {
+				if rule.Status != "auto" {
+					ruleOrigins[rule.STIGID] = rule.Origin
+				}
+			}
+			tailorProv := &tailoringProvenance{
+				RuleOrigins: ruleOrigins,
+			}
+			if rootPath != "" {
+				tailorProv.RootFile = rootPath
+				tailorProv.RootSHA256 = sha256Hex(rootBytes)
+			}
+			if hostPath != "" {
+				tailorProv.HostFile = hostPath
+				tailorProv.HostSHA256 = sha256Hex(hostBytes)
+			}
+			provenance, err = assessmentProvenanceLayered(body, report, *scanPath, *benchmarkPath, *htmlPath, *arfPath, htmlReport, arfBytes, tailorProv)
+		} else {
+			provenance, err = assessmentProvenance(body, report, *scanPath, *benchmarkPath, *htmlPath, *arfPath, htmlReport, arfBytes)
+		}
 		if err != nil {
 			fmt.Fprintf(stderr, "docket: provenance rejected: %v\n", err)
 			return 2

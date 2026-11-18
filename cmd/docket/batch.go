@@ -152,17 +152,25 @@ func runBatch(args []string, out, stderr io.Writer) int {
 			fmt.Fprintf(stderr, "batch %s: %v\n", s.XCCDF, err)
 			return 2
 		}
-		policyDirectory := *libraryRoot
-		if policyDirectory == "" {
-			policyDirectory = filepath.Dir(selectedPath)
+		libraryDir := *libraryRoot
+		if libraryDir == "" {
+			libraryDir = filepath.Dir(selectedPath)
 		}
-		tailoring, tailoringPath, tailoringBytes, err := loadTailoring(policyDirectory, major, report)
+		hostDir := s.Dir
+		
+		// Use new layered tailoring: root + host override
+		// RHEL root layer is partial (only overrides), not full inventory
+		tailoring, rootPath, rootBytes, hostPath, hostBytes, err := loadLayeredTailoring(
+			libraryDir, hostDir, report.DISABenchmark, benchmark, report, false)
 		if err != nil {
 			fmt.Fprintf(stderr, "batch tailoring for %s: %v\n", s.XCCDF, err)
 			return 2
 		}
-		if tailoringPath != "" {
-			fmt.Fprintf(out, "TAILORING RHEL %d: %s (sha256 %s; %d rules)\n", major, tailoringPath, sha256Hex(tailoringBytes), len(tailoring))
+		if rootPath != "" {
+			fmt.Fprintf(out, "TAILORING ROOT RHEL %d: %s (sha256 %s; %d rules)\n", major, rootPath, sha256Hex(rootBytes), len(tailoring))
+		}
+		if hostPath != "" {
+			fmt.Fprintf(out, "TAILORING HOST %s: %s (sha256 %s)\n", filepath.Base(hostDir), hostPath, sha256Hex(hostBytes))
 		}
 		if *dryRun {
 			kind := "XCCDF-only"
@@ -208,9 +216,13 @@ func runBatch(args []string, out, stderr io.Writer) int {
 			fmt.Fprintf(stderr, "batch %s: %v\n", s.XCCDF, err)
 			return 2
 		}
-		if err := applyTailoring(doc, report, tailoring); err != nil {
-			fmt.Fprintf(stderr, "batch tailoring %s: %v\n", s.XCCDF, err)
-			return 2
+		var ruleOrigins map[string]string
+		if len(tailoring) > 0 {
+			ruleOrigins, err = applyLayeredTailoring(doc, report, tailoring, rootPath, hostPath)
+			if err != nil {
+				fmt.Fprintf(stderr, "batch tailoring %s: %v\n", s.XCCDF, err)
+				return 2
+			}
 		}
 		body, err := json.MarshalIndent(doc, "", "  ")
 		if err != nil {
@@ -219,20 +231,38 @@ func runBatch(args []string, out, stderr io.Writer) int {
 		}
 		body = append(body, '\n')
 		version := "assessment-provenance-v10"
-		if tailoringPath != "" {
-			version = "assessment-provenance-v11-tailored"
+		hasTailoring := (rootPath != "" || hostPath != "")
+		if hasTailoring {
+			version = "assessment-provenance-v12-layered-tailoring"
 		}
-		digest := bundleDigest([]byte(version), scan, benchmark, html, arfBytes)
-		if tailoringPath != "" {
-			digest = bundleDigest([]byte(version), scan, benchmark, html, arfBytes, tailoringBytes)
+		digestParts := [][]byte{[]byte(version), scan, benchmark, html, arfBytes}
+		if rootPath != "" {
+			digestParts = append(digestParts, rootBytes)
 		}
+		if hostPath != "" {
+			digestParts = append(digestParts, hostBytes)
+		}
+		digest := bundleDigest(digestParts...)
 		name := s.Prefix + "-disa-" + report.BenchmarkSHA256[:16] + "-" + digest[:16] + "-ASSESSMENT.cklb"
 		path := filepath.Join(s.Dir, name)
-		var policyInput *evidenceInput
-		if tailoringPath != "" {
-			policyInput = &evidenceInput{tailoringPath, sha256Hex(tailoringBytes)}
+		
+		// Build layered tailoring provenance
+		var tailorProv *tailoringProvenance
+		if hasTailoring {
+			tailorProv = &tailoringProvenance{
+				RuleOrigins: ruleOrigins,
+			}
+			if rootPath != "" {
+				tailorProv.RootFile = rootPath
+				tailorProv.RootSHA256 = sha256Hex(rootBytes)
+			}
+			if hostPath != "" {
+				tailorProv.HostFile = hostPath
+				tailorProv.HostSHA256 = sha256Hex(hostBytes)
+			}
 		}
-		provenance, err := assessmentProvenance(body, report, s.XCCDF, selectedPath, s.HTML, s.ARF, html, arfBytes, policyInput)
+		
+		provenance, err := assessmentProvenanceLayered(body, report, s.XCCDF, selectedPath, s.HTML, s.ARF, html, arfBytes, tailorProv)
 		if err != nil {
 			fmt.Fprintf(stderr, "batch provenance %s: %v\n", s.XCCDF, err)
 			return 2
