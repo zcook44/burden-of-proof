@@ -299,6 +299,18 @@ func runCiscoBatch(args []string, out, stderr io.Writer) int {
 				fmt.Fprintf(stderr, "Cisco checklist: %v\n", err)
 				return 2
 			}
+			
+			// Check if we need to overwrite due to provenance change
+			if skipped {
+				// File existed and was identical - check if provenance changed
+				if old, readErr := readPrivate(path + ".provenance.json"); readErr == nil {
+					if !bytes.Equal(old, sidecar) {
+						fmt.Fprintf(out, "WARNING: %s provenance changed (tailoring, benchmark, or inputs differ); overwriting provenance\n", path)
+						os.Remove(path + ".provenance.json")
+					}
+				}
+			}
+			
 			if _, err := writeBatchResult(path+".provenance.json", sidecar); err != nil {
 				fmt.Fprintf(stderr, "Cisco provenance: %v\n", err)
 				return 2

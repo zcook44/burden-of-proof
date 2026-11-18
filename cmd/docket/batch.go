@@ -272,16 +272,39 @@ func runBatch(args []string, out, stderr io.Writer) int {
 			fmt.Fprintf(stderr, "batch %s: %v (created=%d skipped=%d)\n", s.XCCDF, err, created, skipped)
 			return 2
 		}
+		
+		// Check provenance equivalence when file already existed
 		if wasSkipped {
 			// A prior run may have used a different private path for the same
 			// benchmark or a different spelling of the scan root. Validate the
 			// original paths and all non-path fields before retaining its sidecar.
-			if old, readErr := readPrivate(path + ".provenance.json"); readErr == nil && equivalentProvenance(old, provenance) {
-				skipped++
-				fmt.Fprintf(out, "SKIP %s (verified equivalent provenance; original paths retained)\n", path)
+			if old, readErr := readPrivate(path + ".provenance.json"); readErr == nil {
+				if equivalentProvenance(old, provenance) {
+					skipped++
+					fmt.Fprintf(out, "SKIP %s (verified equivalent provenance; original paths retained)\n", path)
+					continue
+				}
+				// Provenance doesn't match - warn and overwrite both files
+				fmt.Fprintf(out, "WARNING: %s provenance changed (tailoring, benchmark, or inputs differ); overwriting\n", path)
+				os.Remove(path)
+				os.Remove(path + ".provenance.json")
+				// Rewrite checklist
+				if _, err := writeBatchResult(path, body); err != nil {
+					fmt.Fprintf(stderr, "batch overwrite %s: %v\n", path, err)
+					return 2
+				}
+				// Write new provenance
+				if _, err := writeBatchResult(path+".provenance.json", provenance); err != nil {
+					fmt.Fprintf(stderr, "batch provenance %s: %v\n", path, err)
+					return 2
+				}
+				created++
+				fmt.Fprintf(out, "OVERWRITTEN %s (%d controls)\n", path, len(report.Controls))
 				continue
 			}
 		}
+		
+		// Write provenance for newly created files
 		if _, err := writeBatchResult(path+".provenance.json", provenance); err != nil {
 			fmt.Fprintf(stderr, "batch provenance %s: %v (checklist retained for safe retry)\n", path, err)
 			return 2
