@@ -2,7 +2,7 @@
 
 One binary converts RHEL OpenSCAP results and Cisco running configurations into private CKLB review candidates. It does not scan a guest, log into a switch, approve a finding, or deliver evidence. Those jobs remain with people, which is inconvenient and also the point.
 
-[Repository overview](../README.md) · [RHEL picture](RHEL-OSCAP-WORKFLOW.md) · [Cisco picture](CISCO-SCAN-PROCESS.md) · [Batch rules](BATCH-CKLB.md) · [Cisco checks](CISCO-CONFIG.md) · [Network scan fields](NETWORK-SCAN.md) · [Commands](GO-MIGRATION.md) · [Review workflow](WORKFLOW.md) · [Disconnected release](DISCONNECTED-RELEASE.md)
+[Repository overview](../README.md) · [RHEL picture](RHEL-OSCAP-WORKFLOW.md) · [Cisco picture](CISCO-SCAN-PROCESS.md) · [Batch rules](BATCH-CKLB.md) · [Cisco checks](CISCO-CONFIG.md) · [Network scan fields](NETWORK-SCAN.md) · [Commands](GO-MIGRATION.md) · [Review workflow](WORKFLOW.md) · [Quarterly run (draft)](QUARTERLY-ADMIN.md) · [Disconnected release](DISCONNECTED-RELEASE.md)
 
 ## 1. Install the same binary either way
 

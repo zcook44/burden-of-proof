@@ -253,6 +253,8 @@ Host override files **must** use `schema_version: 2` with `benchmark_id` and `be
 4. Fix any mismatched control IDs (new/removed controls)
 5. Re-run conversions
 
+The full admin sequence for doing this every publication quarter, including fresh scans and where last quarter's files go, is the draft [Quarterly STIG run](QUARTERLY-ADMIN.md).
+
 ## Disconnected Deployment
 
 The `scripts/package-disconnected.sh` script includes:
