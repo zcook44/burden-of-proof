@@ -138,8 +138,8 @@ func checkLibraryTailoring(libraryRoot string, out, stderr io.Writer) (int, int)
 		benchmarkID := strings.TrimSuffix(entry.Name(), ".tailoring.yaml")
 		benchmarkPath, benchmark, err := benchmarkForID(libraryRoot, benchmarkID)
 		if err != nil {
-			fmt.Fprintf(stderr, "WARNING: %s: no matching benchmark (%v)\n", entry.Name(), err)
-			warnings++
+			fmt.Fprintf(stderr, "ERROR: %s: no matching benchmark (%v)\n", entry.Name(), err)
+			issues++
 			continue
 		}
 		report, err := reportForBenchmark(benchmark)

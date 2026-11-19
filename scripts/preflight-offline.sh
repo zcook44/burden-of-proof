@@ -3,17 +3,18 @@
 set -euo pipefail
 umask 077
 usage() {
-  printf 'Usage: %s --converter BIN --input-root DIR --library-root DIR [--checkmate BIN --checklist-root DIR [--schema JSON]]\n' "${0##*/}" >&2
+  printf 'Usage: %s --converter BIN --input-root DIR --library-root DIR [--evidence-root DIR] [--checkmate BIN --checklist-root DIR [--schema JSON]]\n' "${0##*/}" >&2
   exit 2
 }
 die() { printf 'preflight-offline: %s\n' "$*" >&2; exit 1; }
-converter='' input='' library='' checkmate='' checklist='' schema=''
+converter='' input='' library='' evidence='' checkmate='' checklist='' schema=''
 while (($#)); do
   (($# >= 2)) || usage
   case $1 in
     --converter) converter=$2 ;;
     --input-root) input=$2 ;;
     --library-root) library=$2 ;;
+    --evidence-root) evidence=$2 ;;
     --checkmate) checkmate=$2 ;;
     --checklist-root) checklist=$2 ;;
     --schema) schema=$2 ;;
@@ -67,33 +68,35 @@ check_tree() {
 check_tree "$input"
 check_tree "$library"
 if [[ -n $checklist && $checklist != "$input" && $checklist != "$library" ]]; then check_tree "$checklist"; fi
+if [[ -n $evidence && $evidence != "$input" && $evidence != "$library" ]]; then check_tree "$evidence"; fi
 
-# Layered tailoring: root at library root, host in scan/device dirs.
-# Use docket tailoring check to validate files that will be loaded.
+# Every tailoring file the converters will read, plus files they would skip.
+# A non-zero tailoring check stops the preflight. Nested host files are not applied.
 printf 'TAILORING VALIDATION:\n'
 if ! "$converter" tailoring check --library-root "$library" --scan-root "$input"; then
   die "tailoring validation failed"
 fi
+if [[ -n $evidence && $evidence != "$input" ]]; then
+  if ! "$converter" tailoring check --library-root "$library" --scan-root "$evidence"; then
+    die "tailoring validation failed for evidence root"
+  fi
+fi
 printf 'Tailoring files validated.\n'
 
-# Warn about misplaced tailoring files (these will be ignored)
 misplaced=0
 while IFS= read -r -d '' path; do
-  # Tailoring files must be at library root or in immediate subdirs of input root (host dirs)
-  # Any nested deeper than one level under input root will be ignored
   relative=${path#"$input"/}
-  if [[ $relative != "$path" ]]; then
-    # It's under input root - check depth
-    depth=$(echo "$relative" | tr -cd '/' | wc -c)
-    if ((depth > 1)); then
-      printf 'WARNING: Nested tailoring file will be ignored (not in a host directory): %s\n' "$path" >&2
-      ((misplaced++))
-    fi
+  if [[ $relative == "$path" ]]; then
+    continue
+  fi
+  depth=$(printf '%s' "$relative" | tr -cd '/' | wc -c)
+  if ((depth > 1)); then
+    printf 'preflight-offline: nested tailoring file is not loaded from a host directory: %s\n' "$path" >&2
+    misplaced=$((misplaced + 1))
   fi
 done < <(find "$input" -name '*.tailoring.yaml' -type f -print0 2>/dev/null || true)
-
 if ((misplaced > 0)); then
-  printf 'WARNING: %d tailoring file(s) are misplaced and will be ignored.\n' "$misplaced" >&2
+  die "$misplaced tailoring file(s) are nested deeper than the host directory"
 fi
 
 printf 'CONVERTER DRY RUN (no files written):\n'

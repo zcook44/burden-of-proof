@@ -26,6 +26,9 @@ done
   echo 'Missing or linked DISA CKLB schema' >&2; exit 1;
 }
 printf '%s  %s\n' '8b88205de07662006e1660b1decad677d344828d6687b1dd26bca15105b7bb37' "$root/schemas/SV3_CKLB_1_0_JSON_SCHEMA.json" | sha256sum -c - >/dev/null
+# shellcheck source=require-go.sh
+source "$root/scripts/require-go.sh"
+docket_require_go
 # Fail instead of fetching a compiler or dependency in a disconnected build.
 export GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local GOWORK=off CGO_ENABLED=0
 export GOOS=linux GOARCH=amd64 GOFLAGS=-mod=vendor

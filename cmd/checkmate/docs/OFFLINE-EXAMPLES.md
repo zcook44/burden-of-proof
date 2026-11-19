@@ -1,6 +1,6 @@
 # Offline example inputs (separate private copies)
 
-Checkmate edits CKLB files; it does not convert scans. The source checkout currently contains tracked `examples/` fixtures and `benchmarks/` files, including selected RHEL 7–10 material. It also tracks `release/private-offline-inputs.tar.gz`, a previously committed copy of RHEL scan bundles; this is **source history**, not a generic binary-package ingredient. Git ignore patterns do not protect files already tracked. Do not edit them to try the TUI. A new copy in an owner-private directory outside the checkout is the safer rehearsal. This guide and the schema travel in the generic binary archive; the example data does not. Apparently the binary is less interested in your host evidence than Git once was.
+Checkmate edits CKLB files; it does not convert scans. The source checkout contains tracked `cmd/checkmate/examples/` fixtures and `cmd/checkmate/benchmarks/` files, including selected RHEL 7–10 material. Do not edit the tracked copies to try the TUI. A new copy in an owner-private directory outside the checkout is the rehearsal. The runtime archive installs `checkmate` beside `docket` and does not contain those examples.
 
 ## Stage from authorized source trees
 
@@ -21,17 +21,15 @@ The script selects the benchmark files available in the source library; it does 
 
 ## Exercise after an offline build
 
+From the repository root, with Go 1.22 or newer:
+
 ```sh
-VERSION=1.1.0  # current release; choose a newer unused version to rebuild
-[ ! -e "release/checkmate_${VERSION}_linux_amd64.tar.gz" ] &&
-[ ! -e "release/checkmate_${VERSION}_linux_arm64.tar.gz" ] &&
-GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local GOFLAGS=-mod=vendor ./scripts/package.sh "$VERSION"
-./scripts/install-checkmate.sh "release/checkmate_${VERSION}_linux_amd64.tar.gz"
+./scripts/package-disconnected.sh 2.1.0 ./dist/releases
+./scripts/install-docket.sh --prefix "$HOME/.local" ./dist/releases/docket-2.1.0-linux-amd64.tar.gz
 checkmate --root "$HOME/private/checkmate-practice/examples" --list
 checkmate --root "$HOME/private/checkmate-practice/examples" --benchmark RHEL_9_STIG --list
 checkmate --root "$HOME/private/checkmate-practice/examples" --validate \
   --schema "$PWD/schemas/SV3_CKLB_1_0_JSON_SCHEMA.json"
-# Interactive editor; changes only your practice copies:
 checkmate --root "$HOME/private/checkmate-practice/examples"
 ```
 
@@ -48,27 +46,35 @@ checkmate --root "$HOME/private/checkmate-practice/examples" \
 
 The export is schema v3 and does not invent `rule_name`. Explicit statuses override the next scan for every host of that benchmark. Run `docket tailoring rehash` after you install the file at the library root. Do not treat the draft as approved site policy.
 
-To test conversion read-only, run the **separate** converter's `batch-cklb --dry-run` using absolute `--input-root "$HOME/private/checkmate-practice/examples"` and `--library-root "$HOME/private/checkmate-practice/benchmarks"`. The staged bundles include HTML+ARF; whether a particular converter build accepts them must be checked with that build. Permission and naming validity alone do not establish assessment correctness.
+To test conversion read-only:
+
+```sh
+docket batch-cklb --dry-run \
+  --input-root "$HOME/private/checkmate-practice/examples" \
+  --library-root "$HOME/private/checkmate-practice/benchmarks"
+```
+
+The staged bundles include HTML and ARF. Permission and naming validity alone do not establish assessment correctness.
 
 ## Read-only deployment preflight
 
-The optional `scripts/preflight-offline.sh` belongs to the **separate** converter checkout, not Checkmate. With a separately built executable converter and owner-private, canonical absolute paths to the staged inputs:
+`scripts/preflight-offline.sh` is in this repository. With the installed binaries and owner-private, canonical absolute paths:
 
 ```sh
-/path/to/burden-of-proof/scripts/preflight-offline.sh \
-  --converter /private/bin/docket \
+scripts/preflight-offline.sh \
+  --converter "$(command -v docket)" \
   --input-root "$HOME/private/checkmate-practice/examples" \
   --library-root "$HOME/private/checkmate-practice/benchmarks" \
-  --checkmate "$PWD/release/checkmate" \
-  --checklist-root "$HOME/private/checkmate-practice/examples"
-# Optional: add --schema "$PWD/schemas/SV3_CKLB_1_0_JSON_SCHEMA.json"
+  --checkmate "$(command -v checkmate)" \
+  --checklist-root "$HOME/private/checkmate-practice/examples" \
+  --schema "$PWD/schemas/SV3_CKLB_1_0_JSON_SCHEMA.json"
 ```
 
-Verify the separate script's interface in that checkout before running it. Its expected contract is a dry-run converter check, Checkmate `--list`, and optional schema validation; it does not run a scan or perform a checklist edit. An already edited staged CKLB will fail a manifest check. Do not treat example tailoring selected by the converter as approved site policy.
+The script runs `tailoring check`, `batch-cklb --dry-run`, and `checkmate --list`. `--schema` adds `--validate`. It does not run a scan or edit a checklist. A tailoring check failure exits non-zero. An already edited staged CKLB will fail a manifest check. Do not treat example tailoring selected by the converter as approved site policy.
 
 ## Transfer private inputs separately
 
-The generic Checkmate archives deliberately omit example scans, CKLBs, benchmarks and tailoring. If authorized to move staged inputs, make a distinct owner-private archive outside the checkout and verify it after transfer. Do not copy it over the already tracked `release/private-offline-inputs.tar.gz`: that historical archive is not a suitable destination for new assessments, and an archive under `release/` is not magically ignored.
+The runtime archive omits example scans, CKLBs, benchmarks, and tailoring. If authorized to move staged inputs, make a distinct owner-private archive outside the checkout and verify it after transfer.
 
 ```sh
 umask 077

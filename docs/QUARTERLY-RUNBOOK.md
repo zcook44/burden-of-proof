@@ -16,7 +16,54 @@ Read [CONFIG.md](CONFIG.md) and [TAILORING.md](TAILORING.md) once. This runbook 
 
 ## Layout
 
-Use these paths, or the same names in `~/.config/docket/config.yaml`. Directories are mode `0700`. Evidence, tailoring, manifests, and checklists are mode `0600`. Official manuals may be `0644`. No symlinks.
+Use these paths, or the same names in `~/.config/docket/config.yaml`. No symlinks.
+
+## Directory permissions
+
+Every directory the tools walk is mode `0700` and owned by the account that runs `docket`. `install -d -m 700 a/b` sets `0700` on `b` only. The parent `a` can stay `0755`, and the tools then refuse the tree. Set the mode on each directory, including parents.
+
+```sh
+install -d -m 700 \
+  /private \
+  /private/stig-library \
+  /private/stig-archive \
+  /private/stig-archive/2026-q3 \
+  /private/inventory \
+  /private/inventory/2026-q4 \
+  /private/evidence \
+  /private/cisco-review \
+  /private/cisco-review/2026-q4 \
+  /private/checklists \
+  /private/checklists/2026-q4 \
+  "$HOME/.config" \
+  "$HOME/.config/docket"
+chmod 700 /private /private/stig-library /private/stig-archive /private/stig-archive/2026-q3 \
+  /private/inventory /private/inventory/2026-q4 \
+  /private/evidence /private/cisco-review /private/cisco-review/2026-q4 \
+  /private/checklists /private/checklists/2026-q4
+```
+
+The library root and every subdirectory under it, including a drop directory such as `/private/stig-library/drop`, are `0700`. A new host directory under the inventory and a new device directory under the evidence root are `0700` as well. After those directories exist:
+
+```sh
+find /private/stig-library /private/inventory /private/evidence \
+  /private/cisco-review /private/checklists /private/stig-archive \
+  -type d -exec chmod 700 {} +
+chown -R "$(id -un)":"$(id -gn)" /private/stig-library /private/inventory /private/evidence \
+  /private/cisco-review /private/checklists /private/stig-archive
+```
+
+`chown` is for a copy that left another account as the owner. Skip it when `id -un` already owns the tree.
+
+A manual whose name ends in `_Manual-xccdf.xml` may be mode `0644`. It must not be group-writable, world-writable, or executable. Tailoring files, scans, device configs, the manifest, and checklists are mode `0600`.
+
+```sh
+find /private/stig-library -type d -exec chmod 700 {} +
+find /private/stig-library -name '*_Manual-xccdf.xml' -exec chmod 644 {} +
+find /private/stig-library -name '*.tailoring.yaml' -exec chmod 600 {} +
+find /private/inventory /private/evidence -type f -exec chmod 600 {} +
+chmod 600 /private/evidence/devices.json "$HOME/.config/docket/config.yaml"
+```
 
 | Path | Contents this quarter |
 | --- | --- |
@@ -32,12 +79,19 @@ Use these paths, or the same names in `~/.config/docket/config.yaml`. Directorie
 
 ## 0. Install the bundle
 
-On the connected build host, from this repository:
+The connected build machine needs Go 1.22 or newer on `PATH`. Go 1.22.2 and Go 1.27.3 are both enough. `go.mod` says `go 1.22.0`. `scripts/package-disconnected.sh` sets `GOTOOLCHAIN=local` and `GOPROXY=off`, so it uses that compiler and does not download one. If the compiler is missing or older than 1.22, the script stops before `go test` and prints the tarball install. Copy `go1.22.2.linux-amd64.tar.gz` from a connected machine, then:
 
 ```sh
+rm -rf "$HOME/sdk/go"
+mkdir -p "$HOME/sdk"
+tar -C "$HOME/sdk" -xzf go1.22.2.linux-amd64.tar.gz
+export PATH="$HOME/sdk/go/bin:$PATH"
+go version
 ./scripts/package-disconnected.sh 2.1.0 ./dist/releases
 sha256sum ./dist/releases/docket-2.1.0-linux-amd64.tar.gz
 ```
+
+The disconnected host that only runs the installed binaries does not need Go.
 
 Transfer `docket-2.1.0-linux-amd64.tar.gz` and the `.sha256` file beside it. On the disconnected host:
 
@@ -47,7 +101,7 @@ sha256sum -c docket-2.1.0-linux-amd64.tar.gz.sha256
 ./scripts/install-docket.sh --prefix "$HOME/.local" /secure/incoming/docket-2.1.0-linux-amd64.tar.gz
 ```
 
-The installer unpacks the archive, checks the checksum, and installs `docket` and `checkmate`. Expected lines:
+The installer unpacks the archive, checks the checksum, and installs `docket` and `checkmate`. Expected lines when the system completion directory is not writable:
 
 ```text
 INSTALLED /home/<you>/.local/bin/docket
@@ -55,7 +109,15 @@ INSTALLED /home/<you>/.local/bin/checkmate
 COMPLETION /home/<you>/.local/share/bash-completion/completions/docket
 ```
 
-If the system completion directory is not writable, the completion files still land under the prefix. Confirm the commands exist:
+A writable system directory prints `COMPLETION /usr/share/bash-completion/completions/docket` instead. The prefix copies are always installed at `$prefix/share/bash-completion/completions/`. If `$prefix/bin` is not on `PATH`, the installer still exits 0 and prints the line to add:
+
+```text
+install-docket: /home/<you>/.local/bin is not on PATH.
+install-docket: add it for this account with:
+  export PATH="/home/<you>/.local/bin:$PATH"
+```
+
+Open a new shell after that line, or call the binaries by the paths in the `INSTALLED` lines. Confirm the commands exist:
 
 ```sh
 docket quarter --help
@@ -124,14 +186,23 @@ Manuals may stay mode `0644`. Tailoring files must be mode `0600`:
 chmod 600 /private/stig-library/*.tailoring.yaml
 ```
 
-If last quarter's tailoring is still schema v1, v2, or an implicit `rules:` list:
+## Tailoring schema, in plain words
+
+The tools read a tailoring file only when `schema_version` is `3`. That number is the tailoring format. It is not the Cisco manifest number and it is not the provenance sidecar number.
+
+- A version 3 root file lives at the library root and is named `<benchmark-id>.tailoring.yaml`. It lists only the rules an administrator decided. `benchmark_sha256` is the SHA-256 of the manual those rules were written against.
+- A version 3 host file has the same name in that host's directory. It has no hash. It overrides the root file for that host.
+- A file with no `schema_version`, or with version 1 or 2, is an older inventory. Conversion refuses it. `docket tailoring migrate` rewrites it once: comment-less `auto` rows are dropped, a host hash is removed, and the file becomes version 3. A root pin that is already 64 hex digits is kept. Any other pin becomes `rehash-me`.
+- Run migrate when `tailoring check` says the schema is not current, and when you copied last quarter's tailoring forward and those files predate version 3. You do not run it again on files that are already version 3.
+- `devices.json` uses `schema_version: 1` because it is a device list. Do not migrate it.
+- A `.cklb.provenance.json` sidecar is written by `docket`. Untailored RHEL sidecars are version 1. Layered RHEL sidecars and untailored Cisco sidecars are version 2. Layered Cisco sidecars are version 4. Do not migrate them and do not edit them by hand.
 
 ```sh
-docket tailoring migrate --dry-run
-docket tailoring migrate
+docket tailoring migrate --library-root /private/stig-library --dry-run
+docket tailoring migrate --library-root /private/stig-library
 ```
 
-`migrate` with no flags uses the config. Expected output names each file `MIGRATE` or `UNCHANGED`, then `MIGRATE files=N`. Comment-less `auto` rows are dropped. Host files are not in the library root; migrate those with `--scan-root` if any old host files remain in the new inventory (there should be none yet).
+Expected output names each file `MIGRATE` or `UNCHANGED`, then `MIGRATE files=N`. Host files are not in the library root. Migrate those with `--scan-root` when an old host file is still in the inventory.
 
 Pin the root files to the manuals just copied:
 
@@ -234,14 +305,16 @@ install -d -m 700 /private/inventory/2026-q4 /private/evidence /private/cisco-re
 docket quarter --dry-run
 ```
 
-`docket quarter` reads the config and does four things, in order:
+`docket quarter` reads the config and stops at the first failing step. Later steps do not run. With neither `--rhel` nor `--cisco`, it does this:
 
-1. `tailoring check` for the library and the RHEL input root. A validation error stops the command. It does not continue.
-2. `tailoring check` again for the Cisco evidence root when that path differs.
-3. `batch-cklb --dry-run` when `input_root` is set.
-4. `cisco-batch --dry-run` when the manifest, evidence root, and output root are all set.
+1. `tailoring check` for the library and, when RHEL will run, the input root. A validation error stops the command. Nothing is written.
+2. `tailoring check` again for the Cisco evidence root when Cisco will run and that path differs.
+3. Skip RHEL when `input_root` is unset, is not a directory, or contains no OpenSCAP scan bundles. A directory that exists and is not mode `0700` is an error, not an absence.
+4. Skip Cisco when the manifest, evidence root, and output root are all unset. Setting only some of them is an error.
+5. `batch-cklb --dry-run` when RHEL is still selected.
+6. `cisco-batch --dry-run` when Cisco is still selected.
 
-`--dry-run` stops before any checklist is written. Expected shape:
+`--dry-run` stops before any checklist is written. Expected shape when both platforms have evidence:
 
 ```text
 QUARTER tailoring check
@@ -261,13 +334,35 @@ QUARTER DRY RUN complete; no checklists written
 
 Read every `BENCHMARK` line. The path must be this quarter's manual. The counts are candidates, not approval.
 
-`scripts/preflight-offline.sh` is the older tree check. It now exits non-zero when `tailoring check` fails. The ownership walk requires directories and private files to be owner-only. Manual `*_Manual-xccdf.xml` files may be mode `0644`. Prefer `docket quarter --dry-run`. Use preflight when you also want the ownership walk and an optional `checkmate --list`:
+### One platform
+
+`--cisco` converts Cisco evidence and does not read `input_root`. `--rhel` converts RHEL scans and does not read the Cisco manifest, evidence root, or output root. Passing both flags is an error. An empty RHEL tree with `--rhel` is an error. The same empty tree without `--rhel` is skipped so a Cisco-only quarter can finish.
+
+```sh
+docket quarter --cisco --dry-run
+docket quarter --cisco
+docket quarter --rhel --dry-run
+docket quarter --rhel
+```
+
+A Cisco-only dry run prints `QUARTER skipping RHEL (--cisco)` and does not print `batch-cklb`. A RHEL-only dry run prints `QUARTER skipping Cisco (--rhel)`.
+
+### When a step fails
+
+Fix the file named in the error and run the same command again.
+
+- A failure in tailoring check or in a dry run writes nothing.
+- A failure while writing RHEL checklists leaves any checklists written before the failing host. The next run skips identical checklists and retries the failing host.
+- A failure while writing Cisco checklists leaves the RHEL checklists from that run in place. The next run skips identical RHEL checklists and retries Cisco.
+
+`scripts/preflight-offline.sh` checks ownership and then runs `tailoring check`. It exits non-zero when that check fails, when a tailoring file is nested below a host directory, and when `--evidence-root` names a tree whose tailoring check fails. The ownership walk requires directories and private files to be owner-only. Manual `*_Manual-xccdf.xml` files may be mode `0644`. Prefer `docket quarter --dry-run`. Use preflight when you also want the ownership walk and an optional `checkmate --list`:
 
 ```sh
 scripts/preflight-offline.sh \
   --converter "$(command -v docket)" \
   --input-root /private/inventory/2026-q4 \
   --library-root /private/stig-library \
+  --evidence-root /private/evidence \
   --checkmate "$(command -v checkmate)" \
   --checklist-root /private/checklists/2026-q4
 ```
@@ -284,18 +379,20 @@ Copy or link the checklists you will review into `/private/checklists/2026-q4/<h
 
 ## 8. Review in checkmate
 
-```sh
-checkmate --list
-checkmate
-```
+`--root` is the checklist tree. `checklist_root` in the config, or `DOCKET_CHECKLIST_ROOT`, is the same path when the flag is omitted. The examples pass `--root` so they work without the config file. No host starts selected. Set a status and a comment only where you have a reason. A shared STIG id is not a shared finding.
 
-With the config set, `--root` defaults to `checklist_root`. No host starts selected. Set a status and a comment only where you have a reason. A shared STIG id is not a shared finding.
+```sh
+checkmate --root /private/checklists/2026-q4 --list
+checkmate --root /private/checklists/2026-q4
+```
 
 Export the decisions every selected host already shares:
 
 ```sh
 install -d -m 700 /private/tailoring-export
-checkmate --benchmark RHEL_9_STIG --export-tailoring /private/tailoring-export
+checkmate --root /private/checklists/2026-q4 \
+  --benchmark RHEL_9_STIG \
+  --export-tailoring /private/tailoring-export
 ```
 
 Expected:
@@ -305,7 +402,7 @@ Exported N rules to /private/tailoring-export/RHEL_9_STIG.tailoring.yaml
   Schema v3 root candidate. Run docket tailoring rehash after copying it to the library root.
 ```
 
-The file is schema v3, has `benchmark_sha256: rehash-me`, and has no `rule_name`. Rows are real comments or manual status changes. A scan pass whose comment is still the converter's "XCCDF rule result" text is not exported. Read the file. Delete rows that are not site policy. Then:
+The file is schema v3, has `benchmark_sha256: rehash-me`, and has no `rule_name`. Rows are real comments or manual status changes. A scan pass whose comment is still the converter's "XCCDF rule result" text is not exported. A `not_reviewed` row whose comment is empty, contains `NOT REVIEWED`, or is the converter's `DRAFT:` mapping sentence is not exported. A `not_reviewed` row with an administrator's own reason is exported as `not_reviewed`. Read the file. Delete rows that are not site policy. Then:
 
 ```sh
 install -m 600 /private/tailoring-export/RHEL_9_STIG.tailoring.yaml \
@@ -346,14 +443,16 @@ Leave the active library in place for the next quarter's swap. Do not point `--l
 ## Command reference for this quarter
 
 ```sh
-docket tailoring check
-docket tailoring migrate --dry-run
-docket tailoring rehash --dry-run
-docket tailoring rehash
+docket tailoring check --library-root /private/stig-library --scan-root /private/inventory/2026-q4
+docket tailoring migrate --library-root /private/stig-library --dry-run
+docket tailoring rehash --library-root /private/stig-library --dry-run
+docket tailoring rehash --library-root /private/stig-library
 docket quarter --dry-run
 docket quarter
-checkmate --list
-checkmate --benchmark RHEL_9_STIG --export-tailoring /private/tailoring-export
+docket quarter --cisco --dry-run
+docket quarter --rhel --dry-run
+checkmate --root /private/checklists/2026-q4 --list
+checkmate --root /private/checklists/2026-q4 --benchmark RHEL_9_STIG --export-tailoring /private/tailoring-export
 ```
 
 `cisco-cklb`, `cisco-xccdf`, and `xccdf-cklb` stay available for one device or for a saved network XCCDF. The quarterly batch path is `docket quarter`.

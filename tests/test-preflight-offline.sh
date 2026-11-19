@@ -12,7 +12,11 @@ chmod 600 "$tmp/input/one.results.xml" "$tmp/library"/*.xml "$tmp/checklists/a.c
 cat > "$tmp/converter" <<'SH'
 #!/usr/bin/env bash
 printf 'converter %s\n' "$*" >> "$TEST_LOG"
-[[ $* == *'--dry-run'* ]] || exit 1
+[[ $* == *'--dry-run'* || $* == *'tailoring check'* ]] || exit 1
+if [[ $* == *'tailoring check'* ]]; then
+  printf 'VALIDATION PASSED: no issues, 0 warnings\n'
+  exit 0
+fi
 printf 'bundles: 1; no files written\n'
 SH
 cat > "$tmp/checkmate" <<'SH'
@@ -25,7 +29,8 @@ case $* in
 esac
 SH
 chmod 700 "$tmp/converter" "$tmp/checkmate"
-script=/home/zrc/git/burden-of-proof/scripts/preflight-offline.sh
+repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
+script=$repo/scripts/preflight-offline.sh
 export TEST_LOG="$tmp/log"
 "$script" --converter "$tmp/converter" --input-root "$tmp/input" --library-root "$tmp/library" --checkmate "$tmp/checkmate" --checklist-root "$tmp/checklists" > "$tmp/out"
 grep -q 'bundles: 1; no files written' "$tmp/out"

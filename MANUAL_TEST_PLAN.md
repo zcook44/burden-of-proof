@@ -1,6 +1,6 @@
 # Manual Test Plan for Layered Tailoring
 
-Schema version 3 is current. Host files omit `benchmark_sha256`. Root files keep the pin. Examples below that still say schema version 2 or put a hash on a host file are stale; follow [docs/TAILORING.md](docs/TAILORING.md) and [docs/QUARTERLY-RUNBOOK.md](docs/QUARTERLY-RUNBOOK.md). Automated coverage lives in `cmd/docket/quarter_test.go`, `internal/tailoring`, and `cmd/checkmate/internal/checklist`.
+Schema version 3 is current. Host files omit `benchmark_sha256`. Root files keep the pin. Follow [docs/TAILORING.md](docs/TAILORING.md) and [docs/QUARTERLY-RUNBOOK.md](docs/QUARTERLY-RUNBOOK.md). Automated coverage lives in `cmd/docket/quarter_test.go`, `cmd/docket/docs_commands_test.go`, `internal/tailoring`, and `cmd/checkmate/internal/checklist`.
 
 This test plan verifies the layered tailoring system works correctly on a disconnected deployment.
 
@@ -18,7 +18,7 @@ This test plan verifies the layered tailoring system works correctly on a discon
 
 ```bash
 # Create library root with RHEL 9 benchmark
-mkdir -p /tmp/test-library
+install -d -m 700 /tmp/test-library
 cp U_RHEL_9_STIG_V2R10_Manual-xccdf.xml /tmp/test-library/
 chmod 600 /tmp/test-library/U_RHEL_9_STIG_V2R10_Manual-xccdf.xml
 
@@ -41,7 +41,8 @@ EOF
 chmod 600 /tmp/test-library/RHEL_9_STIG.tailoring.yaml
 
 # Create scan root with one host scan
-mkdir -p /tmp/test-scans/node1.example.test
+install -d -m 700 /tmp/test-scans /tmp/test-scans/node1.example.test
+chmod 700 /tmp/test-scans /tmp/test-scans/node1.example.test
 cp node1.results.xccdf.xml /tmp/test-scans/node1.example.test/scan.results.xccdf.xml
 chmod 600 /tmp/test-scans/node1.example.test/scan.results.xccdf.xml
 
@@ -124,7 +125,7 @@ cat /tmp/test-scans/node1.example.test/*-ASSESSMENT.cklb.provenance.json | jq '{
 
 ```bash
 # Create library root with Cisco benchmark
-mkdir -p /tmp/cisco-library
+install -d -m 700 /tmp/cisco-library
 cp U_Cisco_IOS_Router_RTR_STIG_V3R11_Manual-xccdf.xml /tmp/cisco-library/
 chmod 600 /tmp/cisco-library/U_Cisco_IOS_Router_RTR_STIG_V3R11_Manual-xccdf.xml
 
@@ -132,8 +133,7 @@ chmod 600 /tmp/cisco-library/U_Cisco_IOS_Router_RTR_STIG_V3R11_Manual-xccdf.xml
 cp cisco-library/Cisco_IOS_Router_RTR_STIG.tailoring.yaml /tmp/cisco-library/
 chmod 600 /tmp/cisco-library/Cisco_IOS_Router_RTR_STIG.tailoring.yaml
 
-# Edit root file to add ONE site-wide override (example: V-216555)
-# Change line "    status: auto" to "    status: not_applicable" and add comment:
+# Add ONE site-wide override to the partial root file (example: V-216555).
 #   - stig_id: V-216555
 #     sv_id: SV-216555r1007824_rule
 #     status: not_applicable
@@ -143,7 +143,8 @@ chmod 600 /tmp/cisco-library/Cisco_IOS_Router_RTR_STIG.tailoring.yaml
 CISCO_SHA=$(sha256sum /tmp/cisco-library/U_Cisco_IOS_Router_RTR_STIG_V3R11_Manual-xccdf.xml | awk '{print $1}')
 
 # Create device directory with config
-mkdir -p /tmp/cisco-devices/router1
+install -d -m 700 /tmp/cisco-devices /tmp/cisco-devices/router1
+chmod 700 /tmp/cisco-devices /tmp/cisco-devices/router1
 cat > /tmp/cisco-devices/router1/scan.running-config <<'EOF'
 hostname router1
 version 15.7

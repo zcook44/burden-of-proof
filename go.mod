@@ -1,6 +1,6 @@
 module github.com/zcook44/burden-of-proof
 
-go 1.27.3
+go 1.22.0
 
 require (
 	github.com/charmbracelet/bubbletea v1.3.4

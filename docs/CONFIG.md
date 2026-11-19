@@ -33,7 +33,12 @@ Example: with the file above, these are the same command.
 ```sh
 docket quarter --dry-run
 DOCKET_LIBRARY_ROOT=/private/stig-library docket quarter --dry-run --input-root /private/inventory/2026-q4
+docket quarter --cisco --dry-run
+docket quarter --rhel --dry-run
+checkmate --root /private/checklists/2026-q4 --list
 ```
+
+`--cisco` ignores `input_root`. `--rhel` ignores `cisco_manifest`, `evidence_root`, and `output_root`. With neither flag, a missing RHEL tree or a tree with no scan bundles is skipped, and Cisco still runs when its three paths are set. A partial Cisco trio is an error. `checkmate --root` overrides `checklist_root`.
 
 A flag still wins over the file. `DOCKET_LIBRARY_ROOT` wins over `library_root` in the file and loses to `--library-root`.
 

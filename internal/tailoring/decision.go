@@ -34,6 +34,8 @@ func isAutomatedComment(c string) bool {
 		"OVAL test result:",
 		"Automated scan candidate",
 		"Automated config candidate",
+		"DRAFT: numeric V/SV mapping of SSG results",
+		"DRAFT only: independently review the official DISA check",
 		"Raw running config SHA-256",
 		"Official Cisco benchmark SHA-256",
 	}

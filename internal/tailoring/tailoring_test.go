@@ -108,6 +108,9 @@ func TestIsAdminDecisionSkipsScanPasses(t *testing.T) {
 	if IsAdminDecision("not_reviewed", "NOT REVIEWED — raw data") {
 		t.Fatal("placeholder exported")
 	}
+	if IsAdminDecision("not_reviewed", "DRAFT: numeric V/SV mapping of SSG results; not an official DISA scan or ISSO-approved finding.") {
+		t.Fatal("draft mapping sentence exported")
+	}
 	if !IsAdminDecision("not_a_finding", "Reviewed with the system owner") {
 		t.Fatal("human pass dropped")
 	}

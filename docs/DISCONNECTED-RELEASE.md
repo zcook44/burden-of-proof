@@ -1,13 +1,25 @@
 # Disconnected Linux release
 
-Build a runtime bundle on a Linux/amd64 build host with Go 1.27.3 and the checked-in `vendor/` tree. The build script forces `GOPROXY=off`, `GOSUMDB=off`, `GOTOOLCHAIN=local`, `GOFLAGS=-mod=vendor`, and `CGO_ENABLED=0`; it runs the Go suite before creating the archive. No Go toolchain or network connection is needed to **run** the packaged CLIs.
+Build a runtime bundle on a connected Linux/amd64 machine with Go 1.22 or newer and the checked-in `vendor/` tree. Go 1.22.2 and Go 1.27.3 both build this module. `go.mod` says `go 1.22.0`. `scripts/package-disconnected.sh` and `scripts/install-docket.sh --from-source` set `GOPROXY=off`, `GOSUMDB=off`, `GOTOOLCHAIN=local`, `GOFLAGS=-mod=vendor`, and `CGO_ENABLED=0`, then refuse to start when `go version` is older than 1.22. They do not download a compiler or a module. The message names the running compiler and the offline install below.
+
+On a connected machine, download `go1.22.2.linux-amd64.tar.gz` (or any newer official tarball) from https://go.dev/dl/ and copy that file to the build host:
+
+```sh
+rm -rf "$HOME/sdk/go"
+mkdir -p "$HOME/sdk"
+tar -C "$HOME/sdk" -xzf go1.22.2.linux-amd64.tar.gz
+export PATH="$HOME/sdk/go/bin:$PATH"
+go version
+```
+
+A host that only runs the installed `docket` and `checkmate` binaries does not need Go, a module cache, or a network.
 
 ```sh
 ./scripts/package-disconnected.sh VERSION ./dist/releases
 ./scripts/install-docket.sh
 ```
 
-`install-docket.sh` picks the newest `dist/releases/docket-*-linux-amd64.tar.gz`, checks the sibling `.sha256`, and installs `docket` and `checkmate` onto `~/.local/bin` (or `--prefix`). Release 1.0.1 was published before the rename, so its archive is still called `stig-evidence-1.0.1-linux-amd64.tar.gz`. It did not get the memo. Archives built from this tree use the `docket-` prefix.
+`install-docket.sh` picks the newest `dist/releases/docket-*-linux-amd64.tar.gz`, checks the sibling `.sha256`, and installs `docket` and `checkmate` onto `~/.local/bin` (or `--prefix`). If that `bin` directory is not on `PATH`, the installer prints `export PATH="<prefix>/bin:$PATH"` and still exits 0. Release 1.0.1 was published before the rename, so its archive is still called `stig-evidence-1.0.1-linux-amd64.tar.gz`. Archives built from this tree use the `docket-` prefix. `--from-source` is for a checkout that contains `vendor/` and `scripts/require-go.sh`. The release archive does not contain them.
 
 The archive contains `bin/docket`, `bin/checkmate`, bash completion for both commands, the executable Bash `scripts/preflight-offline.sh`, the Python 3 `scripts/generate-cisco-tailoring.py` (Python is needed only to run this optional generator), four example `templates/RHEL_{7,8,9,10}_STIG.tailoring.yaml` files, partial schema v3 Cisco root tailoring examples under `cisco-library/`, `schemas/SV3_CKLB_1_0_JSON_SCHEMA.json` and its [provenance notice](../schemas/PROVENANCE.md), repository and `docs/*.md` documentation, the asset contract, **both** non-executable `docs/snapshots/oscap_scan.yml` and `docs/snapshots/run-lab-oscap.sh`, `RELEASE.txt` (including source commit and dirty state), and `SHA256SUMS` for every included file. The DISA schema is for **optional CKLB validation** through `checkmate --validate`, not a converter input. The upstream ZIP has no explicit redistribution notice; verify organizational authority before sharing the bundle beyond authorized recipients. It does **not** contain the live `/scratch/ansible` playbook/wrapper, official XCCDF benchmarks (including the 25 Cisco XMLs tracked in this source repository), SSG scan results, credentials, approvals, or signing material. The outer SHA-256 file detects transfer corruption **only if its expected hash arrives through an independently trusted channel**; neither checksum is a publisher signature. Do not execute an untrusted archive merely because its adjacent hash matches.
 
@@ -44,7 +56,7 @@ Supply official extracted DISA manual XCCDF files separately in one owner-privat
   --converter "$PWD/bin/docket" \
   --input-root /private/inventory \
   --library-root /private/stig-library \
-  --checkmate /private/checkmate/checkmate \
+  --checkmate "$(command -v checkmate)" \
   --checklist-root /private/checklists \
   --schema "$PWD/schemas/SV3_CKLB_1_0_JSON_SCHEMA.json"
 ```
@@ -53,4 +65,4 @@ The Bash preflight checks the input, library, and (if separate) checklist roots 
 
 Cisco review uses that same binary and the same library root. `cisco-cklb` and `cisco-batch` take `--dry-run` and write nothing until you omit it. `cisco-xccdf` writes the device-named result on the first successful run; there is no preview flag to hide behind. It applies `<benchmark-id>.tailoring.yaml` when that file sits beside `scan.running-config`. `xccdf-cklb` copies that result into `<host>.cklb` and writes `<host>.cklb.provenance.json`. The Bash preflight remains the RHEL check. Supply the running configuration and device identity from outside this archive. [Install and run](README.md). [Scan fields](NETWORK-SCAN.md).
 
-For an offline source build instead of the binary bundle, transfer this repository **including `vendor/` and all uncommitted changes intended for release**, then run `GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local GOWORK=off CGO_ENABLED=0 GOFLAGS=-mod=vendor go test ./...` and `go build -mod=vendor -o docket ./cmd/docket` and `go build -mod=vendor -o checkmate ./cmd/checkmate`. A Git commit identifier in `RELEASE.txt` does not identify uncommitted source bytes; make a clean, reviewed commit/tag before representing the package as a formal source release.
+For a source build instead of the binary bundle, copy this repository **including `vendor/`** to the build host that already has Go 1.22 or newer, then run `./scripts/install-docket.sh --from-source`. That uses the same offline environment as the package script. A Git commit identifier in `RELEASE.txt` does not identify uncommitted source bytes; make a clean, reviewed commit before representing the package as a formal source release. The installed binaries still need no Go.

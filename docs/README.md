@@ -2,11 +2,11 @@
 
 One binary converts RHEL OpenSCAP results and Cisco running configurations into private CKLB review candidates. It does not scan a guest, log into a switch, approve a finding, or deliver evidence. Those jobs remain with people, which is inconvenient and also the point.
 
-[Repository overview](../README.md) · [RHEL picture](RHEL-OSCAP-WORKFLOW.md) · [Cisco picture](CISCO-SCAN-PROCESS.md) · [Batch rules](BATCH-CKLB.md) · [Cisco checks](CISCO-CONFIG.md) · [Network scan fields](NETWORK-SCAN.md) · [Commands](GO-MIGRATION.md) · [Review workflow](WORKFLOW.md) · [Quarterly run (draft)](QUARTERLY-ADMIN.md) · [Disconnected release](DISCONNECTED-RELEASE.md)
+[Repository overview](../README.md) · [RHEL picture](RHEL-OSCAP-WORKFLOW.md) · [Cisco picture](CISCO-SCAN-PROCESS.md) · [Batch rules](BATCH-CKLB.md) · [Cisco checks](CISCO-CONFIG.md) · [Network scan fields](NETWORK-SCAN.md) · [Commands](GO-MIGRATION.md) · [Review workflow](WORKFLOW.md) · [Quarterly run](QUARTERLY-RUNBOOK.md) · [Disconnected release](DISCONNECTED-RELEASE.md)
 
 ## 1. Install the same binary either way
 
-After `scripts/package-disconnected.sh` writes a tarball, `scripts/install-docket.sh` checks its checksum, unpacks it, and installs `docket` onto `~/.local/bin`. If that directory is not already on `PATH`, the script adds it to `~/.profile` and `~/.bashrc` or stops. The same script installs bash completion for every account at `/usr/share/bash-completion/completions/docket`. That write needs sudo, and the install stops if sudo cannot do it. `scripts/install-docket.sh --from-source` builds from this checkout and fails when Go is missing, older than 1.22, or unable to build from `vendor/` with the network turned off. The archive does not contain official benchmarks. It is a converter, not a STIG library that fell off a truck.
+After `scripts/package-disconnected.sh` writes a tarball, `scripts/install-docket.sh` checks its checksum, unpacks it, and installs `docket` and `checkmate` onto `~/.local/bin`. If that directory is not already on `PATH`, the installer prints `export PATH="$HOME/.local/bin:$PATH"` and still finishes. Completion files are always copied under `$prefix/share/bash-completion/completions/`. They are also copied to `/usr/share/bash-completion/completions/` when that directory is writable or passwordless sudo can write it. A system directory that is not writable does not fail the install. The connected build needs Go 1.22 or newer. `scripts/install-docket.sh --from-source` builds from this checkout and fails when Go is missing, older than 1.22, or unable to build from `vendor/` with the network turned off. The installed binaries need no Go. The archive does not contain official benchmarks.
 
 From a source checkout that includes `vendor/`, build with the same flags the release script uses:
 
@@ -15,13 +15,14 @@ export GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local GOWORK=off CGO_ENABLED=0 GOFLAG
 go test ./...
 install -d -m 700 dist
 go build -trimpath -ldflags='-s -w' -o dist/docket ./cmd/docket
+go build -trimpath -ldflags='-s -w' -o dist/checkmate ./cmd/checkmate
 ```
 
 A shorter build command will usually produce a binary. It will not be the binary this release claims to be.
 
 ## 2. Stage one private library
 
-Use one owner-owned mode `0700` directory, for example `/private/stig-library`. Copy authorized manual XCCDF files into it at mode `0600`. RHEL and Cisco benchmarks may share that directory. The CLI selects a RHEL file from the scan's OS, and a Cisco file only when you pass its exact `--benchmark-id` or `--benchmark` path. It will not guess. It has met people.
+Use one owner-owned mode `0700` directory, for example `/private/stig-library`. Copy authorized manual XCCDF files into it. Manuals may be mode `0644`. They must not be group-writable or executable. RHEL and Cisco benchmarks may share that directory. The CLI selects a RHEL file from the scan's OS, and a Cisco file only when you pass its exact `--benchmark-id` or `--benchmark` path. It will not guess.
 
 A Git checkout of `stig-library-cisco/` is mode `0644` and is not an operational library. Stage a private copy. Do not point the CLI at the checkout and hope.
 
@@ -97,6 +98,6 @@ A repeated run with the same bytes skips. A different result is never silently o
 
 ## 5. Read the candidate, then stop
 
-Review Open, then Not Reviewed, then Not Applicable, then a sample of Not a Finding. Import a representative checklist into STIG Viewer before anyone calls it adopted. `checkmate --list` inventories CKLBs and `checkmate --validate --schema` checks them against the bundled schema. `checkmate --export-tailoring` writes schema v3 root candidates from shared administrator decisions. Editing a checklist there makes the provenance hash stale, which is the tool's way of refusing to cosign your edits.
+Review Open, then Not Reviewed, then Not Applicable, then a sample of Not a Finding. Import a representative checklist into STIG Viewer before anyone calls it adopted. `checkmate --root DIR --list` inventories CKLBs and `checkmate --root DIR --validate --schema FILE` checks them against the bundled schema. `checklist_root` is the config equivalent of `--root`. `checkmate --root DIR --export-tailoring DIR` writes schema v3 root candidates from shared administrator decisions. Editing a checklist there makes the provenance hash stale, which is the tool's way of refusing to cosign your edits.
 
 RHEL details: [batch converter](BATCH-CKLB.md) and the [picture](RHEL-OSCAP-WORKFLOW.md). Cisco check behavior: [Cisco config](CISCO-CONFIG.md). Scan fields: [network scan](NETWORK-SCAN.md). The demo script for people who do not want a flag reference: [admin walkthrough](NETWORK-ADMIN-WALKTHROUGH.md).

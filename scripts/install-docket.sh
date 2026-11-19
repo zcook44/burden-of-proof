@@ -39,39 +39,22 @@ extract_tmp=
 trap '[[ -n ${extract_tmp:-} ]] && rm -rf -- "$extract_tmp"' EXIT
 
 require_go() {
-  command -v go >/dev/null 2>&1 || die "Go is not installed. A source install cannot fetch a toolchain."
-  local version major minor
-  version=$(go env GOVERSION 2>/dev/null || true)
-  version=${version#go}
-  [[ $version =~ ^([0-9]+)\.([0-9]+) ]] || die "cannot read the Go version. Refusing to guess."
-  major=${BASH_REMATCH[1]}
-  minor=${BASH_REMATCH[2]}
-  if (( major < 1 || (major == 1 && minor < 22) )); then
-    die "Go ${version} is older than 1.22. The vendored build will not start."
-  fi
-  [[ -f $repo/vendor/modules.txt && -d $repo/cmd/docket ]] || die "vendor/ or cmd/docket is missing. Refusing to download modules."
+  [[ -f $script_dir/require-go.sh ]] || die "a source build needs this repository checkout, including scripts/require-go.sh and vendor/. The release archive does not include them. Installed docket and checkmate binaries do not need Go."
+  # shellcheck source=require-go.sh
+  source "$script_dir/require-go.sh"
+  docket_require_go || die "source build needs Go 1.22 or newer. See the message above."
+  [[ -f $repo/vendor/modules.txt && -d $repo/cmd/docket && -d $repo/cmd/checkmate ]] || die "vendor/, cmd/docket, or cmd/checkmate is missing. Refusing to download modules."
 }
 
 ensure_path() {
-  local bindir=$1 rc
+  local bindir=$1 line
   case :$PATH: in
     *:"$bindir":*) return 0 ;;
   esac
-  [[ $bindir == "$HOME/.local/bin" ]] || die "$bindir is not on PATH. Use --prefix \"\$HOME/.local\" or add that directory yourself."
-  local line='export PATH="$HOME/.local/bin:$PATH"'
-  for rc in "$HOME/.profile" "$HOME/.bashrc"; do
-    if [[ -L $rc ]]; then
-      die "refusing to follow a symlink while updating PATH: $rc"
-    fi
-    if [[ ! -e $rc ]]; then
-      touch "$rc" || die "cannot create $rc to put ~/.local/bin on PATH"
-    fi
-    [[ -w $rc ]] || die "cannot update $rc to put ~/.local/bin on PATH"
-    if ! grep -Fq '.local/bin' "$rc"; then
-      printf '\n%s\n' "$line" >> "$rc"
-    fi
-  done
-  printf 'install-docket: added ~/.local/bin to PATH in ~/.profile and ~/.bashrc. Open a new shell.\n' >&2
+  line="export PATH=\"$bindir:\$PATH\""
+  printf 'install-docket: %s is not on PATH.\n' "$bindir" >&2
+  printf 'install-docket: add it for this account with:\n' >&2
+  printf '  %s\n' "$line" >&2
 }
 
 binary=

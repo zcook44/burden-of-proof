@@ -119,6 +119,55 @@ func TestConfigFeedsQuarter(t *testing.T) {
 	}
 }
 
+func TestQuarterSkipsAbsentPlatforms(t *testing.T) {
+	root, _, library := tailoredFixture(t)
+	bench, err := os.ReadFile(filepath.Join(library, "U_RHEL_9_STIG_V1R1_Manual-xccdf.xml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(bench)
+	policy := "schema_version: 3\nbenchmark_id: RHEL_9_STIG\nbenchmark_sha256: " + hex.EncodeToString(sum[:]) + "\nrules: []\n"
+	if err := os.WriteFile(filepath.Join(library, "RHEL_9_STIG.tailoring.yaml"), []byte(policy), 0600); err != nil {
+		t.Fatal(err)
+	}
+	empty := filepath.Join(t.TempDir(), "empty-inventory")
+	if err := os.Mkdir(empty, 0700); err != nil {
+		t.Fatal(err)
+	}
+	var out, errs bytes.Buffer
+	if code := run([]string{"quarter", "--library-root", library, "--input-root", empty, "--dry-run"}, &out, &errs); code == 0 || !strings.Contains(out.String(), "skipping RHEL") {
+		t.Fatalf("empty RHEL tree should skip and then stop: %d\n%s\n%s", code, out.String(), errs.String())
+	}
+	out.Reset()
+	errs.Reset()
+	if code := run([]string{"quarter", "--rhel", "--library-root", library, "--input-root", empty}, &out, &errs); code == 0 || !strings.Contains(errs.String(), "no OpenSCAP scan bundles") {
+		t.Fatalf("--rhel with no scans: %d\n%s\n%s", code, out.String(), errs.String())
+	}
+	out.Reset()
+	errs.Reset()
+	if code := run([]string{"quarter", "--cisco", "--library-root", library}, &out, &errs); code == 0 || !strings.Contains(errs.String(), "--cisco needs") {
+		t.Fatalf("--cisco without inputs: %d\n%s\n%s", code, out.String(), errs.String())
+	}
+	out.Reset()
+	errs.Reset()
+	if code := run([]string{"quarter", "--cisco", "--library-root", library, "--input-root", root, "--dry-run"}, &out, &errs); code == 0 || !strings.Contains(out.String(), "skipping RHEL (--cisco)") || strings.Contains(out.String(), "batch-cklb") {
+		t.Fatalf("--cisco must not convert RHEL scans: %d\n%s\n%s", code, out.String(), errs.String())
+	}
+}
+
+func TestUnmatchedRootTailoringFails(t *testing.T) {
+	_, _, library := tailoredFixture(t)
+	body := []byte("this is not tailoring\n")
+	if err := os.WriteFile(filepath.Join(library, "Nope_STIG.tailoring.yaml"), body, 0600); err != nil {
+		t.Fatal(err)
+	}
+	var out, errs bytes.Buffer
+	code := run([]string{"tailoring", "check", "--library-root", library}, &out, &errs)
+	if code == 0 || !strings.Contains(errs.String(), "ERROR:") || strings.Contains(out.String(), "VALIDATION PASSED") {
+		t.Fatalf("unmatched tailoring file was not fatal: %d\n%s\n%s", code, out.String(), errs.String())
+	}
+}
+
 func TestPublicBenchmarkModeIsReadable(t *testing.T) {
 	root := t.TempDir()
 	if err := os.Chmod(root, 0700); err != nil {

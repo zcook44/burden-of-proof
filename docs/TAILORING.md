@@ -66,7 +66,7 @@ Paths may come from [the shared config](CONFIG.md).
 
 `cisco-batch` and `xccdf-cklb` write a partial host worksheet beside each checklist. It lists administrator overrides and not-reviewed rows. Scored passes are omitted. The worksheet has no benchmark hash. Copy the rows you mean to keep into the device directory.
 
-`checkmate --export-tailoring DIR` writes a schema v3 root candidate per benchmark. It includes a rule only when every selected host shares the same status and comment, and only when that comment is an administrator decision. Plain scan passes and untouched "NOT REVIEWED" text are omitted. The file's pin is `rehash-me` until `docket tailoring rehash`.
+`checkmate --root DIR --export-tailoring DIR` writes a schema v3 root candidate per benchmark. `checklist_root` in the shared config is the same path when `--root` is omitted. It includes a rule only when every selected host shares the same status and comment, and only when that comment is an administrator decision. Plain scan passes and untouched "NOT REVIEWED" text are omitted. The file's pin is `rehash-me` until `docket tailoring rehash`.
 
 ## Provenance
 
