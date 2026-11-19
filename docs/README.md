@@ -6,7 +6,7 @@ Ceasefire is one package. It installs `docket` and `checkmate`. `docket` convert
 
 ## 1. Install the package
 
-After `scripts/package-disconnected.sh` writes a tarball, `scripts/install-docket.sh` checks its checksum, unpacks it, and installs `docket` and `checkmate` onto `~/.local/bin`. If that directory is not already on `PATH`, the installer prints `export PATH="$HOME/.local/bin:$PATH"` and still finishes. Completion files are always copied under `$prefix/share/bash-completion/completions/`. They are also copied to `/usr/share/bash-completion/completions/` when that directory is writable or passwordless sudo can write it. A system directory that is not writable does not fail the install. The connected build needs Go 1.22 or newer. `scripts/install-docket.sh --from-source` builds from this checkout and fails when Go is missing, older than 1.22, or unable to build from `vendor/` with the network turned off. The installed binaries need no Go. The archive does not contain official benchmarks.
+After `scripts/package-ceasefire.sh` writes a tarball, `scripts/install-ceasefire.sh` checks its checksum, unpacks it, and installs `docket` and `checkmate` onto `~/.local/bin`. If that directory is not already on `PATH`, the installer prints `export PATH="$HOME/.local/bin:$PATH"` and still finishes. Completion files are always copied under `$prefix/share/bash-completion/completions/`. They are also copied to `/usr/share/bash-completion/completions/` when that directory is writable or passwordless sudo can write it. A system directory that is not writable does not fail the install. The connected build needs Go 1.22 or newer. `scripts/install-ceasefire.sh --from-source` builds from this checkout and fails when Go is missing, older than 1.22, or unable to build from `vendor/` with the network turned off. The installed binaries need no Go. The archive does not contain official benchmarks.
 
 From a source checkout that includes `vendor/`, build with the same flags the release script uses:
 
@@ -51,7 +51,7 @@ Inputs are owner-private: directories `0700`, files `0600`, no symlinks.
 
 | You have | Command | Preview | Checklist lands |
 | --- | --- | --- | --- |
-| A tree of RHEL OpenSCAP results | `batch-cklb` | `preflight-offline.sh`, then `--dry-run` | Beside each scan: `<prefix>-disa-…-ASSESSMENT.cklb` and `.cklb.provenance.json` |
+| A tree of RHEL OpenSCAP results | `batch-cklb` | `ceasefire-preflight.sh`, then `--dry-run` | Beside each scan: `<prefix>-disa-…-ASSESSMENT.cklb` and `.cklb.provenance.json` |
 | One Cisco configuration and one benchmark | `cisco-cklb` | `--dry-run` | Beside the configuration: `<prefix>-cisco-…-ASSESSMENT.cklb` and provenance |
 | Many Cisco devices | `cisco-batch` | `--dry-run` | `--output-root/<benchmark-id>/<host>/`, plus `index.html` |
 | A Cisco result that must carry IP, FQDN, and MAC | `cisco-xccdf`, then `xccdf-cklb` | No dry-run. The first command writes the result. | `checklists/<benchmark-id>/<host>/<host>.cklb`, provenance, review page, and tailoring worksheet |
@@ -92,7 +92,7 @@ Inputs are owner-private: directories `0700`, files `0600`, no symlinks.
   --out /private/checklists/Cisco_IOS_XE_Switch_L2S_STIG/ios-xe-switch-01/ios-xe-switch-01.cklb
 ```
 
-On a first deployment, run `docket quarter --dry-run` or `scripts/preflight-offline.sh` before the write. `checkmate` is installed beside `docket`. Pass `--checkmate` and `--checklist-root` to the preflight when you want an inventory. Details are in the [release notes](DISCONNECTED-RELEASE.md) and the [quarterly runbook](QUARTERLY-RUNBOOK.md).
+On a first deployment, run `docket quarter --dry-run` or `scripts/ceasefire-preflight.sh` before the write. `checkmate` is installed beside `docket`. Pass `--checkmate` and `--checklist-root` to the preflight when you want an inventory. Details are in the [release notes](DISCONNECTED-RELEASE.md) and the [quarterly runbook](QUARTERLY-RUNBOOK.md).
 
 A repeated run with the same bytes skips. A different result is never silently overwritten. If that feels stubborn, it is the feature.
 

@@ -12,7 +12,7 @@ usage() {
   printf 'A docket-*-linux-amd64.tar.gz from release 2.0.0 is still accepted.\n' >&2
   exit 2
 }
-die() { printf 'install-docket: %s\n' "$*" >&2; exit 1; }
+die() { printf 'install-ceasefire: %s\n' "$*" >&2; exit 1; }
 
 prefix=${HOME}/.local
 from_source=0
@@ -40,10 +40,10 @@ extract_tmp=
 trap '[[ -n ${extract_tmp:-} ]] && rm -rf -- "$extract_tmp"' EXIT
 
 require_go() {
-  [[ -f $script_dir/require-go.sh ]] || die "a source build needs this repository checkout, including scripts/require-go.sh and vendor/. The release archive does not include them. Installed docket and checkmate binaries do not need Go."
-  # shellcheck source=require-go.sh
-  source "$script_dir/require-go.sh"
-  docket_require_go || die "source build needs Go 1.22 or newer. See the message above."
+  [[ -f $script_dir/ceasefire-require-go.sh ]] || die "a source build needs this repository checkout, including scripts/ceasefire-require-go.sh and vendor/. The release archive does not include them. The installed docket and checkmate commands do not need Go."
+  # shellcheck source=ceasefire-require-go.sh
+  source "$script_dir/ceasefire-require-go.sh"
+  ceasefire_require_go || die "source build needs Go 1.22 or newer. See the message above."
   [[ -f $repo/vendor/modules.txt && -d $repo/cmd/docket && -d $repo/cmd/checkmate ]] || die "vendor/, cmd/docket, or cmd/checkmate is missing. Refusing to download modules."
 }
 
@@ -53,8 +53,8 @@ ensure_path() {
     *:"$bindir":*) return 0 ;;
   esac
   line="export PATH=\"$bindir:\$PATH\""
-  printf 'install-docket: %s is not on PATH.\n' "$bindir" >&2
-  printf 'install-docket: add it for this account with:\n' >&2
+  printf 'install-ceasefire: %s is not on PATH.\n' "$bindir" >&2
+  printf 'install-ceasefire: add it for this account with:\n' >&2
   printf '  %s\n' "$line" >&2
 }
 
@@ -80,7 +80,7 @@ else
   [[ -f $tarball && ! -L $tarball ]] || die "tarball is not a regular file: $tarball"
   [[ -f ${tarball}.sha256 && ! -L ${tarball}.sha256 ]] || die "checksum file is missing beside the tarball"
   (cd -- "$(dirname -- "$tarball")" && sha256sum -c "$(basename -- "${tarball}.sha256")") >/dev/null || die "checksum verification failed: $tarball"
-  extract_tmp=$(mktemp -d "${TMPDIR:-/tmp}/docket-install.XXXXXXXX")
+  extract_tmp=$(mktemp -d "${TMPDIR:-/tmp}/ceasefire-install.XXXXXXXX")
   tar -xzf "$tarball" -C "$extract_tmp"
   archive_name=$(find "$extract_tmp" -mindepth 1 -maxdepth 1 -type d -printf '%f\n')
   [[ $(printf '%s\n' "$archive_name" | wc -l) -eq 1 && -x $extract_tmp/$archive_name/bin/docket ]] || die "archive does not contain bin/docket"
@@ -115,7 +115,7 @@ elif [[ -d $comp_dir ]] && command -v sudo >/dev/null 2>&1 && sudo -n true >/dev
   sudo install -m 644 "$checkmate_completion" "$comp_dir/checkmate"
   printf 'COMPLETION %s\n' "$comp_dir/docket"
 else
-  printf 'install-docket: system completion directory is not writable; installed completions under %s\n' "$prefix_comp" >&2
+  printf 'install-ceasefire: system completion directory is not writable; installed completions under %s\n' "$prefix_comp" >&2
   printf 'COMPLETION %s\n' "$prefix_comp/docket"
 fi
 user_completion=${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/docket

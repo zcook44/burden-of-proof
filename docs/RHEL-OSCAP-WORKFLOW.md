@@ -8,7 +8,7 @@ Accepted majors are **RHEL 7 through 10**. The lab playbook performs **one** sca
 
 ## From the guest to the reviewer
 
-`preflight-offline.sh` and `batch-cklb` are the commands in this archive. The lab playbook lives in `/scratch/ansible` and is not part of the disconnected bundle. The bundle keeps non-executable snapshots of that playbook and its wrapper.
+`ceasefire-preflight.sh` and `batch-cklb` are the commands in this archive. The lab playbook lives in `/scratch/ansible` and is not part of the disconnected bundle. The bundle keeps non-executable snapshots of that playbook and its wrapper.
 
 ```mermaid
 flowchart TD
@@ -16,7 +16,7 @@ flowchart TD
   scan["Saved host directory: folder name equals TestResult target"]
   bench["Official DISA XCCDF: newest version, then release, per OS"]
   policy["Per-OS tailoring YAML: optional, every host of that OS"]
-  pre["preflight-offline.sh: private trees, then batch-cklb --dry-run"]
+  pre["ceasefire-preflight.sh: private trees, then batch-cklb --dry-run"]
   batch["batch-cklb: numeric V or SV join"]
   out["Checklist and sidecar: mode 0600, beside the scan"]
   human["STIG Viewer: every host, every rule, including Not a Finding"]
@@ -78,7 +78,7 @@ Source: [Batch CKLB](BATCH-CKLB.md) historical v6 readback. Library selection wa
 | Step | Command | What it writes |
 | --- | --- | --- |
 | Check the handoff | `asset-check --asset --pre --host` | Nothing. It checks the asset record against the supplied pre-scan bytes. |
-| Preview | `preflight-offline.sh`, then `batch-cklb --dry-run` | Nothing. It prints the newest benchmark and any tailoring file it would use. |
+| Preview | `ceasefire-preflight.sh`, then `batch-cklb --dry-run` | Nothing. It prints the newest benchmark and any tailoring file it would use. |
 | Convert | `batch-cklb --input-root --library-root` | `<prefix>-disa-<benchmark-hash>-<bundle-hash>-ASSESSMENT.cklb` and a matching `.cklb.provenance.json` |
 | Hand off | Import each host's CKLB into STIG Viewer | The checklist security judges. `checkmate --list` is an optional admin inventory from the same archive. |
 

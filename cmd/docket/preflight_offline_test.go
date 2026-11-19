@@ -24,7 +24,7 @@ func TestPreflightFailsClosedOnTailoring(t *testing.T) {
 	if out, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("build docket: %v\n%s", err, out)
 	}
-	script := filepath.Join(repo, "scripts", "preflight-offline.sh")
+	script := filepath.Join(repo, "scripts", "ceasefire-preflight.sh")
 
 	root, _, library := tailoredFixture(t)
 	bench, err := os.ReadFile(filepath.Join(library, "U_RHEL_9_STIG_V1R1_Manual-xccdf.xml"))

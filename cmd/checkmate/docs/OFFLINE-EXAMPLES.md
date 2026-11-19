@@ -24,8 +24,8 @@ The script selects the benchmark files available in the source library; it does 
 From the repository root, with Go 1.22 or newer:
 
 ```sh
-./scripts/package-disconnected.sh 2.1.0 ./dist/releases
-./scripts/install-docket.sh --prefix "$HOME/.local" ./dist/releases/ceasefire-2.1.0-linux-amd64.tar.gz
+./scripts/package-ceasefire.sh 2.1.0 ./dist/releases
+./scripts/install-ceasefire.sh --prefix "$HOME/.local" ./dist/releases/ceasefire-2.1.0-linux-amd64.tar.gz
 checkmate --root "$HOME/private/checkmate-practice/examples" --list
 checkmate --root "$HOME/private/checkmate-practice/examples" --benchmark RHEL_9_STIG --list
 checkmate --root "$HOME/private/checkmate-practice/examples" --validate \
@@ -58,10 +58,10 @@ The staged bundles include HTML and ARF. Permission and naming validity alone do
 
 ## Read-only deployment preflight
 
-`scripts/preflight-offline.sh` is in this repository. With the installed binaries and owner-private, canonical absolute paths:
+`scripts/ceasefire-preflight.sh` is in this repository. With the installed binaries and owner-private, canonical absolute paths:
 
 ```sh
-scripts/preflight-offline.sh \
+scripts/ceasefire-preflight.sh \
   --converter "$(command -v docket)" \
   --input-root "$HOME/private/checkmate-practice/examples" \
   --library-root "$HOME/private/checkmate-practice/benchmarks" \

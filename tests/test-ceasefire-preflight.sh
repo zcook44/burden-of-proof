@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-tmp=$(mktemp -d "${TMPDIR:?}/preflight-offline-test.XXXXXXXX")
+tmp=$(mktemp -d "${TMPDIR:?}/ceasefire-preflight-test.XXXXXXXX")
 trap 'rm -rf -- "$tmp"' EXIT
 mkdir -m 700 "$tmp/input" "$tmp/library" "$tmp/checklists"
 printf 'scan\n' > "$tmp/input/one.results.xml"
@@ -30,7 +30,7 @@ esac
 SH
 chmod 700 "$tmp/converter" "$tmp/checkmate"
 repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
-script=$repo/scripts/preflight-offline.sh
+script=$repo/scripts/ceasefire-preflight.sh
 export TEST_LOG="$tmp/log"
 "$script" --converter "$tmp/converter" --input-root "$tmp/input" --library-root "$tmp/library" --checkmate "$tmp/checkmate" --checklist-root "$tmp/checklists" > "$tmp/out"
 grep -q 'bundles: 1; no files written' "$tmp/out"

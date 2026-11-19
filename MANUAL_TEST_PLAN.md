@@ -256,7 +256,7 @@ head -10 /tmp/cisco-library/Cisco_IOS_Switch_RTR_STIG.tailoring.yaml
 
 ```bash
 # Run offline preflight (includes tailoring validation)
-./scripts/preflight-offline.sh --converter ./docket \
+./scripts/ceasefire-preflight.sh --converter ./docket \
     --input-root /tmp/test-scans --library-root /tmp/test-library
 
 # Expected:
@@ -266,7 +266,7 @@ head -10 /tmp/cisco-library/Cisco_IOS_Switch_RTR_STIG.tailoring.yaml
 # - Preflight complete message
 
 # Try with Cisco
-./scripts/preflight-offline.sh --converter ./docket \
+./scripts/ceasefire-preflight.sh --converter ./docket \
     --input-root /tmp/cisco-devices --library-root /tmp/cisco-library
 ```
 

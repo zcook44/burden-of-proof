@@ -79,7 +79,7 @@ chmod 600 /private/evidence/devices.json "$HOME/.config/docket/config.yaml"
 
 ## 0. Install the bundle
 
-The connected build machine needs Go 1.22 or newer on `PATH`. Go 1.22.2 and Go 1.27.3 are both enough. `go.mod` says `go 1.22.0`. `scripts/package-disconnected.sh` sets `GOTOOLCHAIN=local` and `GOPROXY=off`, so it uses that compiler and does not download one. If the compiler is missing or older than 1.22, the script stops before `go test` and prints the tarball install. Copy `go1.22.2.linux-amd64.tar.gz` from a connected machine, then:
+The connected build machine needs Go 1.22 or newer on `PATH`. Go 1.22.2 and Go 1.27.3 are both enough. `go.mod` says `go 1.22.0`. `scripts/package-ceasefire.sh` sets `GOTOOLCHAIN=local` and `GOPROXY=off`, so it uses that compiler and does not download one. If the compiler is missing or older than 1.22, the script stops before `go test` and prints the tarball install. Copy `go1.22.2.linux-amd64.tar.gz` from a connected machine, then:
 
 ```sh
 rm -rf "$HOME/sdk/go"
@@ -87,7 +87,7 @@ mkdir -p "$HOME/sdk"
 tar -C "$HOME/sdk" -xzf go1.22.2.linux-amd64.tar.gz
 export PATH="$HOME/sdk/go/bin:$PATH"
 go version
-./scripts/package-disconnected.sh 2.1.0 ./dist/releases
+./scripts/package-ceasefire.sh 2.1.0 ./dist/releases
 sha256sum ./dist/releases/ceasefire-2.1.0-linux-amd64.tar.gz
 ```
 
@@ -98,7 +98,7 @@ Transfer `ceasefire-2.1.0-linux-amd64.tar.gz` and the `.sha256` file beside it. 
 ```sh
 cd /secure/incoming
 sha256sum -c ceasefire-2.1.0-linux-amd64.tar.gz.sha256
-./scripts/install-docket.sh --prefix "$HOME/.local" /secure/incoming/ceasefire-2.1.0-linux-amd64.tar.gz
+./scripts/install-ceasefire.sh --prefix "$HOME/.local" /secure/incoming/ceasefire-2.1.0-linux-amd64.tar.gz
 ```
 
 The installer unpacks the archive, checks the checksum, and installs `docket` and `checkmate`. Expected lines when the system completion directory is not writable:
@@ -112,8 +112,8 @@ COMPLETION /home/<you>/.local/share/bash-completion/completions/docket
 A writable system directory prints `COMPLETION /usr/share/bash-completion/completions/docket` instead. The prefix copies are always installed at `$prefix/share/bash-completion/completions/`. If `$prefix/bin` is not on `PATH`, the installer still exits 0 and prints the line to add:
 
 ```text
-install-docket: /home/<you>/.local/bin is not on PATH.
-install-docket: add it for this account with:
+install-ceasefire: /home/<you>/.local/bin is not on PATH.
+install-ceasefire: add it for this account with:
   export PATH="/home/<you>/.local/bin:$PATH"
 ```
 
@@ -355,10 +355,10 @@ Fix the file named in the error and run the same command again.
 - A failure while writing RHEL checklists leaves any checklists written before the failing host. The next run skips identical checklists and retries the failing host.
 - A failure while writing Cisco checklists leaves the RHEL checklists from that run in place. The next run skips identical RHEL checklists and retries Cisco.
 
-`scripts/preflight-offline.sh` checks ownership and then runs `tailoring check`. It exits non-zero when that check fails, when a tailoring file is nested below a host directory, and when `--evidence-root` names a tree whose tailoring check fails. The ownership walk requires directories and private files to be owner-only. Manual `*_Manual-xccdf.xml` files may be mode `0644`. Prefer `docket quarter --dry-run`. Use preflight when you also want the ownership walk and an optional `checkmate --list`:
+`scripts/ceasefire-preflight.sh` checks ownership and then runs `tailoring check`. It exits non-zero when that check fails, when a tailoring file is nested below a host directory, and when `--evidence-root` names a tree whose tailoring check fails. The ownership walk requires directories and private files to be owner-only. Manual `*_Manual-xccdf.xml` files may be mode `0644`. Prefer `docket quarter --dry-run`. Use preflight when you also want the ownership walk and an optional `checkmate --list`:
 
 ```sh
-scripts/preflight-offline.sh \
+scripts/ceasefire-preflight.sh \
   --converter "$(command -v docket)" \
   --input-root /private/inventory/2026-q4 \
   --library-root /private/stig-library \

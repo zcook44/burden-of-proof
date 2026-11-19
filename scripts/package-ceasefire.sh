@@ -27,9 +27,9 @@ done
   echo 'Missing or linked DISA CKLB schema' >&2; exit 1;
 }
 printf '%s  %s\n' '8b88205de07662006e1660b1decad677d344828d6687b1dd26bca15105b7bb37' "$root/schemas/SV3_CKLB_1_0_JSON_SCHEMA.json" | sha256sum -c - >/dev/null
-# shellcheck source=require-go.sh
-source "$root/scripts/require-go.sh"
-docket_require_go
+# shellcheck source=ceasefire-require-go.sh
+source "$root/scripts/ceasefire-require-go.sh"
+ceasefire_require_go
 # Fail instead of fetching a compiler or dependency in a disconnected build.
 export GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local GOWORK=off CGO_ENABLED=0
 export GOOS=linux GOARCH=amd64 GOFLAGS=-mod=vendor
@@ -49,8 +49,8 @@ package="$stage/$name"
 install -d -m 700 "$package" "$package/bin" "$package/scripts" "$package/templates" "$package/cisco-library" "$package/docs" "$package/docs/snapshots" "$package/contracts" "$package/schemas"
 (cd "$root" && go build -trimpath -ldflags='-s -w' -o "$package/bin/docket" ./cmd/docket)
 (cd "$root" && go build -trimpath -ldflags='-s -w' -o "$package/bin/checkmate" ./cmd/checkmate)
-install -m 755 "$root/scripts/preflight-offline.sh" "$package/scripts/preflight-offline.sh"
-install -m 755 "$root/scripts/install-docket.sh" "$package/scripts/install-docket.sh"
+install -m 755 "$root/scripts/ceasefire-preflight.sh" "$package/scripts/ceasefire-preflight.sh"
+install -m 755 "$root/scripts/install-ceasefire.sh" "$package/scripts/install-ceasefire.sh"
 install -m 644 "$root/scripts/docket-completion.bash" "$package/scripts/docket-completion.bash"
 install -m 644 "$root/scripts/checkmate-completion.bash" "$package/scripts/checkmate-completion.bash"
 install -m 755 "$root/scripts/generate-cisco-tailoring.py" "$package/scripts/generate-cisco-tailoring.py"
@@ -81,12 +81,12 @@ fi
   printf 'Commands: docket, checkmate\n'
   printf 'Go: %s\nSource commit: %s\nSource worktree: %s\n' "$(go version)" "$commit" "$source_state"
   printf 'Build: GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local GOFLAGS=-mod=vendor\n'
-  printf 'Contents: Ceasefire archive with the docket and checkmate commands, Bash installer, completions, RHEL preflight, Python 3 Cisco tailoring generator, RHEL templates (4), Cisco partial root tailoring (25), DISA CKLB schema, documentation and file checksums.\n'
+  printf 'Contents: Ceasefire archive with the docket and checkmate commands, Ceasefire installer, completions, preflight, Python 3 Cisco tailoring generator, RHEL templates (4), Cisco partial root tailoring (25), DISA CKLB schema, documentation and file checksums.\n'
   printf 'Not included: official DISA benchmarks, SSG scan inputs, Cisco running configs, device collectors, private evidence, credentials, signatures.\n'
 } > "$package/RELEASE.txt"
 (
   cd "$package"
-  sha256sum bin/docket bin/checkmate scripts/preflight-offline.sh scripts/install-docket.sh scripts/docket-completion.bash scripts/checkmate-completion.bash scripts/generate-cisco-tailoring.py README.md LICENSE RELEASE.txt \
+  sha256sum bin/docket bin/checkmate scripts/ceasefire-preflight.sh scripts/install-ceasefire.sh scripts/docket-completion.bash scripts/checkmate-completion.bash scripts/generate-cisco-tailoring.py README.md LICENSE RELEASE.txt \
     docs/*.md docs/snapshots/oscap_scan.yml docs/snapshots/run-lab-oscap.sh contracts/*.md templates/*.yaml cisco-library/*.yaml schemas/*.json schemas/*.md > SHA256SUMS
 )
 source_date_epoch=${SOURCE_DATE_EPOCH:-0}

@@ -6,7 +6,7 @@ usage() {
   printf 'Usage: %s --converter BIN --input-root DIR --library-root DIR [--evidence-root DIR] [--checkmate BIN --checklist-root DIR [--schema JSON]]\n' "${0##*/}" >&2
   exit 2
 }
-die() { printf 'preflight-offline: %s\n' "$*" >&2; exit 1; }
+die() { printf 'ceasefire-preflight: %s\n' "$*" >&2; exit 1; }
 converter='' input='' library='' evidence='' checkmate='' checklist='' schema=''
 while (($#)); do
   (($# >= 2)) || usage
@@ -91,7 +91,7 @@ while IFS= read -r -d '' path; do
   fi
   depth=$(printf '%s' "$relative" | tr -cd '/' | wc -c)
   if ((depth > 1)); then
-    printf 'preflight-offline: nested tailoring file is not loaded from a host directory: %s\n' "$path" >&2
+    printf 'ceasefire-preflight: nested tailoring file is not loaded from a host directory: %s\n' "$path" >&2
     misplaced=$((misplaced + 1))
   fi
 done < <(find "$input" -name '*.tailoring.yaml' -type f -print0 2>/dev/null || true)

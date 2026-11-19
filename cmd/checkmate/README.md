@@ -113,7 +113,7 @@ sha256sum "$HOME/private/stig/schema/SV3_CKLB_1_0_JSON_SCHEMA.json"
 
 ## Prepare a private library and scan results
 
-These helper scripts live in `cmd/checkmate/scripts/` and are run from that directory. Checkmate takes a completed CKLB `--root`. It does not read the STIG library or import OpenSCAP results. The disconnected bundle that installs both binaries is `scripts/package-disconnected.sh` in the repository root.
+These helper scripts live in `cmd/checkmate/scripts/` and are run from that directory. Checkmate takes a completed CKLB `--root`. It does not read the STIG library or import OpenSCAP results. The disconnected bundle that installs both binaries is `scripts/package-ceasefire.sh` in the repository root.
 
 To extract a new library from official RHEL or Cisco STIG ZIPs, or a directory containing ZIPs **directly** (not recursively), choose a destination that does not exist. The script streams only RHEL `U_RHEL_N_STIG_VxRy_Manual-xccdf.xml` and Cisco `U_Cisco_*STIG_VxRy_Manual-xccdf.xml` / `U_Cisco_*VxRy_STIG_Manual-xccdf.xml` entries to a flat, owner-private directory. Cisco filenames include IOS/IOS-XE/IOS-XR Router and Switch, ASA, ACI, ISE, NX-OS and SNA variants; for example `U_Cisco_IOS_Router_NDM_STIG_V3R9_Manual-xccdf.xml` and `U_Cisco_ACI_RTR_Manual_V1R2_STIG_Manual-xccdf.xml`. It does not unpack PDFs, scripts, or arbitrary archive paths, does not overwrite a library, and fails on duplicate benchmark filenames. The destination's parent must already exist, be owned by you, and not be group/world writable. Source ZIPs should be obtained and verified under your organization's DISA distribution procedures; this script does not authenticate an archive or validate the XCCDF's identity.
 
@@ -166,22 +166,22 @@ A multi-file edit is **not transactionally atomic**. If a later file fails, earl
 From the repository root, on a build host with Go 1.22 or newer and the vendored modules:
 
 ```sh
-./scripts/package-disconnected.sh 2.1.0 ./dist/releases
+./scripts/package-ceasefire.sh 2.1.0 ./dist/releases
 (cd ./dist/releases && sha256sum -c ceasefire-2.1.0-linux-amd64.tar.gz.sha256)
-./scripts/install-docket.sh --prefix "$HOME/.local" ./dist/releases/ceasefire-2.1.0-linux-amd64.tar.gz
+./scripts/install-ceasefire.sh --prefix "$HOME/.local" ./dist/releases/ceasefire-2.1.0-linux-amd64.tar.gz
 ```
 
 The archive contains `bin/docket`, `bin/checkmate`, bash completion for both, the installer, the preflight, the DISA JSON schema, and its [provenance notice](../../schemas/PROVENANCE.md). It does **not** contain private checklists, scan evidence, or benchmarks. The build uses `GOPROXY=off`, `GOSUMDB=off`, `GOTOOLCHAIN=local`, and `CGO_ENABLED=0`. The target is Linux amd64. If `$HOME/.local/bin` is not on `PATH`, the installer prints the `export` line and still finishes. Completion is installed under the prefix even when the system completion directory is not writable.
 
 ```mermaid
 flowchart LR
-    source["Source checkout: Go 1.22+, vendor, both commands"] --> pack["scripts/package-disconnected.sh"]
+    source["Source checkout: Go 1.22+, vendor, both commands"] --> pack["scripts/package-ceasefire.sh"]
     pack --> generic["Ceasefire archive: docket, checkmate, schema, docs"]
-    generic --> offline["Disconnected host: scripts/install-docket.sh"]
+    generic --> offline["Disconnected host: scripts/install-ceasefire.sh"]
     private["Private scans, CKLB copies, benchmarks, tailoring"] -.->|Separate authorized transfer| offline
 ```
 
-For a **read-only deployment check**, use `scripts/preflight-offline.sh` from this repository. Supply `docket`, the private scan and benchmark roots, and `checkmate` plus a completed-checklist root. It checks private tree ownership and any root `SHA256SUMS`, runs `tailoring check`, runs `batch-cklb --dry-run`, and runs `checkmate --list` (plus `--validate` only if you supply a schema). A tailoring check failure exits non-zero. It does not scan hosts or edit checklists. See the [offline examples guide](docs/OFFLINE-EXAMPLES.md#read-only-deployment-preflight). A dry run is **not** approval to use example tailoring as site policy.
+For a **read-only deployment check**, use `scripts/ceasefire-preflight.sh` from this repository. Supply `docket`, the private scan and benchmark roots, and `checkmate` plus a completed-checklist root. It checks private tree ownership and any root `SHA256SUMS`, runs `tailoring check`, runs `batch-cklb --dry-run`, and runs `checkmate --list` (plus `--validate` only if you supply a schema). A tailoring check failure exits non-zero. It does not scan hosts or edit checklists. See the [offline examples guide](docs/OFFLINE-EXAMPLES.md#read-only-deployment-preflight). A dry run is **not** approval to use example tailoring as site policy.
 
 ## Export candidate tailoring
 
