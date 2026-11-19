@@ -25,7 +25,10 @@ for path in docs/OSCAP-SOURCE.md docs/CISCO-CONFIG.md docs/snapshots/oscap_scan.
 done
 printf '%s  %s\n' '8b88205de07662006e1660b1decad677d344828d6687b1dd26bca15105b7bb37' "$repo/schemas/SV3_CKLB_1_0_JSON_SCHEMA.json" | sha256sum -c -
 [[ $(stat -c %a "$package/docs/snapshots/oscap_scan.yml") == 644 && $(stat -c %a "$package/docs/snapshots/run-lab-oscap.sh") == 644 ]] || { echo 'snapshot mode is not nonexecutable 0644' >&2; exit 1; }
-[[ $(stat -c %a "$package/scripts/ceasefire-preflight.sh") == 755 && $(stat -c %a "$package/scripts/install-ceasefire.sh") == 755 && $(stat -c %a "$package/scripts/generate-cisco-tailoring.py") == 755 && $(stat -c %a "$package/scripts/docket-completion.bash") == 644 ]] || { echo 'runtime scripts have unexpected modes' >&2; exit 1; }
+[[ $(stat -c %a "$package/scripts/ceasefire-preflight.sh") == 755 && $(stat -c %a "$package/scripts/install-ceasefire.sh") == 755 && $(stat -c %a "$package/scripts/generate-cisco-tailoring.py") == 755 && $(stat -c %a "$package/scripts/generate-cisco-examples.py") == 755 && $(stat -c %a "$package/scripts/unpack-stig-library.sh") == 755 && $(stat -c %a "$package/scripts/fix-oscap-permissions.sh") == 755 && $(stat -c %a "$package/scripts/stage-offline-examples.py") == 755 && $(stat -c %a "$package/scripts/docket-completion.bash") == 644 && $(stat -c %a "$package/scripts/ceasefire-require-go.sh") == 644 ]] || { echo 'runtime scripts have unexpected modes' >&2; exit 1; }
+[[ -f $package/vendor/modules.txt && -f $package/go.mod && -f $package/go.sum ]] || { echo 'vendored module inputs are missing from the archive' >&2; exit 1; }
+cmp "$repo/vendor/modules.txt" "$package/vendor/modules.txt"
+if find "$package/vendor" -type l -print -quit | grep -q .; then echo 'packaged vendor tree contains a symlink' >&2; exit 1; fi
 python3 "$package/scripts/generate-cisco-tailoring.py" --help >/dev/null
 # These relative links must resolve inside the extracted bundle, not back to the repo.
 assert_relative_link() {

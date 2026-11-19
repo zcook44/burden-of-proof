@@ -51,9 +51,24 @@ install -d -m 700 "$package" "$package/bin" "$package/scripts" "$package/templat
 (cd "$root" && go build -trimpath -ldflags='-s -w' -o "$package/bin/checkmate" ./cmd/checkmate)
 install -m 755 "$root/scripts/ceasefire-preflight.sh" "$package/scripts/ceasefire-preflight.sh"
 install -m 755 "$root/scripts/install-ceasefire.sh" "$package/scripts/install-ceasefire.sh"
+install -m 644 "$root/scripts/ceasefire-require-go.sh" "$package/scripts/ceasefire-require-go.sh"
 install -m 644 "$root/scripts/docket-completion.bash" "$package/scripts/docket-completion.bash"
 install -m 644 "$root/scripts/checkmate-completion.bash" "$package/scripts/checkmate-completion.bash"
 install -m 755 "$root/scripts/generate-cisco-tailoring.py" "$package/scripts/generate-cisco-tailoring.py"
+install -m 755 "$root/scripts/generate-cisco-examples.py" "$package/scripts/generate-cisco-examples.py"
+install -m 755 "$root/cmd/checkmate/scripts/unpack-stig-library.sh" "$package/scripts/unpack-stig-library.sh"
+install -m 755 "$root/cmd/checkmate/scripts/fix-oscap-permissions.sh" "$package/scripts/fix-oscap-permissions.sh"
+install -m 755 "$root/cmd/checkmate/scripts/stage-offline-examples.py" "$package/scripts/stage-offline-examples.py"
+install -m 644 "$root/go.mod" "$root/go.sum" "$package/"
+if [[ -L $root/vendor || ! -f $root/vendor/modules.txt ]]; then
+  echo 'vendor/modules.txt is missing. Refusing to build without the vendored modules.' >&2
+  exit 1
+fi
+cp -a "$root/vendor" "$package/vendor"
+if find "$package/vendor" -type l -print -quit | grep -q .; then
+  echo 'vendor tree contains a symlink' >&2
+  exit 1
+fi
 install -m 644 "$root/README.md" "$package/README.md"
 install -m 644 "$root/LICENSE" "$package/LICENSE"
 install -m 644 "$root/contracts/asset-record-v1.md" "$package/contracts/asset-record-v1.md"
@@ -81,13 +96,17 @@ fi
   printf 'Commands: docket, checkmate\n'
   printf 'Go: %s\nSource commit: %s\nSource worktree: %s\n' "$(go version)" "$commit" "$source_state"
   printf 'Build: GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local GOFLAGS=-mod=vendor\n'
-  printf 'Contents: Ceasefire archive with the docket and checkmate commands, Ceasefire installer, completions, preflight, Python 3 Cisco tailoring generator, RHEL templates (4), Cisco partial root tailoring (25), DISA CKLB schema, documentation and file checksums.\n'
+  printf 'Contents: Ceasefire archive with the docket and checkmate commands, Ceasefire installer, preflight, Go check, completions, Cisco tailoring and example generators, STIG library and permission helpers, vendored Go modules, RHEL templates (4), Cisco partial root tailoring (25), DISA CKLB schema, documentation and file checksums.\n'
   printf 'Not included: official DISA benchmarks, SSG scan inputs, Cisco running configs, device collectors, private evidence, credentials, signatures.\n'
 } > "$package/RELEASE.txt"
 (
   cd "$package"
-  sha256sum bin/docket bin/checkmate scripts/ceasefire-preflight.sh scripts/install-ceasefire.sh scripts/docket-completion.bash scripts/checkmate-completion.bash scripts/generate-cisco-tailoring.py README.md LICENSE RELEASE.txt \
-    docs/*.md docs/snapshots/oscap_scan.yml docs/snapshots/run-lab-oscap.sh contracts/*.md templates/*.yaml cisco-library/*.yaml schemas/*.json schemas/*.md > SHA256SUMS
+  list=$(mktemp)
+  find . -type f -printf '%P\n' | LC_ALL=C sort > "$list"
+  while IFS= read -r file; do
+    sha256sum "$file"
+  done < "$list" > SHA256SUMS
+  rm -f "$list"
 )
 source_date_epoch=${SOURCE_DATE_EPOCH:-0}
 [[ $source_date_epoch =~ ^[0-9]+$ ]] || { echo 'SOURCE_DATE_EPOCH must be an unsigned integer' >&2; exit 2; }

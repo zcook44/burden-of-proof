@@ -171,7 +171,7 @@ From the repository root, on a build host with Go 1.22 or newer and the vendored
 ./scripts/install-ceasefire.sh --prefix "$HOME/.local" ./dist/releases/ceasefire-2.1.0-linux-amd64.tar.gz
 ```
 
-The archive contains `bin/docket`, `bin/checkmate`, bash completion for both, the installer, the preflight, the DISA JSON schema, and its [provenance notice](../../schemas/PROVENANCE.md). It does **not** contain private checklists, scan evidence, or benchmarks. The build uses `GOPROXY=off`, `GOSUMDB=off`, `GOTOOLCHAIN=local`, and `CGO_ENABLED=0`. The target is Linux amd64. If `$HOME/.local/bin` is not on `PATH`, the installer prints the `export` line and still finishes. Completion is installed under the prefix even when the system completion directory is not writable.
+The archive contains `bin/docket`, `bin/checkmate`, bash completion for both, the Ceasefire installer and preflight, the STIG library and permission helpers, the vendored Go modules, the DISA JSON schema, and its [provenance notice](../../schemas/PROVENANCE.md). It does **not** contain private checklists, scan evidence, or benchmarks. The build uses `GOPROXY=off`, `GOSUMDB=off`, `GOTOOLCHAIN=local`, and `CGO_ENABLED=0`. The target is Linux amd64. If `$HOME/.local/bin` is not on `PATH`, the installer prints the `export` line and still finishes. Completion is installed under the prefix even when the system completion directory is not writable.
 
 ```mermaid
 flowchart LR
