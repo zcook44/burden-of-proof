@@ -7,7 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/zcook44/checkmate/internal/checklist"
+	"github.com/zcook44/burden-of-proof/cmd/checkmate/internal/checklist"
 )
 
 func viewKey(m model, typ tea.KeyType) model {

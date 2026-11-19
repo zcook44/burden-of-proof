@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/zcook44/checkmate/internal/checklist"
+	"github.com/zcook44/burden-of-proof/cmd/checkmate/internal/checklist"
 )
 
 func sample(t *testing.T, dir, host, status string) string {

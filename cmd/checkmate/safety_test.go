@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/zcook44/checkmate/internal/checklist"
+	"github.com/zcook44/burden-of-proof/cmd/checkmate/internal/checklist"
 )
 
 func TestSelectionStartsEmptyAndCanSelectMatchingStatus(t *testing.T) {

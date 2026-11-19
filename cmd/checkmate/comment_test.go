@@ -2,7 +2,7 @@ package main
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/zcook44/checkmate/internal/checklist"
+	"github.com/zcook44/burden-of-proof/cmd/checkmate/internal/checklist"
 	"os"
 	"strings"
 	"testing"

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/zcook44/checkmate/internal/checklist"
+	"github.com/zcook44/burden-of-proof/cmd/checkmate/internal/checklist"
 	"strings"
 	"testing"
 )
