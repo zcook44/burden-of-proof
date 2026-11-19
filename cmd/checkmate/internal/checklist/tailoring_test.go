@@ -188,11 +188,11 @@ func TestFormatTailoringYAML(t *testing.T) {
 	yaml := FormatTailoringYAML(tf)
 
 	// Check for required elements
-	if !strings.Contains(yaml, "# RHEL_9_STIG tailoring") {
-		t.Error("missing benchmark header")
+	if !strings.Contains(yaml, "schema_version: 3") || !strings.Contains(yaml, "benchmark_sha256: rehash-me") {
+		t.Error("missing schema v3 root pin placeholder")
 	}
-	if !strings.Contains(yaml, "rule_name: PLACEHOLDER") {
-		t.Error("missing rule_name")
+	if strings.Contains(yaml, "rule_name:") || strings.Contains(yaml, "PLACEHOLDER") {
+		t.Error("export invented a rule_name")
 	}
 	if !strings.Contains(yaml, "stig_id: V-257777") {
 		t.Error("missing stig_id")
@@ -206,30 +206,46 @@ func TestFormatTailoringYAML(t *testing.T) {
 	if !strings.Contains(yaml, "comment: \"Test comment\"") {
 		t.Error("missing comment")
 	}
-	if !strings.Contains(yaml, "TODO: Fill in SSG rule name") {
-		t.Error("missing placeholder warning")
+	if strings.Contains(yaml, "TODO: Fill in SSG rule name") {
+		t.Error("stale placeholder warning")
 	}
 }
 
 func TestFormatTailoringYAML_StatusMapping(t *testing.T) {
-	// Test that not_reviewed maps to auto
 	tf := TailoringFile{
 		Benchmark: "RHEL_9_STIG",
 		Release:   "Release: 10",
 		Entries: []TailoringEntry{
 			{
-				RuleName: "PLACEHOLDER",
-				StigID:   "V-100",
-				SvID:     "SV-100_rule",
-				Status:   "not_reviewed",
-				Comment:  "Test",
+				StigID:  "V-100",
+				SvID:    "SV-100_rule",
+				Status:  "not_reviewed",
+				Comment: "Waiting on the vendor exception",
 			},
 		},
 	}
 
 	yaml := FormatTailoringYAML(tf)
-	if !strings.Contains(yaml, "status: auto") {
-		t.Error("not_reviewed should map to auto status")
+	if !strings.Contains(yaml, "status: not_reviewed") || strings.Contains(yaml, "status: auto") {
+		t.Error("a reviewed not_reviewed decision should keep its status")
+	}
+}
+
+func TestAnalyzeTailoring_SkipsPlainScanPasses(t *testing.T) {
+	files := []File{{
+		Path: "/test/host1.cklb",
+		Rules: []Rule{
+			{Benchmark: "RHEL_9_STIG", Release: "R10", ID: "V-1", RuleID: "SV-1_rule", Status: "not_a_finding", Comment: "XCCDF rule result: pass; check result: true"},
+			{Benchmark: "RHEL_9_STIG", Release: "R10", ID: "V-2", RuleID: "SV-2_rule", Status: "not_a_finding", Comment: "Reviewed with the system owner"},
+		},
+	}}
+	results := AnalyzeTailoring(files, true)
+	if len(results) != 1 || len(results[0].Entries) != 1 || results[0].Entries[0].StigID != "V-2" {
+		t.Fatalf("scan pass was exported: %+v", results)
+	}
+	body := FormatTailoringYAML(results[0])
+	if strings.Contains(body, "V-1") || strings.Contains(body, "rule_name:") || !strings.Contains(body, "schema_version: 3") {
+		t.Fatalf("export format: %s", body)
 	}
 }
 

@@ -1,8 +1,10 @@
-# RHEL 9 DISA STIG V2R10 checklist tailoring.
-# rule_name is the SSG remediation rule name. STIG/SV IDs come from V2R10.
-# status: auto keeps the scan's candidate status; set an explicit CKLB status
-# only after reviewing the control and updating the administrator comment.
-# This file applies to EVERY RHEL 9 host converted with this library.
+# Example RHEL_9_STIG tailoring. Not approved site policy.
+# schema version 3. benchmark_sha256 is a placeholder until you run
+#   docket tailoring rehash --library-root <library>
+# beside the official manual. Host copies of this file must omit benchmark_sha256.
+schema_version: 3
+benchmark_id: RHEL_9_STIG
+benchmark_sha256: rehash-me
 rules:
   - rule_name: xwindows_remove_packages
     stig_id: V-257837

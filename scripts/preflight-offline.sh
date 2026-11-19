@@ -46,7 +46,14 @@ check_tree() {
     uid=$(stat -c %u -- "$path")
     mode=$(stat -c %a -- "$path")
     [[ $uid == "$EUID" ]] || die "not owned by current user: $path"
-    (( (8#$mode & 0077) == 0 )) || die "not owner-private: $path (mode $mode)"
+    base=${path##*/}
+    if [[ -f $path && $base == *_Manual-xccdf.xml ]]; then
+      # Public DISA manuals may be mode 0644. They must not be writable by
+      # group or other, and they must not be executable.
+      (( (8#$mode & 0133) == 0 )) || die "benchmark must not be group/world-writable or executable: $path (mode $mode)"
+    else
+      (( (8#$mode & 0077) == 0 )) || die "not owner-private: $path (mode $mode)"
+    fi
     ((count+=1))
   done
   printf 'TREE OK: %s (%d entries)\n' "$root" "$count"
@@ -64,11 +71,10 @@ if [[ -n $checklist && $checklist != "$input" && $checklist != "$library" ]]; th
 # Layered tailoring: root at library root, host in scan/device dirs.
 # Use docket tailoring check to validate files that will be loaded.
 printf 'TAILORING VALIDATION:\n'
-if "$converter" tailoring check --library-root "$library" --scan-root "$input" 2>&1; then
-  printf 'Tailoring files validated (if present).\n'
-else
-  printf 'WARNING: Tailoring validation found issues. Review output above before conversion.\n' >&2
+if ! "$converter" tailoring check --library-root "$library" --scan-root "$input"; then
+  die "tailoring validation failed"
 fi
+printf 'Tailoring files validated.\n'
 
 # Warn about misplaced tailoring files (these will be ignored)
 misplaced=0

@@ -46,7 +46,7 @@ checkmate --root "$HOME/private/checkmate-practice/examples" \
   --export-tailoring "$HOME/private/checkmate-practice/tailoring-export"
 ```
 
-`rule_name` in that file is `PLACEHOLDER`. Explicit statuses would override the next scan for every host of that benchmark. From the source checkout, `scripts/map-tailoring-rule-names.sh` can report names already used beside the same `stig_id` in `benchmarks/` or another library. It does not edit the export. The script is not in the generic archive. Do not treat the draft as approved site policy.
+The export is schema v3 and does not invent `rule_name`. Explicit statuses override the next scan for every host of that benchmark. Run `docket tailoring rehash` after you install the file at the library root. Do not treat the draft as approved site policy.
 
 To test conversion read-only, run the **separate** converter's `batch-cklb --dry-run` using absolute `--input-root "$HOME/private/checkmate-practice/examples"` and `--library-root "$HOME/private/checkmate-practice/benchmarks"`. The staged bundles include HTML+ARF; whether a particular converter build accepts them must be checked with that build. Permission and naming validity alone do not establish assessment correctness.
 

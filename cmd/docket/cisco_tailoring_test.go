@@ -13,7 +13,7 @@ import (
 
 func ciscoPolicyBody(bench []byte, firstStatus, firstComment string, omitSecond bool) string {
 	sum := sha256.Sum256(bench)
-	body := "schema_version: 2\nbenchmark_id: Cisco_IOS_Router_NDM_STIG\nbenchmark_sha256: " + hex.EncodeToString(sum[:]) + "\nrules:\n  - stig_id: V-215662\n    sv_id: SV-215662r1269385_rule\n    status: " + firstStatus + "\n"
+	body := "schema_version: 3\nbenchmark_id: Cisco_IOS_Router_NDM_STIG\nbenchmark_sha256: " + hex.EncodeToString(sum[:]) + "\nrules:\n  - stig_id: V-215662\n    sv_id: SV-215662r1269385_rule\n    status: " + firstStatus + "\n"
 	if firstComment != "" {
 		body += "    comment: " + firstComment + "\n"
 	}
@@ -125,15 +125,17 @@ func TestCiscoTailoringFullAutoPreservesLogicAndAdminOverrideIsVersioned(t *test
 }
 
 func TestCiscoTailoringRejectsMissingRuleOrUncommentedOverrideBeforeWriting(t *testing.T) {
-	for _, variant := range []string{"missing rule", "no comment", "wrong revision", "unknown field", "wrong benchmark hash", "duplicate rule", "second document"} {
+	for _, variant := range []string{"legacy schema", "no comment", "wrong revision", "unknown field", "wrong benchmark hash", "duplicate rule", "second document"} {
 		t.Run(variant, func(t *testing.T) {
 			_, host, cfg, bench := ciscoFixture(t)
 			benchmark, err := os.ReadFile(bench)
 			if err != nil {
 				t.Fatal(err)
 			}
-			body := ciscoPolicyBody(benchmark, "auto", "", variant == "missing rule")
+			body := ciscoPolicyBody(benchmark, "auto", "", false)
 			switch variant {
+			case "legacy schema":
+				body = strings.Replace(body, "schema_version: 3", "schema_version: 2", 1)
 			case "no comment":
 				body = ciscoPolicyBody(benchmark, "open", "", false)
 			case "wrong revision":

@@ -44,14 +44,16 @@ trap 'rm -rf -- "$stage"' EXIT
 package="$stage/$name"
 install -d -m 700 "$package" "$package/bin" "$package/scripts" "$package/templates" "$package/cisco-library" "$package/docs" "$package/docs/snapshots" "$package/contracts" "$package/schemas"
 (cd "$root" && go build -trimpath -ldflags='-s -w' -o "$package/bin/docket" ./cmd/docket)
+(cd "$root" && go build -trimpath -ldflags='-s -w' -o "$package/bin/checkmate" ./cmd/checkmate)
 install -m 755 "$root/scripts/preflight-offline.sh" "$package/scripts/preflight-offline.sh"
 install -m 755 "$root/scripts/install-docket.sh" "$package/scripts/install-docket.sh"
 install -m 644 "$root/scripts/docket-completion.bash" "$package/scripts/docket-completion.bash"
+install -m 644 "$root/scripts/checkmate-completion.bash" "$package/scripts/checkmate-completion.bash"
 install -m 755 "$root/scripts/generate-cisco-tailoring.py" "$package/scripts/generate-cisco-tailoring.py"
 install -m 644 "$root/README.md" "$package/README.md"
 install -m 644 "$root/LICENSE" "$package/LICENSE"
 install -m 644 "$root/contracts/asset-record-v1.md" "$package/contracts/asset-record-v1.md"
-for doc in README BATCH-CKLB CISCO-CONFIG GO-MIGRATION WORKFLOW DISCONNECTED-RELEASE OSCAP-SOURCE NETWORK-SCAN NETWORK-ADMIN-WALKTHROUGH CISCO-SCAN-PROCESS RHEL-OSCAP-WORKFLOW TAILORING; do
+for doc in README BATCH-CKLB CISCO-CONFIG GO-MIGRATION WORKFLOW DISCONNECTED-RELEASE OSCAP-SOURCE NETWORK-SCAN NETWORK-ADMIN-WALKTHROUGH CISCO-SCAN-PROCESS RHEL-OSCAP-WORKFLOW TAILORING QUARTERLY-RUNBOOK CONFIG; do
   install -m 644 "$root/docs/$doc.md" "$package/docs/$doc.md"
 done
 install -m 644 "$root/docs/snapshots/oscap_scan.yml" "$package/docs/snapshots/oscap_scan.yml"
@@ -60,7 +62,7 @@ install -m 644 "$root/schemas/SV3_CKLB_1_0_JSON_SCHEMA.json" "$root/schemas/PROV
 for major in 7 8 9 10; do
   install -m 644 "$root/templates/RHEL_${major}_STIG.tailoring.yaml" "$package/templates/RHEL_${major}_STIG.tailoring.yaml"
 done
-# Include Cisco root-layer tailoring inventories (schema v2, full inventories)
+# Include Cisco root-layer tailoring files (schema v3, partial)
 for cisco_file in "$root"/stig-library-cisco/*.tailoring.yaml; do
   [[ -f $cisco_file && ! -L $cisco_file ]] && install -m 644 "$cisco_file" "$package/cisco-library/$(basename "$cisco_file")"
 done
@@ -74,12 +76,12 @@ fi
   printf 'Product: docket\nVersion: %s\nTarget: linux/amd64 (CGO_ENABLED=0)\n' "$version"
   printf 'Go: %s\nSource commit: %s\nSource worktree: %s\n' "$(go version)" "$commit" "$source_state"
   printf 'Build: GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local GOFLAGS=-mod=vendor\n'
-  printf 'Contents: docket CLI, Bash installer and completion, RHEL preflight, Python 3 Cisco tailoring generator, RHEL templates (4), Cisco root-layer inventories (25), DISA CKLB schema, documentation and file checksums.\n'
+  printf 'Contents: docket and checkmate CLIs, Bash installer, completions, RHEL preflight, Python 3 Cisco tailoring generator, RHEL templates (4), Cisco partial root tailoring (25), DISA CKLB schema, documentation and file checksums.\n'
   printf 'Not included: official DISA benchmarks, SSG scan inputs, Cisco running configs, device collectors, private evidence, credentials, signatures.\n'
 } > "$package/RELEASE.txt"
 (
   cd "$package"
-  sha256sum bin/docket scripts/preflight-offline.sh scripts/install-docket.sh scripts/docket-completion.bash scripts/generate-cisco-tailoring.py README.md LICENSE RELEASE.txt \
+  sha256sum bin/docket bin/checkmate scripts/preflight-offline.sh scripts/install-docket.sh scripts/docket-completion.bash scripts/checkmate-completion.bash scripts/generate-cisco-tailoring.py README.md LICENSE RELEASE.txt \
     docs/*.md docs/snapshots/oscap_scan.yml docs/snapshots/run-lab-oscap.sh contracts/*.md templates/*.yaml cisco-library/*.yaml schemas/*.json schemas/*.md > SHA256SUMS
 )
 source_date_epoch=${SOURCE_DATE_EPOCH:-0}

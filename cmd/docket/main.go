@@ -16,6 +16,17 @@ import (
 )
 
 func readPrivate(path string) ([]byte, error) {
+	return readFile(path, true)
+}
+
+// readBenchmark reads a DISA manual XCCDF. Those files are public publications,
+// so they do not have to be mode 0600 or owned by the caller. Symlinks are
+// still refused. Private evidence, tailoring, and outputs keep readPrivate.
+func readBenchmark(path string) ([]byte, error) {
+	return readFile(path, false)
+}
+
+func readFile(path string, ownerPrivate bool) ([]byte, error) {
 	fd, err := syscall.Open(path, syscall.O_RDONLY|syscall.O_CLOEXEC|syscall.O_NOFOLLOW, 0)
 	if err != nil {
 		return nil, fmt.Errorf("open %s: %w", path, err)
@@ -26,7 +37,10 @@ func readPrivate(path string) ([]byte, error) {
 	if err := syscall.Fstat(fd, &stat); err != nil {
 		return nil, err
 	}
-	if stat.Mode&syscall.S_IFMT != syscall.S_IFREG || stat.Uid != uint32(os.Geteuid()) || stat.Mode&0077 != 0 {
+	if stat.Mode&syscall.S_IFMT != syscall.S_IFREG {
+		return nil, fmt.Errorf("%s must be a regular file", path)
+	}
+	if ownerPrivate && (stat.Uid != uint32(os.Geteuid()) || stat.Mode&0077 != 0) {
 		return nil, fmt.Errorf("%s must be an owner-private regular file", path)
 	}
 	return io.ReadAll(file)
@@ -54,11 +68,28 @@ func run(args []string, out, stderr io.Writer) int {
 	if len(args) > 0 && args[0] == "draft-cklb" {
 		return runMapped(args[1:], true, out, stderr)
 	}
-	if len(args) > 0 && args[0] == "tailoring" && len(args) > 1 && args[1] == "check" {
-		return runTailoringCheck(args[2:], out, stderr)
+	if len(args) > 0 && args[0] == "tailoring" {
+		if len(args) < 2 {
+			fmt.Fprintln(stderr, "usage: docket tailoring {check|rehash|migrate}")
+			return 2
+		}
+		switch args[1] {
+		case "check":
+			return runTailoringCheck(args[2:], out, stderr)
+		case "rehash":
+			return runTailoringRehash(args[2:], out, stderr)
+		case "migrate":
+			return runTailoringMigrate(args[2:], out, stderr)
+		default:
+			fmt.Fprintln(stderr, "usage: docket tailoring {check|rehash|migrate}")
+			return 2
+		}
+	}
+	if len(args) > 0 && args[0] == "quarter" {
+		return runQuarter(args[1:], out, stderr)
 	}
 	if len(args) == 0 || args[0] != "asset-check" {
-		fmt.Fprintln(stderr, "usage: docket {asset-check|reconcile|draft-cklb|batch-cklb|cisco-cklb|cisco-batch|cisco-xccdf|xccdf-cklb|tailoring check} (read-only checks or private review candidates; not a CKLB release)")
+		fmt.Fprintln(stderr, "usage: docket {asset-check|reconcile|draft-cklb|batch-cklb|cisco-cklb|cisco-batch|cisco-xccdf|xccdf-cklb|tailoring check|tailoring rehash|tailoring migrate|quarter} (read-only checks or private review candidates; not a CKLB release)")
 		return 2
 	}
 	flags := flag.NewFlagSet("asset-check", flag.ContinueOnError)
@@ -120,7 +151,7 @@ func runMapped(args []string, asDraft bool, out, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "docket: %v\n", err)
 		return 2
 	}
-	benchmark, err := readPrivate(*benchmarkPath)
+	benchmark, err := readBenchmark(*benchmarkPath)
 	if err != nil {
 		fmt.Fprintf(stderr, "docket: %v\n", err)
 		return 2
@@ -130,7 +161,7 @@ func runMapped(args []string, asDraft bool, out, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "docket: %v\n", err)
 		return 2
 	}
-	
+
 	// Load layered tailoring for draft-cklb (reconcile doesn't need it)
 	var tailoring []layeredTailoringRule
 	var rootPath, hostPath string
@@ -140,13 +171,13 @@ func runMapped(args []string, asDraft bool, out, stderr io.Writer) int {
 		hostDir := filepath.Dir(*scanPath)
 		// RHEL root layer is partial (only overrides), not full inventory
 		tailoring, rootPath, rootBytes, hostPath, hostBytes, err = loadLayeredTailoring(
-			libraryDir, hostDir, report.DISABenchmark, benchmark, report, false)
+			libraryDir, hostDir, report.DISABenchmark, benchmark, report)
 		if err != nil {
 			fmt.Fprintf(stderr, "docket: tailoring: %v\n", err)
 			return 2
 		}
 	}
-	
+
 	var value any = report
 	var htmlReport, arfBytes []byte
 	if asDraft {
@@ -182,7 +213,7 @@ func runMapped(args []string, asDraft bool, out, stderr io.Writer) int {
 			fmt.Fprintf(stderr, "docket: draft rejected: %v\n", err)
 			return 2
 		}
-		
+
 		// Apply layered tailoring to draft
 		if len(tailoring) > 0 {
 			doc := value.(map[string]any)

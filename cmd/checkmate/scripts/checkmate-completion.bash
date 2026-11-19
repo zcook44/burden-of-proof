@@ -1,5 +1,24 @@
-# Bash completion for checkmate. Flags only.
-# Completing checklist directories would mean the shell walking private evidence.
+# Bash completion for checkmate.
+# Benchmark IDs come from the same docket library config as docket itself.
+_checkmate_cfg() {
+  local key=$1 file line
+  file=${DOCKET_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/docket/config.yaml}
+  [[ -f $file && ! -L $file ]] || return 0
+  line=$(sed -n "s/^${key}:[[:space:]]*//p" "$file" | head -n 1)
+  line=${line%%#*}
+  line=${line#"${line%%[![:space:]]*}"}
+  line=${line%"${line##*[![:space:]]}"}
+  line=${line#\"}; line=${line%\"}
+  line=${line#\'}; line=${line%\'}
+  printf '%s' "$line"
+}
+
+_checkmate_benchmark_ids() {
+  local lib=${DOCKET_LIBRARY_ROOT:-$(_checkmate_cfg library_root)}
+  [[ -d $lib && ! -L $lib ]] || return 0
+  find -P "$lib" -type f -name '*.tailoring.yaml' -printf '%f\n' 2>/dev/null | sed -n 's/^\(.*_STIG\)\.tailoring\.yaml$/\1/p' | sort -u
+}
+
 _checkmate_complete() {
   local cur prev
   COMPREPLY=()
@@ -10,7 +29,18 @@ _checkmate_complete() {
     return
   fi
   case $prev in
-    --root|--schema|--export-tailoring) COMPREPLY=($(compgen -f -- "$cur")) ;;
+    --benchmark)
+      COMPREPLY=($(compgen -W "$(_checkmate_benchmark_ids | tr '\n' ' ')" -- "$cur"))
+      ;;
+    --root|--schema|--export-tailoring)
+      local root=${DOCKET_CHECKLIST_ROOT:-$(_checkmate_cfg checklist_root)}
+      if [[ -n $root && -d $root ]]; then
+        COMPREPLY=($(compgen -W "$(find -P "$root" -mindepth 1 -maxdepth 1 -type d -printf '%p\n' 2>/dev/null | tr '\n' ' ')" -- "$cur"))
+      fi
+      if [[ ${#COMPREPLY[@]} -eq 0 ]]; then
+        COMPREPLY=($(compgen -f -- "$cur"))
+      fi
+      ;;
   esac
 }
 complete -F _checkmate_complete checkmate

@@ -13,6 +13,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/zcook44/burden-of-proof/internal/ciscoconfig"
+	"github.com/zcook44/burden-of-proof/internal/config"
 	"github.com/zcook44/burden-of-proof/internal/draft"
 	"github.com/zcook44/burden-of-proof/internal/reconcile"
 )
@@ -96,6 +97,15 @@ func runCiscoBatch(args []string, out, stderr io.Writer) int {
 	} else if err != nil {
 		return 2
 	}
+	cfg, _, cfgErr := config.Load()
+	if cfgErr != nil {
+		fmt.Fprintf(stderr, "Cisco batch: %v\n", cfgErr)
+		return 2
+	}
+	*manifestPath = config.Resolve(*manifestPath, "DOCKET_CISCO_MANIFEST", cfg.CiscoManifest, "")
+	*evidenceRoot = config.Resolve(*evidenceRoot, "DOCKET_EVIDENCE_ROOT", cfg.EvidenceRoot, "")
+	*libraryRoot = config.Resolve(*libraryRoot, "DOCKET_LIBRARY_ROOT", cfg.LibraryRoot, "")
+	*outputRoot = config.Resolve(*outputRoot, "DOCKET_OUTPUT_ROOT", cfg.OutputRoot, "")
 	if flags.NArg() != 0 || *manifestPath == "" || *evidenceRoot == "" || *libraryRoot == "" || *outputRoot == "" {
 		fmt.Fprintln(stderr, "usage: docket cisco-batch --manifest FILE --evidence-root DIR --library-root DIR --output-root DIR [--dry-run]")
 		return 2
@@ -193,17 +203,17 @@ func runCiscoBatch(args []string, out, stderr io.Writer) int {
 			}
 			// Build draft report for tailoring inspection (needed to get reconcile.Report-like structure)
 			draftReport := buildCiscoReport(doc, benchmarkID, benchmark)
-			
-			// Load layered tailoring: root at library, host at device dir
-			// Cisco root layer requires full inventory (all controls)
-			libraryDir := filepath.Dir(benchmarkPath)
+
+			// Root tailoring is pinned at the library root, even when the
+			// newest manual was selected from a subdirectory.
+			libraryDir := *libraryRoot
 			policyRules, rootPath, rootBytes, hostPath, hostBytes, err := loadLayeredTailoring(
-				libraryDir, hostDir, benchmarkID, benchmark, draftReport, true)
+				libraryDir, hostDir, benchmarkID, benchmark, draftReport)
 			if err != nil {
 				fmt.Fprintf(stderr, "Cisco tailoring: %v\n", err)
 				return 2
 			}
-			
+
 			var ruleOrigins map[string]string
 			if len(policyRules) > 0 {
 				// Compute combined hash for tailored ID
@@ -220,7 +230,7 @@ func runCiscoBatch(args []string, out, stderr io.Writer) int {
 				}
 				_, ruleOrigins = applyCiscoLayeredTailoring(doc, policyRules, rootPath, hostPath)
 			}
-			
+
 			suggestion, err := suggestCiscoTailoring(benchmarkID, benchmark, doc)
 			if err != nil {
 				fmt.Fprintf(stderr, "Cisco tailoring suggestion: %v\n", err)
@@ -299,7 +309,7 @@ func runCiscoBatch(args []string, out, stderr io.Writer) int {
 				fmt.Fprintf(stderr, "Cisco checklist: %v\n", err)
 				return 2
 			}
-			
+
 			// Check if we need to overwrite due to provenance change
 			if skipped {
 				// File existed and was identical - check if provenance changed
@@ -310,7 +320,7 @@ func runCiscoBatch(args []string, out, stderr io.Writer) int {
 					}
 				}
 			}
-			
+
 			if _, err := writeBatchResult(path+".provenance.json", sidecar); err != nil {
 				fmt.Fprintf(stderr, "Cisco provenance: %v\n", err)
 				return 2

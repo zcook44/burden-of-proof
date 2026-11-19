@@ -47,13 +47,19 @@ func latestBenchmark(root string, scan []byte) (string, []byte, error) {
 	if err != nil {
 		return "", nil, err
 	}
+	return latestRHELRelease(root, major)
+}
+
+// latestRHELRelease selects the highest official V/R tuple for one RHEL major.
+// It walks subdirectories. Two files with the same version and release fail.
+func latestRHELRelease(root string, major int) (string, []byte, error) {
 	if err := privateLibraryDirectory(root); err != nil {
 		return "", nil, err
 	}
 	selected := ""
 	var selectedData []byte
 	bestV, bestR := 0, 0
-	err = filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
@@ -77,7 +83,7 @@ func latestBenchmark(root string, scan []byte) (string, []byte, error) {
 		if family != major || v < 1 || r < 1 {
 			return fmt.Errorf("invalid RHEL %d benchmark release: %s", major, path)
 		}
-		data, err := readPrivate(path)
+		data, err := readBenchmark(path)
 		if err != nil {
 			return fmt.Errorf("benchmark %s: %w", path, err)
 		}

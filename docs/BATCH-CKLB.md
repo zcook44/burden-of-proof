@@ -4,7 +4,7 @@
 
 This is evidence-side conversion of saved scans, not lab provisioning or an official DISA assessment. The lab lives in a separate repository; this CLI accepts caller-supplied private paths. No ceremonial stamp is included.
 
-This command is **RHEL OpenSCAP only**. Cisco saved running configurations use [`cisco-cklb`](CISCO-CONFIG.md), an explicit platform/role benchmark and a separate private-input workflow; the Bash batch preflight does not validate Cisco configs. The source checkout tracks Cisco XML and all-`auto` inventories under `stig-library-cisco/`, but the generic archive excludes them.
+This command is **RHEL OpenSCAP only**. Cisco saved running configurations use [`cisco-cklb`](CISCO-CONFIG.md), an explicit platform/role benchmark and a separate private-input workflow; the Bash batch preflight does not validate Cisco configs. The source checkout tracks Cisco XML and partial schema v3 root files under `stig-library-cisco/`. The generic archive includes the YAML examples and excludes the manuals.
 
 Build the CLI with the environment in [install and run](README.md). Go 1.22+ and the vendored tree are enough; a creative subset of the flags is not.
 
@@ -21,7 +21,7 @@ Run from **any working directory** by using the built executable's path. In the 
   --library-root /private/stig-library
 ```
 
-The October library ZIP contains nested RHEL 9 and 10 product ZIPs; extract each required product ZIP too, so the library root contains `U_RHEL_<OS>_STIG_V<version>R<release>_Manual-xccdf.xml` files. Supply separately obtained RHEL 7 and 8 benchmarks for those families. Library directories must be owner-owned/private (0700), the XCCDF files owner-private (0600), and no symlinks are accepted. For **each scan OS**, every invocation selects the highest **numeric version, then numeric release**, cross-checking filename against the official benchmark ID, XML namespace, version and `release-info`. It prints the selected path and SHA-256, including during `--dry-run`; malformed candidates and equal highest releases in different paths fail closed. SSG result version `0.1.82` is *not* an official DISA release number. No download or ZIP extraction occurs during conversion.
+The October library ZIP contains nested RHEL 9 and 10 product ZIPs; extract each required product ZIP too, so the library root contains `U_RHEL_<OS>_STIG_V<version>R<release>_Manual-xccdf.xml` files. Supply separately obtained RHEL 7 and 8 benchmarks for those families. Library directories must be owner-owned and mode 0700, and no symlinks are accepted. Manual XCCDF files may be mode 0644; they must not be group-writable or executable. Tailoring files stay mode 0600. For **each scan OS**, every invocation selects the highest **numeric version, then numeric release**, cross-checking filename against the official benchmark ID, XML namespace, version and `release-info`. It prints the selected path and SHA-256, including during `--dry-run`; malformed candidates and equal highest releases in different paths fail closed. SSG result version `0.1.82` is *not* an official DISA release number. No download or ZIP extraction occurs during conversion.
 
 Adding a new quarterly release to that root makes the **next invocation** use it, including for old scans. That is a deliberate current-benchmark reinterpretation, not a reconstruction of the benchmark in force when the scan ran; compare changed controls before compliance use. Different benchmark bytes produce distinct output filenames and do not overwrite earlier files. For a pinned historical conversion of a **single-OS tree**, use `--benchmark /private/official.xml` **instead of** `--library-root`; a mismatched OS fails. Change only `--input-root` to process a different tree (including deeply nested folders). The input directory must contain host-named leaf directories; each XCCDF `TestResult/target` must equal its containing directory's basename. The scanner needs no VM access for conversion. Run `batch-cklb --help` for flags. No global `--operator-approved` is offered: approval of one run cannot be silently extended to every scan found recursively.
 
@@ -31,23 +31,23 @@ Tailoring uses a **two-layer architecture**: site-wide defaults at the library r
 
 **Root layer (site-wide):** Put an owner-private `RHEL_<major>_STIG.tailoring.yaml` at the `--library-root` directory (for example `RHEL_9_STIG.tailoring.yaml`) **only after authorization**. This applies to **every host of that OS**. `--benchmark` mode also looks beside its benchmark file. An absent root file leaves checklists unchanged; `rules: []` is a valid empty policy. Root files may be partial inventories (only the rules you're tailoring) or complete. The packaged templates are **unapproved examples**: RHEL 8 V2R9 illustrates twelve `auto` entries from `rh8-r2v9-ignore-rules`; RHEL 9 V2R10 illustrates thirteen entries from `rh9-r2v10-ignore-rules` (twelve `auto` and an explicit lab-specific `not_a_finding` for passwordless sudo). RHEL 7 V3R15 and RHEL 10 V1R3 examples use empty policies. These ignore lists are external remediation inputs, not converter configuration or authorization.
 
-**Host layer (per-host overrides):** Put `RHEL_<major>_STIG.tailoring.yaml` in the host's scan directory (same directory as `*.results.xml`) for host-specific decisions. Host files must use schema version 2 and are always partial (only the rules differing from root). Host overrides replace the root's decision for that rule on that host only.
+**Host layer (per-host overrides):** Put `RHEL_<major>_STIG.tailoring.yaml` in the host's scan directory (same directory as `*.results.xml`) for host-specific decisions. Host files use schema version 3, omit `benchmark_sha256`, and list only the rules that differ. Host overrides replace the root's decision for that rule on that host only.
 
-**Schema version 2 format** (recommended for all new files; old files still accepted for root layer):
+**Schema version 3** is the only format `batch-cklb` reads. Older files need `docket tailoring migrate`.
 
 ```yaml
-schema_version: 2
+schema_version: 3
 benchmark_id: RHEL_9_STIG
 benchmark_sha256: 2d61d198272dedbf273307daea9f4ab409840ceaaa0ac192d84d194ecd7f1690
 rules:
-  - rule_name: sudo_remove_nopasswd  # SSG rule name from the ignore file
-    stig_id: V-258106               # DISA group ID
-    sv_id: SV-258106r1102061_rule  # exact rule ID in the selected benchmark
-    status: auto                    # auto | open | not_a_finding | not_applicable | not_reviewed
-    comment: "Remediation excluded; verify the privilege policy for this control."
+  - rule_name: sudo_remove_nopasswd  # optional SSG rule name
+    stig_id: V-258106
+    sv_id: SV-258106r1102061_rule
+    status: not_a_finding
+    comment: "Passwordless sudo is required for the automation account."
 ```
 
-`auto` retains the scan-derived checklist status and adds the note to Comments. To answer a Not Reviewed item or correct a false positive, change `status` to the desired checklist value **only after authorization** and write the administrator's reason in `comment`. The original automated candidate and host observations remain in the checklist/provenance; the comment labels a manual decision, not approval of it. **Schema v2 comment rules**: root-layer `auto` entries must NOT have comments; non-auto overrides require comments. Host-layer files always require comments for all overrides including `auto` (to explain why this host differs).
+The hash line is root-only. `auto` on the root keeps the scan status; a comment on that row is a note. Any other status needs a comment. Host `auto` needs a comment because it is undoing a root decision. See [TAILORING.md](TAILORING.md).
 
 The exact V/SV pair, allowed status, comment requirements, duplicates, unknown YAML fields, and file privacy are checked before output; none of those checks validates policy approval. Editing either layer creates a **new** versioned checklist and sidecar, which record both files' paths and SHA-256s, plus per-rule layer provenance; reruns with unchanged inputs verify and skip. When provenance doesn't match (tailoring, benchmark, or inputs changed), the tool warns and overwrites both files to allow batch processing to continue. For initial deployment use the [Bash preflight](DISCONNECTED-RELEASE.md) with `docket tailoring check` to review benchmark and policy selections before writing. See [TAILORING.md](TAILORING.md) for complete layered tailoring documentation.
 

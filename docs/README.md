@@ -91,12 +91,12 @@ Inputs are owner-private: directories `0700`, files `0600`, no symlinks.
   --out /private/checklists/Cisco_IOS_XE_Switch_L2S_STIG/ios-xe-switch-01/ios-xe-switch-01.cklb
 ```
 
-On a first RHEL deployment, run `scripts/preflight-offline.sh` before the write. The example without Checkmate is the one that matches this archive. Add Checkmate only when that separate tool is actually installed. Details and the with-Checkmate form are in the [release notes](DISCONNECTED-RELEASE.md).
+On a first deployment, run `docket quarter --dry-run` or `scripts/preflight-offline.sh` before the write. `checkmate` is installed beside `docket`. Pass `--checkmate` and `--checklist-root` to the preflight when you want an inventory. Details are in the [release notes](DISCONNECTED-RELEASE.md) and the [quarterly runbook](QUARTERLY-RUNBOOK.md).
 
 A repeated run with the same bytes skips. A different result is never silently overwritten. If that feels stubborn, it is the feature.
 
 ## 5. Read the candidate, then stop
 
-Review Open, then Not Reviewed, then Not Applicable, then a sample of Not a Finding. Import a representative checklist into STIG Viewer before anyone calls it adopted. Checkmate, when supplied separately, can list or schema-check existing CKLBs. Editing one there makes the provenance hash stale, which is the tool's way of refusing to cosign your edits.
+Review Open, then Not Reviewed, then Not Applicable, then a sample of Not a Finding. Import a representative checklist into STIG Viewer before anyone calls it adopted. `checkmate --list` inventories CKLBs and `checkmate --validate --schema` checks them against the bundled schema. `checkmate --export-tailoring` writes schema v3 root candidates from shared administrator decisions. Editing a checklist there makes the provenance hash stale, which is the tool's way of refusing to cosign your edits.
 
 RHEL details: [batch converter](BATCH-CKLB.md) and the [picture](RHEL-OSCAP-WORKFLOW.md). Cisco check behavior: [Cisco config](CISCO-CONFIG.md). Scan fields: [network scan](NETWORK-SCAN.md). The demo script for people who do not want a flag reference: [admin walkthrough](NETWORK-ADMIN-WALKTHROUGH.md).

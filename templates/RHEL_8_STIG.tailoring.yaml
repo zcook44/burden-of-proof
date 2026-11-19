@@ -1,7 +1,10 @@
-# RHEL 8 DISA STIG V2R9 checklist tailoring.
-# Seeded from rh8-r2v9-ignore-rules; an excluded fix is not a checklist answer.
-# status: auto retains the scan result. Change it only with an admin comment.
-# This file applies to EVERY RHEL 8 host converted with this library.
+# Example RHEL_8_STIG tailoring. Not approved site policy.
+# schema version 3. benchmark_sha256 is a placeholder until you run
+#   docket tailoring rehash --library-root <library>
+# beside the official manual. Host copies of this file must omit benchmark_sha256.
+schema_version: 3
+benchmark_id: RHEL_8_STIG
+benchmark_sha256: rehash-me
 rules:
   - rule_name: xwindows_remove_packages
     stig_id: V-230553

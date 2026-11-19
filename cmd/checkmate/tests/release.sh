@@ -26,11 +26,13 @@ printf '%s  %s\n' '8b88205de07662006e1660b1decad677d344828d6687b1dd26bca15105b7b
 fixture=$(mktemp -d "${TMPDIR:-/home/zrc/.hermes/cache/scratch}/checkmate-release-test.XXXXXX")
 trap 'rm -r "$fixture"' EXIT
 mkdir -m 700 "$fixture/checklists"
-printf '%s\n' '{"title":"fixture.cklb","id":"123e4567-e89b-12d3-a456-426614174000","stigs":[{"stig_name":"Cisco IOS STIG","display_name":"Cisco IOS","stig_id":"Cisco_IOS_STIG","release_info":"V1R2","uuid":"123e4567-e89b-12d3-a456-426614174001","size":1,"rules":[{"group_id":"V-42","rule_id":"SV-42r1_rule","rule_title":"Login policy","severity":"high","status":"open","comments":"","finding_details":""}]}]}' > "$fixture/checklists/sample.cklb"
+printf '%s\n' '{"title":"fixture.cklb","id":"123e4567-e89b-12d3-a456-426614174000","stigs":[{"stig_name":"Cisco IOS STIG","display_name":"Cisco IOS","stig_id":"Cisco_IOS_STIG","release_info":"V1R2","uuid":"123e4567-e89b-12d3-a456-426614174001","size":1,"rules":[{"group_id":"V-42","rule_id":"SV-42r1_rule","rule_title":"Login policy","severity":"high","status":"open","comments":"Reviewed with the system owner","finding_details":""}]}]}' > "$fixture/checklists/sample.cklb"
 printf '%s\n' '{"$schema":"https://json-schema.org/draft/2019-09/schema","type":"object","required":["title"],"properties":{"title":{"type":"string"}}}' > "$fixture/schema.json"
 release/checkmate --root "$fixture/checklists" --list | grep -q 'Cisco_IOS_STIG  V-42'
 release/checkmate --root "$fixture/checklists" --export-tailoring "$fixture/tailoring" | grep -q 'Exported 1 rules'
-grep -q 'rule_name: PLACEHOLDER' "$fixture/tailoring/Cisco_IOS_STIG.tailoring.yaml"
+grep -q 'schema_version: 3' "$fixture/tailoring/Cisco_IOS_STIG.tailoring.yaml"
+grep -q 'benchmark_sha256: rehash-me' "$fixture/tailoring/Cisco_IOS_STIG.tailoring.yaml"
+if grep -q 'rule_name:' "$fixture/tailoring/Cisco_IOS_STIG.tailoring.yaml"; then echo 'export invented rule_name' >&2; exit 1; fi
 grep -q 'stig_id: V-42' "$fixture/tailoring/Cisco_IOS_STIG.tailoring.yaml"
 grep -q 'status: open' "$fixture/tailoring/Cisco_IOS_STIG.tailoring.yaml"
 if release/checkmate --root "$fixture/checklists" --export-tailoring "$fixture/tailoring" >/dev/null 2>&1; then

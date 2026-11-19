@@ -210,3 +210,33 @@ func TestRelativeOldProvenanceCannotSkipAcrossMatchingScanSuffix(t *testing.T) {
 		t.Fatalf("expected overwrite warning for relative paths, got skip: %s", out.String())
 	}
 }
+
+func TestBatchRerunSkipsLayeredTailoringAndPublicBenchmark(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "inventory")
+	host := filepath.Join(root, "node9.example.test")
+	library := filepath.Join(t.TempDir(), "library")
+	for _, dir := range []string{root, host, library} {
+		if err := os.Mkdir(dir, 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	privateBench(t, host, "run.results.xml", sourceFixture(9))
+	manual := filepath.Join(library, "U_RHEL_9_STIG_V1R1_Manual-xccdf.xml")
+	body := []byte(officialFixture(9, 1))
+	if err := os.WriteFile(manual, body, 0644); err != nil {
+		t.Fatal(err)
+	}
+	policy := "schema_version: 3\nbenchmark_id: RHEL_9_STIG\nbenchmark_sha256: " + sha256Hex(body) + "\nrules:\n  - stig_id: V-100\n    sv_id: SV-100r1_rule\n    status: not_a_finding\n    comment: site default\n"
+	privateBench(t, library, "RHEL_9_STIG.tailoring.yaml", policy)
+	privateBench(t, host, "RHEL_9_STIG.tailoring.yaml", "schema_version: 3\nbenchmark_id: RHEL_9_STIG\nrules:\n  - stig_id: V-100\n    sv_id: SV-100r1_rule\n    status: not_applicable\n    comment: this host is exempt\n")
+	args := []string{"batch-cklb", "--input-root", root, "--library-root", library}
+	var out, errs bytes.Buffer
+	if code := run(args, &out, &errs); code != 0 || !strings.Contains(out.String(), "created=1") {
+		t.Fatalf("initial %d %s %s", code, out.String(), errs.String())
+	}
+	out.Reset()
+	errs.Reset()
+	if code := run(args, &out, &errs); code != 0 || !strings.Contains(out.String(), "created=0 skipped=1") || strings.Contains(out.String(), "OVERWRITTEN") {
+		t.Fatalf("rerun %d %s %s", code, out.String(), errs.String())
+	}
+}

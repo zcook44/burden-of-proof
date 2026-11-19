@@ -89,21 +89,22 @@ func runCiscoXCCDF(args []string, out, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "cisco-xccdf: %v\n", err)
 		return 2
 	}
-	
+
 	// Build report for tailoring validation
 	draftReport := buildCiscoReportForXCCDF(doc, id, benchmark)
-	
-	// Load layered tailoring
-	// Cisco root layer requires full inventory (all controls)
+
 	libraryDir := filepath.Dir(resolvedBenchmark)
+	if *libraryRoot != "" {
+		libraryDir = *libraryRoot
+	}
 	hostDir := filepath.Dir(*configPath)
 	policyRules, rootPath, rootBytes, hostPath, hostBytes, err := loadLayeredTailoring(
-		libraryDir, hostDir, id, benchmark, draftReport, true)
+		libraryDir, hostDir, id, benchmark, draftReport)
 	if err != nil {
 		fmt.Fprintf(stderr, "cisco-xccdf: %v\n", err)
 		return 2
 	}
-	
+
 	tailoringSHA := ""
 	if len(policyRules) > 0 {
 		applyCiscoLayeredTailoring(doc, policyRules, rootPath, hostPath)
@@ -190,7 +191,7 @@ func runXCCDFCKLB(args []string, out, stderr io.Writer) int {
 	if *libraryRoot != "" {
 		*benchmarkPath, benchmark, err = selectCiscoBenchmark(*libraryRoot, scan.BenchmarkID)
 	} else {
-		benchmark, err = readPrivate(*benchmarkPath)
+		benchmark, err = readBenchmark(*benchmarkPath)
 	}
 	if err != nil {
 		fmt.Fprintf(stderr, "xccdf-cklb: %v\n", err)
@@ -224,7 +225,7 @@ func loadCiscoScanInputs(configPath, benchmarkPath, libraryRoot, benchmarkID, po
 	if libraryRoot != "" {
 		benchmarkPath, benchmark, err = selectCiscoBenchmark(libraryRoot, benchmarkID)
 	} else {
-		benchmark, err = readPrivate(benchmarkPath)
+		benchmark, err = readBenchmark(benchmarkPath)
 		if err == nil {
 			var meta ciscoMeta
 			if xmlErr := xml.Unmarshal(benchmark, &meta); xmlErr != nil {

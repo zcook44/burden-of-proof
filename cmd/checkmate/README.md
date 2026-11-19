@@ -30,7 +30,7 @@ flowchart TD
     end
     edit --> human["Human review, independent validation, approval and delivery"]
     edit -.-> stale["Existing provenance sidecar hash becomes stale"]
-    edit -.-> tailor["--export-tailoring: rows every selected host already shares; rule_name stays manual"]
+    edit -.-> tailor["--export-tailoring: shared admin decisions as schema v3; no invented rule_name"]
     tailor -.-> benchmark
 ```
 
@@ -115,7 +115,7 @@ sha256sum "$HOME/private/stig/schema/SV3_CKLB_1_0_JSON_SCHEMA.json"
 
 ## Prepare a private library and scan results
 
-These helper scripts are in the **source repository**, not the binary release archive. They are for the **Go converter's** `--library-root` and `--input-root`. Checkmate itself takes a completed CKLB `--root`; it neither reads the STIG library nor imports OpenSCAP results. The scripts do not install the separately bundled CKLB JSON schema. `scripts/map-tailoring-rule-names.sh` is source-only as well. It reports SSG `rule_name` values for a file written by [`--export-tailoring`](#export-candidate-tailoring). It does not edit that file.
+These helper scripts live with the converter sources. Checkmate takes a completed CKLB `--root`. It does not read the STIG library or import OpenSCAP results. The disconnected bundle that installs both binaries is `scripts/package-disconnected.sh` in the repository root, not `scripts/package.sh` in this directory.
 
 To extract a new library from official RHEL or Cisco STIG ZIPs, or a directory containing ZIPs **directly** (not recursively), choose a destination that does not exist. The script streams only RHEL `U_RHEL_N_STIG_VxRy_Manual-xccdf.xml` and Cisco `U_Cisco_*STIG_VxRy_Manual-xccdf.xml` / `U_Cisco_*VxRy_STIG_Manual-xccdf.xml` entries to a flat, owner-private directory. Cisco filenames include IOS/IOS-XE/IOS-XR Router and Switch, ASA, ACI, ISE, NX-OS and SNA variants; for example `U_Cisco_IOS_Router_NDM_STIG_V3R9_Manual-xccdf.xml` and `U_Cisco_ACI_RTR_Manual_V1R2_STIG_Manual-xccdf.xml`. It does not unpack PDFs, scripts, or arbitrary archive paths, does not overwrite a library, and fails on duplicate benchmark filenames. The destination's parent must already exist, be owned by you, and not be group/world writable. Source ZIPs should be obtained and verified under your organization's DISA distribution procedures; this script does not authenticate an archive or validate the XCCDF's identity.
 
@@ -202,15 +202,7 @@ For a **read-only deployment check**, use `scripts/preflight-offline.sh` from th
 
 `not_reviewed` with an empty comment, or a comment containing `NOT REVIEWED`, is left out. Any other `not_reviewed` row is written as `status: auto`, which tells docket to keep the next scan's candidate. `open`, `not_a_finding`, and `not_applicable` are copied as explicit statuses. An explicit status replaces the scan result for **every** host converted with that library. The export cannot tell a reviewed decision from last quarter's scan result that merely happened to match. Read the file, and delete rows that are not policy, before it becomes site policy.
 
-`rule_name` is `PLACEHOLDER`. CKLB JSON does not carry the SCAP Security Guide remediation name docket expects. Fill those in before a conversion. From this source checkout, not from the generic archive:
-
-```sh
-./scripts/map-tailoring-rule-names.sh \
-  "$HOME/private/stig/tailoring_export/RHEL_9_STIG.tailoring.yaml" \
-  "$HOME/private/stig/stig_library"
-```
-
-The script reports `rule_name` values already present beside the same `stig_id` in a reference directory. It prints them. It does not edit the export. Names it cannot find still have to come from the converter's documentation or from SSG content.
+The export is schema version 3. It has no `rule_name` and no real benchmark hash (`benchmark_sha256` is `rehash-me` until `docket tailoring rehash`). `rule_name` is optional in docket and is not stored in CKLB JSON, so checkmate does not invent one. Plain scan passes and untouched NOT REVIEWED text are omitted. Only rows every selected host shares, with a real administrator comment or a manual status, are written.
 
 The output directory is created at mode `0700` when it is missing. A symlink is refused. Each new file is mode `0600`. An existing file stops the run before anything is replaced. `--benchmark` limits the export the same way it limits `--list`.
 

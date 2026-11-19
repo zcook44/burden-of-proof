@@ -12,6 +12,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/zcook44/burden-of-proof/cmd/checkmate/internal/checklist"
+	"github.com/zcook44/burden-of-proof/internal/config"
 )
 
 type stage int
@@ -621,6 +622,14 @@ func main() {
 	exportTailoring := flag.String("export-tailoring", "", "export common decisions to tailoring YAML file(s); specify output directory")
 	flag.Parse()
 	if *root == "" {
+		cfg, _, err := config.Load()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(2)
+		}
+		*root = config.Resolve("", "DOCKET_CHECKLIST_ROOT", cfg.ChecklistRoot, "")
+	}
+	if *root == "" {
 		fmt.Fprintln(os.Stderr, "usage: checkmate --root /private/checklists [--benchmark STIG_ID] [--list | --validate --schema /private/schema.json | --schema /private/schema.json | --export-tailoring /output/dir]")
 		os.Exit(2)
 	}
@@ -698,7 +707,7 @@ func main() {
 			fmt.Printf("Exported %d rules to %s\n", w.Count, w.Path)
 			fmt.Printf("  Benchmark: %s\n", w.Benchmark)
 			fmt.Printf("  Release: %s\n", w.Release)
-			fmt.Printf("  WARNING: rule_name fields are PLACEHOLDER. Fill them in before docket uses this file. Explicit statuses replace the next scan.\n")
+			fmt.Printf("  Schema v3 root candidate. Run docket tailoring rehash after copying it to the library root. Explicit statuses replace the next scan.\n")
 		}
 		return
 	}

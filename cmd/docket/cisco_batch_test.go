@@ -81,8 +81,8 @@ func TestCiscoBatchWritesOneReviewPagePerBenchmark(t *testing.T) {
 		t.Fatal(err)
 	}
 	suggestion := string(tailoring)
-	if !strings.Contains(suggestion, "status: auto") || !strings.Contains(suggestion, "status: not_reviewed") || !strings.Contains(suggestion, "tailoring file") {
-		t.Fatal("tailoring suggestion is missing scored and unreviewed rows")
+	if strings.Contains(suggestion, "benchmark_sha256:") || !strings.Contains(suggestion, "schema_version: 3") || !strings.Contains(suggestion, "status: not_reviewed") || !strings.Contains(suggestion, "tailoring") {
+		t.Fatalf("tailoring suggestion is not a partial schema v3 host worksheet:\n%s", suggestion)
 	}
 	if !strings.Contains(out.String(), "open=") {
 		t.Fatalf("batch did not report counts: %s", out.String())
