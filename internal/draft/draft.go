@@ -17,13 +17,14 @@ import (
 )
 
 type rule struct {
-	ID       string `xml:"id,attr"`
-	Severity string `xml:"severity,attr"`
-	Weight   string `xml:"weight,attr"`
-	Title    string `xml:"title"`
-	Version  string `xml:"version"`
-	Fix      string `xml:"fixtext"`
-	Check    struct {
+	ID          string `xml:"id,attr"`
+	Severity    string `xml:"severity,attr"`
+	Weight      string `xml:"weight,attr"`
+	Title       string `xml:"title"`
+	Version     string `xml:"version"`
+	Description string `xml:"description"`
+	Fix         string `xml:"fixtext"`
+	Check       struct {
 		Content string `xml:"check-content"`
 	} `xml:"check"`
 }
@@ -158,83 +159,17 @@ func buildWithEvidence(report reconcile.Report, data []byte, assumeEquivalent bo
 				issue = fmt.Errorf("invalid official severity")
 				continue
 			}
-			details := []string{"DRAFT: SSG-to-DISA vulnerability reference only; DISA check equivalence not reviewed.", "SSG scan SHA-256: " + report.ScanSHA256, "DISA benchmark SHA-256: " + report.BenchmarkSHA256, "Candidate outcome (not a DISA result): " + candidate.Status, "Mapping reason: " + candidate.Reason}
-			if evidence == nil {
-				details = append(details, "No HTML or ARF host observation supplied; only XCCDF rule outcomes are available.")
-			}
-			if assumeEquivalent {
-				details[0] = "DRAFT: numeric V/SV mapping of SSG results; DISA check equivalence not independently verified."
-			}
-			if evidence != nil {
-				details = append(details, "OpenSCAP HTML report SHA-256: "+htmlHash)
-			}
-			if observations != nil {
-				details = append(details, "OpenSCAP ARF SHA-256: "+arfHash)
-			}
-			comparisons := []string{}
-			for _, s := range candidate.Sources {
-				details = append(details, fmt.Sprintf("SSG rule %s: %s; references: %s", s.RuleID, s.Result, strings.Join(s.References, ", ")))
-				if evidence != nil {
-					observed := evidence[s.RuleID]
-					if len(observed.Checks) == 0 {
-						details = append(details, "No executed check details in HTML report for "+s.RuleID)
-					}
-					for _, check := range observed.Checks {
-						details = append(details, fmt.Sprintf("Executed check for %s: %s; OVAL/test ID: %s; check result: %s", s.RuleID, check.Name, check.ID, check.Result))
-						if len(check.Items) == 0 {
-							comparisons = append(comparisons, fmt.Sprintf("%s / %s: no item-state comparison in HTML report", s.RuleID, check.ID))
-						}
-						for _, item := range check.Items {
-							comparisons = append(comparisons, fmt.Sprintf("%s / %s — XCCDF rule result: %s; check result: %s; Result of item-state comparison: %s; %s", s.RuleID, check.ID, s.Result, check.Result, item.Comparison, item.Description))
-							details = append(details, fmt.Sprintf("Host observed item for %s / %s: %s", s.RuleID, check.ID, item.Description))
-						}
-					}
-				}
-				if observations != nil {
-					arfRule := observations.Rules[s.RuleID]
-					if len(arfRule.Tests) == 0 {
-						details = append(details, "No joined OVAL test in ARF for "+s.RuleID)
-					}
-					for _, test := range arfRule.Tests {
-						details = append(details, fmt.Sprintf("ARF executed OVAL test for %s: %s; test result: %s", s.RuleID, test.ID, test.Result))
-						if len(test.Items) == 0 {
-							if test.ObjectFlag != "" {
-								observation := fmt.Sprintf("object %s; object flag: %s; check_existence: %s", test.ObjectID, test.ObjectFlag, test.CheckExistence)
-								details = append(details, fmt.Sprintf("ARF collected object for %s / %s: %s", s.RuleID, test.ID, observation))
-								comparisons = append(comparisons, fmt.Sprintf("%s / %s — XCCDF rule result: %s; OVAL test result: %s; %s; no collected item value", s.RuleID, test.ID, s.Result, test.Result, observation))
-							} else {
-								comparisons = append(comparisons, fmt.Sprintf("%s / %s — XCCDF rule result: %s; OVAL test result: %s; no collected host value in ARF", s.RuleID, test.ID, s.Result, test.Result))
-							}
-						}
-						for _, item := range test.Items {
-							if item.Fields == "" {
-								comparisons = append(comparisons, fmt.Sprintf("%s / %s — XCCDF rule result: %s; OVAL test result: %s; item-state result: %s; collected item has no field value", s.RuleID, test.ID, s.Result, test.Result, item.Result))
-								continue
-							}
-							details = append(details, fmt.Sprintf("ARF host observed output for %s / %s: %s", s.RuleID, test.ID, item.Fields))
-							comparisons = append(comparisons, fmt.Sprintf("%s / %s — XCCDF rule result: %s; OVAL test result: %s; item-state result: %s; returned host value: %s", s.RuleID, test.ID, s.Result, test.Result, item.Result, item.Fields))
-						}
-					}
-				}
-			}
+			notes := collectEvidenceNotes(candidate, evidence, observations)
 			status := "not_reviewed"
-			caution := "DRAFT only: independently review the official DISA check and SSG mapping; no approval or DISA assessment is asserted."
+			copied := false
 			if assumeEquivalent {
-				caution = "DRAFT: numeric V/SV mapping of SSG results; not an official DISA scan or ISSO-approved finding."
+				copied = true
 				if candidate.Status == "not_a_finding" || candidate.Status == "open" || candidate.Status == "not_applicable" {
 					status = candidate.Status
 				}
 			}
-			if evidence != nil {
-				if len(candidate.Sources) == 0 {
-					comparisons = append(comparisons, "No mapped SSG rule; no item-state comparison available")
-				}
-				if len(comparisons) == 0 {
-					comparisons = append(comparisons, "No item-state comparison available in HTML report")
-				}
-				caution = strings.Join(comparisons, "\n") + "\n" + caution
-			}
-			rows = append(rows, officialRuleRow(stigUUID, g, r, status, strings.Join(details, "\n"), caution))
+			comment := rhelComment(status, copied, candidate.Reason, firstResult(candidate.Sources), chooseBrief(status, notes))
+			rows = append(rows, officialRuleRow(stigUUID, g, r, status, withLines(comment, noteLines(notes)), comment))
 			walk(g.Groups)
 		}
 	}
@@ -253,14 +188,83 @@ func buildWithEvidence(report reconcile.Report, data []byte, assumeEquivalent bo
 		return nil, fmt.Errorf("official benchmark title missing")
 	}
 	mode := "unreviewed"
-	title := "DRAFT - NOT REVIEWED - " + report.Target + " - " + name
 	if assumeEquivalent {
 		mode = "numeric-v-sv-mapping"
-		title = "DRAFT - NUMERIC V/SV MAPPING - " + report.Target + " - " + name
 	}
 	if evidence != nil {
 		mode += ":report:" + htmlHash
-		title = "DRAFT - NUMERIC V/SV MAPPING - REPORT EVIDENCE - " + report.Target + " - " + name
 	}
-	return map[string]any{"title": title, "id": uuid5(report.Target + ":" + stigUUID + ":" + report.ScanSHA256 + ":" + mode), "cklb_version": "1.0", "target_data": map[string]any{"host_name": report.Target}, "stigs": []any{map[string]any{"stig_name": name, "display_name": name, "stig_id": b.ID, "release_info": release, "uuid": stigUUID, "size": len(rows), "rules": rows}}}, nil
+	_ = arfHash // The ARF hash stays on the provenance sidecar, not in checklist text.
+	return map[string]any{"title": checklistTitle(report.Target, name), "id": uuid5(report.Target + ":" + stigUUID + ":" + report.ScanSHA256 + ":" + mode), "cklb_version": "1.0", "target_data": map[string]any{"host_name": report.Target}, "stigs": []any{map[string]any{"stig_name": name, "display_name": name, "stig_id": b.ID, "release_info": release, "uuid": stigUUID, "size": len(rows), "rules": rows}}}, nil
+}
+
+func collectEvidenceNotes(candidate reconcile.Control, evidence map[string]reporthtml.Rule, observations *arf.Report) []observationNote {
+	notes := []observationNote{}
+	for _, s := range candidate.Sources {
+		if evidence == nil && observations == nil {
+			notes = append(notes, observationNote{line: fmt.Sprintf("SSG rule %s result %s.", s.RuleID, s.Result)})
+			continue
+		}
+		if evidence != nil {
+			observed := evidence[s.RuleID]
+			if len(observed.Checks) == 0 {
+				notes = append(notes, observationNote{line: "No executed check details in HTML report for " + s.RuleID})
+			}
+			for _, check := range observed.Checks {
+				if len(check.Items) == 0 {
+					notes = append(notes, observationNote{
+						line:   fmt.Sprintf("SSG rule %s check %s (%s) result %s; no item comparison.", s.RuleID, check.Name, check.ID, check.Result),
+						failed: check.Result == "false",
+					})
+				}
+				for _, item := range check.Items {
+					notes = append(notes, observationNote{
+						line:   fmt.Sprintf("SSG rule %s check %s (%s) result %s; item comparison %s: %s", s.RuleID, check.Name, check.ID, check.Result, item.Comparison, item.Description),
+						brief:  briefObservation(item.Description),
+						failed: item.Comparison == "false",
+					})
+				}
+			}
+		}
+		if observations != nil {
+			arfRule := observations.Rules[s.RuleID]
+			if len(arfRule.Tests) == 0 {
+				notes = append(notes, observationNote{line: "No joined OVAL test in ARF for " + s.RuleID})
+			}
+			for _, test := range arfRule.Tests {
+				if len(test.Items) == 0 {
+					if test.ObjectFlag != "" {
+						brief := objectSummary(test)
+						notes = append(notes, observationNote{
+							line:   fmt.Sprintf("SSG rule %s OVAL test %s result %s; object flag: %s; check_existence: %s; %s", s.RuleID, test.ID, test.Result, test.ObjectFlag, test.CheckExistence, brief),
+							brief:  brief,
+							failed: test.Result == "false",
+						})
+					} else {
+						notes = append(notes, observationNote{
+							line:   fmt.Sprintf("SSG rule %s OVAL test %s result %s; no collected host value in ARF.", s.RuleID, test.ID, test.Result),
+							failed: test.Result == "false",
+						})
+					}
+					continue
+				}
+				for _, item := range test.Items {
+					raw := item.Fields
+					if raw == "" {
+						raw = "collected item has no field value"
+					}
+					brief := ""
+					if item.Fields != "" {
+						brief = briefObservation(item.Fields)
+					}
+					notes = append(notes, observationNote{
+						line:   fmt.Sprintf("SSG rule %s OVAL test %s result %s; item result %s; %s", s.RuleID, test.ID, test.Result, item.Result, raw),
+						brief:  brief,
+						failed: item.Result == "false",
+					})
+				}
+			}
+		}
+	}
+	return notes
 }

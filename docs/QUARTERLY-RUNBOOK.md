@@ -402,7 +402,7 @@ Exported N rules to /private/tailoring-export/RHEL_9_STIG.tailoring.yaml
   Schema v3 root candidate. Run docket tailoring rehash after copying it to the library root.
 ```
 
-The file is schema v3, has `benchmark_sha256: rehash-me`, and has no `rule_name`. Rows are real comments or manual status changes. A scan pass whose comment is still the converter's "XCCDF rule result" text is not exported. A `not_reviewed` row whose comment is empty, contains `NOT REVIEWED`, or is the converter's `DRAFT:` mapping sentence is not exported. A `not_reviewed` row with an administrator's own reason is exported as `not_reviewed`. Read the file. Delete rows that are not site policy. Then:
+The file is schema v3, has `benchmark_sha256: rehash-me`, and has no `rule_name`. Rows are real comments or manual status changes. A scan pass whose comment is still the converter's "XCCDF rule result" text is not exported. A comment containing `placed on the DISA rule id` or `saved running configuration on this device` is not exported. A `not_reviewed` row whose comment is empty, contains `NOT REVIEWED`, or is the converter's `DRAFT:` mapping sentence is not exported. A `not_reviewed` row with an administrator's own reason is exported as `not_reviewed`. Read the file. Delete rows that are not site policy. Then:
 
 ```sh
 install -m 600 /private/tailoring-export/RHEL_9_STIG.tailoring.yaml \

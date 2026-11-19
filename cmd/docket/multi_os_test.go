@@ -120,7 +120,7 @@ func TestBatchXCCDFOnlyKeepsAbsentEvidenceExplicit(t *testing.T) {
 		t.Fatal(err)
 	}
 	row := doc["stigs"].([]any)[0].(map[string]any)["rules"].([]any)[0].(map[string]any)
-	if row["status"] != "not_a_finding" || !strings.Contains(row["finding_details"].(string), "No HTML or ARF host observation") {
+	if row["status"] != "not_a_finding" || !strings.Contains(row["finding_details"].(string), "No host value was recorded in the scan.") {
 		t.Fatalf("unlabeled XML-only evidence: %v", row)
 	}
 	sidecar, err := os.ReadFile(files[0] + ".provenance.json")

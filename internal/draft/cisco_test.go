@@ -60,7 +60,7 @@ func TestCiscoConfigRendersAllRulesUnreviewedWithExistingRowShape(t *testing.T) 
 			t.Errorf("unsafe row %d: %#v", i, row)
 		}
 		text := row["comments"].(string) + row["finding_details"].(string)
-		if !strings.Contains(text, "running config") || !strings.Contains(text, "manual") || strings.Contains(text, "SSG") || strings.Contains(text, "OpenSCAP") || strings.Contains(text, "password-encryption") {
+		if !strings.Contains(text, "saved running configuration") || strings.Contains(text, "SHA-256") || strings.Contains(text, "SSG") || strings.Contains(text, "OpenSCAP") || strings.Contains(text, "password-encryption") {
 			t.Errorf("misleading or leaked evidence: %q", text)
 		}
 		for _, field := range []string{"uuid", "stig_uuid", "group_id", "rule_id", "group_id_src", "rule_id_src", "severity", "rule_title"} {
@@ -72,8 +72,11 @@ func TestCiscoConfigRendersAllRulesUnreviewedWithExistingRowShape(t *testing.T) 
 	if rows[0].(map[string]any)["group_id"] != "V-100" || rows[0].(map[string]any)["rule_id"] != "SV-100r2_rule" {
 		t.Fatalf("official IDs lost: %#v", rows[0])
 	}
-	if !strings.Contains(rows[0].(map[string]any)["finding_details"].(string), hexHash(config)) || !strings.Contains(rows[0].(map[string]any)["finding_details"].(string), hexHash([]byte(ciscoBenchmark))) {
-		t.Fatal("raw input hashes missing")
+	if strings.Contains(rows[0].(map[string]any)["finding_details"].(string), hexHash(config)) || strings.Contains(rows[0].(map[string]any)["finding_details"].(string), "SHA-256") {
+		t.Fatal("raw input hashes belong in the provenance sidecar")
+	}
+	if doc["title"] != "router.example.test - Cisco Router NDM" {
+		t.Fatalf("title: %v", doc["title"])
 	}
 }
 

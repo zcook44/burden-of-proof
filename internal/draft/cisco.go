@@ -17,11 +17,13 @@ var ciscoRuleID = regexp.MustCompile(`^SV-([0-9]+)r[0-9]+_rule$`)
 // officialRuleRow is shared by the scan-based renderer and the conservative
 // config renderer so that both retain the same official CKLB rule layout.
 func officialRuleRow(stigUUID string, g group, r rule, status, details, comments string) map[string]any {
+	discussion, impact := manualNarrative(r.Description)
 	return map[string]any{
 		"uuid": uuid5(stigUUID + r.ID), "stig_uuid": stigUUID,
 		"group_id": g.ID, "group_id_src": g.ID, "rule_id": r.ID, "rule_id_src": r.ID,
 		"severity": r.Severity, "weight": r.Weight, "rule_version": r.Version,
 		"rule_title": r.Title, "group_title": g.Title, "fix_text": r.Fix,
+		"check_content": r.Check.Content, "discussion": discussion, "potential_impacts": impact,
 		"status": status, "finding_details": details, "comments": comments,
 	}
 }
@@ -80,19 +82,13 @@ func BuildCiscoReview(config []byte, target string, benchmark []byte, roles cisc
 			default:
 				return fmt.Errorf("invalid Cisco rule severity: %q", r.Severity)
 			}
-			status, observation, automatedComment := evaluateCiscoRule(b, g, r, parsed, roles)
-			details := "Raw running config SHA-256: " + configHash + "\nOfficial Cisco benchmark SHA-256: " + benchHash
-			comments := automatedComment
+			status, observation, _ := evaluateCiscoRule(b, g, r, parsed, roles)
 			if status == "" {
 				status = "not_reviewed"
-				observation, automatedComment = ciscoconfig.FallbackReason(r.Version, r.Title, r.Check.Content)
-				details += "\n" + observation
-				details += "\nRunning config alone does not verify this control's complete operational check; manual review required."
-				comments = automatedComment
-			} else {
-				details += "\n" + observation
+				observation, _ = ciscoconfig.FallbackReason(r.Version, r.Title, r.Check.Content)
 			}
-			rows = append(rows, officialRuleRow(stigUUID, g, r, status, details, comments))
+			text := ciscoComment(status, observation)
+			rows = append(rows, officialRuleRow(stigUUID, g, r, status, text, text))
 			if err := walk(g.Groups); err != nil {
 				return err
 			}
@@ -112,7 +108,7 @@ func BuildCiscoReview(config []byte, target string, benchmark []byte, roles cisc
 		}
 	}
 	return map[string]any{
-		"title":        "DRAFT REVIEW CANDIDATE - " + target + " - " + name,
+		"title":        checklistTitle(target, name),
 		"id":           uuid5(target + ":" + stigUUID + ":" + configHash + ":" + CiscoConfigEvaluatorVersion + ":" + roles.Fingerprint()),
 		"cklb_version": "1.0", "target_data": map[string]any{"host_name": target},
 		"stigs": []any{map[string]any{"stig_name": name, "display_name": name, "stig_id": b.ID, "release_info": release, "uuid": stigUUID, "size": len(rows), "rules": rows}},

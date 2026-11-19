@@ -111,6 +111,12 @@ func TestIsAdminDecisionSkipsScanPasses(t *testing.T) {
 	if IsAdminDecision("not_reviewed", "DRAFT: numeric V/SV mapping of SSG results; not an official DISA scan or ISSO-approved finding.") {
 		t.Fatal("draft mapping sentence exported")
 	}
+	if IsAdminDecision("not_a_finding", "Not a Finding. This host's /etc/ssh/sshd_config has PermitRootLogin no. The SSG check passed; this is that result placed on the DISA rule id.") {
+		t.Fatal("sshd sentence exported")
+	}
+	if IsAdminDecision("not_a_finding", "Not a Finding. Global spanning-tree loopguard default is present. This is the result of the saved running configuration on this device.") {
+		t.Fatal("cisco device sentence exported")
+	}
 	if !IsAdminDecision("not_a_finding", "Reviewed with the system owner") {
 		t.Fatal("human pass dropped")
 	}

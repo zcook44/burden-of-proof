@@ -63,7 +63,7 @@ func TestCiscoCLIExplicitBenchmarkCreatesPrivateReviewCandidate(t *testing.T) {
 	}
 	for _, r := range rows {
 		row := r.(map[string]any)
-		if row["status"] != "not_reviewed" || !strings.Contains(row["finding_details"].(string), "SHA-256") || !strings.Contains(row["comments"].(string), "NOT REVIEWED") {
+		if row["status"] != "not_reviewed" || strings.Contains(row["finding_details"].(string), "SHA-256") || !strings.Contains(row["comments"].(string), "saved running configuration") {
 			t.Fatalf("unsafe candidate: %+v", row)
 		}
 	}

@@ -30,9 +30,10 @@ func BuildFromNetworkScan(benchmark []byte, scan netxccdf.Scan) (map[string]any,
 		ruleID := row["rule_id"].(string)
 		found, ok := scan.Rules[ruleID]
 		if !ok {
+			text := ciscoComment("not_reviewed", "The network scan did not select this control.")
 			row["status"] = "not_reviewed"
-			row["comments"] = "NOT REVIEWED — the network scan did not select this control."
-			row["finding_details"] = "Network XCCDF result: notchecked\nScan running-config SHA-256: " + scan.ConfigSHA256
+			row["comments"] = text
+			row["finding_details"] = text
 			continue
 		}
 		seen[ruleID] = true
@@ -41,17 +42,19 @@ func BuildFromNetworkScan(benchmark []byte, scan netxccdf.Scan) (map[string]any,
 			return nil, fmt.Errorf("network scan result %q for %s is not an XCCDF result", found.Result, ruleID)
 		}
 		row["status"] = status
+		comment := row["comments"].(string)
 		if found.Message != "" {
-			row["comments"] = found.Message
+			comment = found.Message
 		}
-		row["finding_details"] = "Network XCCDF result: " + found.Result + "\n" + found.Message + "\nScan running-config SHA-256: " + scan.ConfigSHA256
+		row["comments"] = comment
+		row["finding_details"] = comment + "\n\nNetwork scan result: " + found.Result + "."
 	}
 	for ruleID := range scan.Rules {
 		if !seen[ruleID] {
 			return nil, fmt.Errorf("network scan rule %s is not in %s", ruleID, scan.BenchmarkID)
 		}
 	}
-	doc["title"] = "DRAFT REVIEW CANDIDATE - " + scan.Identity.FQDN + " - network scan - " + stig["stig_name"].(string)
+	doc["title"] = checklistTitle(scan.Identity.FQDN, stig["stig_name"].(string))
 	doc["id"] = uuid5(scan.Identity.FQDN + ":" + scan.Identity.IPAddress + ":" + scan.Identity.MACAddress + ":network-xccdf:" + scan.BenchmarkID + ":" + scan.ConfigSHA256 + ":" + scan.TailoringSHA256 + ":" + CiscoConfigEvaluatorVersion)
 	doc["target_data"] = map[string]any{
 		"target_type":     scan.Identity.TargetType,

@@ -79,20 +79,18 @@ func TestDraftUsesReportComparisonAsCommentsAndExecutedCheckAsFinding(t *testing
 		t.Fatal(err)
 	}
 	row := doc["stigs"].([]any)[0].(map[string]any)["rules"].([]any)[0].(map[string]any)
-	if !strings.Contains(row["comments"].(string), "Result of item-state comparison: true") || !strings.Contains(row["comments"].(string), "Path: /etc/audit.conf") {
+	want := "Not a Finding. This host's /etc/audit.conf has enabled. The SSG check passed; this is that result placed on the DISA rule id."
+	if row["comments"] != want {
 		t.Fatalf("comments: %s", row["comments"])
 	}
 	if !strings.Contains(row["finding_details"].(string), "audit setting is set") || !strings.Contains(row["finding_details"].(string), "oval:check:tst:1") {
 		t.Fatalf("finding detail: %s", row["finding_details"])
 	}
-	if !strings.Contains(row["finding_details"].(string), "numeric V/SV mapping of SSG results") {
-		t.Fatal("finding detail omitted the mapping method")
-	}
 	if !strings.Contains(row["finding_details"].(string), "Path: /etc/audit.conf; Content: enabled") {
 		t.Fatal("finding detail omitted observed host value")
 	}
-	if !strings.Contains(row["comments"].(string), "XCCDF rule result: pass") || !strings.Contains(row["comments"].(string), "check result: true") {
-		t.Fatal("comment omitted pass/result context")
+	if strings.Contains(row["comments"].(string), "XCCDF rule result") || strings.Contains(row["finding_details"].(string), "SHA-256") {
+		t.Fatal("boilerplate returned to the checklist")
 	}
 }
 
@@ -108,7 +106,8 @@ func TestDraftFailExplainsFailingHostValue(t *testing.T) {
 		t.Fatal(err)
 	}
 	row := doc["stigs"].([]any)[0].(map[string]any)["rules"].([]any)[0].(map[string]any)
-	if row["status"] != "open" || !strings.Contains(row["comments"].(string), "XCCDF rule result: fail; check result: false; Result of item-state comparison: false; Path: /etc/audit.conf; Content: disabled") || !strings.Contains(row["finding_details"].(string), "Content: disabled") {
+	want := "Open. This host's /etc/audit.conf has disabled. An SSG check failed; this is that result placed on the DISA rule id."
+	if row["status"] != "open" || row["comments"] != want || !strings.Contains(row["finding_details"].(string), "Content: disabled") {
 		t.Fatalf("failing value lost: %+v", row)
 	}
 }
@@ -136,7 +135,7 @@ func TestDraftWithARFUsesCollectedHostValueAndReturnResult(t *testing.T) {
 		t.Fatal(err)
 	}
 	row := doc["stigs"].([]any)[0].(map[string]any)["rules"].([]any)[0].(map[string]any)
-	if row["status"] != "not_a_finding" || !strings.Contains(row["finding_details"].(string), `value: "1"`) || !strings.Contains(row["comments"].(string), "item-state result: true") || !strings.Contains(row["comments"].(string), `value: "1"`) {
+	if row["status"] != "not_a_finding" || !strings.Contains(row["finding_details"].(string), `value: "1"`) || !strings.Contains(row["comments"].(string), "crypto.fips_enabled is 1") {
 		t.Fatalf("ARF value absent: %+v", row)
 	}
 	first, err := BuildAssessmentWithARF(report, []byte(benchmark), []byte(html), []byte(arfXML), false)
@@ -165,7 +164,7 @@ func TestDraftWithARFReportsVerifiedAbsentObjectWithoutInventingItem(t *testing.
 		t.Fatal(err)
 	}
 	row := doc["stigs"].([]any)[0].(map[string]any)["rules"].([]any)[0].(map[string]any)
-	if !strings.Contains(row["comments"].(string), "object flag: does not exist") || !strings.Contains(row["comments"].(string), "check_existence: none_exist") || strings.Contains(row["comments"].(string), "returned host value:") {
+	if !strings.Contains(row["comments"].(string), "absence is expected") || !strings.Contains(row["finding_details"].(string), "object flag: does not exist") || strings.Contains(row["comments"].(string), "returned host value:") {
 		t.Fatalf("absence misrepresented: %+v", row)
 	}
 }

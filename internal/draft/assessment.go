@@ -66,12 +66,11 @@ func renderAssessment(report reconcile.Report, doc map[string]any, checks map[st
 		finding, comment := assessmentRule(c, checks, host)
 		row["finding_details"], row["comments"] = finding, comment
 	}
-	label := "STIG CHECKLIST"
 	mode := ":assessment-readable-v4" + evidenceMode
 	if operatorApproved {
 		mode += ":operator-approved-unsigned"
 	}
-	doc["title"] = label + " - " + report.Target + " - " + stig["stig_name"].(string)
+	doc["title"] = checklistTitle(report.Target, stig["stig_name"].(string))
 	doc["id"] = uuid5(doc["id"].(string) + mode)
 	return doc, nil
 }
@@ -86,18 +85,12 @@ func appendDistinct(lines *[]string, seen map[string]bool, value string) {
 // assessmentRule keeps the candidate status separate from individual OVAL
 // outcomes. A passing negative check can legitimately contain a false item.
 func assessmentRule(c reconcile.Control, html map[string]reporthtml.Rule, observed arf.Report) (string, string) {
-	label := map[string]string{"not_a_finding": "Not a Finding", "open": "Open", "not_applicable": "Not Applicable", "not_reviewed": "NOT REVIEWED"}[c.Status]
-	if label == "" {
-		label = "NOT REVIEWED"
-	}
-	comment := label
-	if c.Status == "not_reviewed" {
-		comment += " — " + c.Reason
-	}
 	if len(c.Sources) == 0 {
-		return "No matching automated check was available.", comment
+		comment := rhelComment(c.Status, true, c.Reason, "", "")
+		return withLines(comment, []string{"No matching automated check was available."}), comment
 	}
 	findings, seen := []string{}, map[string]bool{}
+	notes := []observationNote{}
 	for _, src := range c.Sources {
 		rule := observed.Rules[src.RuleID]
 		names := map[string]string{}
@@ -117,13 +110,16 @@ func assessmentRule(c reconcile.Control, html map[string]reporthtml.Rule, observ
 				}
 				if len(check.Items) == 0 {
 					appendDistinct(&findings, seen, fmt.Sprintf("%s — check %s; no item comparison", name, check.Result))
+					notes = append(notes, observationNote{failed: check.Result == "false"})
 				}
 				for _, item := range check.Items {
+					brief := briefObservation(item.Description)
 					if item.Comparison == "not evaluated" {
-						appendDistinct(&findings, seen, fmt.Sprintf("%s — check %s; collected: %s", name, check.Result, briefObservation(item.Description)))
+						appendDistinct(&findings, seen, fmt.Sprintf("%s — check %s; collected: %s", name, check.Result, brief))
 					} else {
-						appendDistinct(&findings, seen, fmt.Sprintf("%s — check %s; item %s: %s", name, check.Result, item.Comparison, briefObservation(item.Description)))
+						appendDistinct(&findings, seen, fmt.Sprintf("%s — check %s; item %s: %s", name, check.Result, item.Comparison, brief))
 					}
+					notes = append(notes, observationNote{brief: brief, failed: item.Comparison == "false"})
 				}
 			}
 			continue
@@ -135,25 +131,31 @@ func assessmentRule(c reconcile.Control, html map[string]reporthtml.Rule, observ
 			}
 			if len(test.Items) == 0 {
 				if test.ObjectFlag != "" {
-					appendDistinct(&findings, seen, fmt.Sprintf("%s — test result %s; %s; no collected value", name, test.Result, objectSummary(test)))
+					brief := objectSummary(test)
+					appendDistinct(&findings, seen, fmt.Sprintf("%s — test result %s; %s; no collected value", name, test.Result, brief))
+					notes = append(notes, observationNote{brief: brief, failed: test.Result == "false"})
 				} else {
 					appendDistinct(&findings, seen, fmt.Sprintf("%s — test result %s; no collected item value", name, test.Result))
+					notes = append(notes, observationNote{failed: test.Result == "false"})
 				}
 			}
 			for _, item := range test.Items {
+				brief := briefObservation(item.Fields)
 				if item.Result == "not evaluated" {
 					label := "collected"
 					if test.CheckExistence == "all_exist" && test.Result == "true" {
 						label = "found"
 					}
-					appendDistinct(&findings, seen, fmt.Sprintf("%s — test result %s; %s: %s", name, test.Result, label, briefObservation(item.Fields)))
+					appendDistinct(&findings, seen, fmt.Sprintf("%s — test result %s; %s: %s", name, test.Result, label, brief))
 				} else {
-					appendDistinct(&findings, seen, fmt.Sprintf("%s — test result %s; observed item %s: %s", name, test.Result, item.Result, briefObservation(item.Fields)))
+					appendDistinct(&findings, seen, fmt.Sprintf("%s — test result %s; observed item %s: %s", name, test.Result, item.Result, brief))
 				}
+				notes = append(notes, observationNote{brief: brief, failed: item.Result == "false"})
 			}
 		}
 	}
-	return strings.Join(boundEvidence(findings, c.Status, 7), "\n"), comment
+	comment := rhelComment(c.Status, true, c.Reason, firstResult(c.Sources), chooseBrief(c.Status, notes))
+	return withLines(comment, boundEvidence(findings, c.Status, 7)), comment
 }
 
 func objectSummary(test arf.Test) string {

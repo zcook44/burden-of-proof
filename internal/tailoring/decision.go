@@ -38,6 +38,9 @@ func isAutomatedComment(c string) bool {
 		"DRAFT only: independently review the official DISA check",
 		"Raw running config SHA-256",
 		"Official Cisco benchmark SHA-256",
+		"this is that result placed on the DISA rule id.",
+		"This checklist does not copy that result onto the DISA rule.",
+		"This is the result of the saved running configuration on this device.",
 	}
 	for _, m := range markers {
 		if strings.Contains(c, m) {

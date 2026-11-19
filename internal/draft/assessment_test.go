@@ -44,8 +44,8 @@ func TestAssessmentRuleBoundsDisplayAndPrioritizesDecisiveValue(t *testing.T) {
 	items = append(items, arf.Item{Result: "false", Fields: `value: "decisive-failure"`})
 	observed := arf.Report{Rules: map[string]arf.Rule{"ssg_a": {Result: "fail", Tests: []arf.Test{{ID: "oval:test:1", Result: "false", Items: items}}}}}
 	finding, comment := assessmentRule(c, nil, observed)
-	if !strings.Contains(finding, "value=decisive-failure") || strings.Contains(comment, "decisive-failure") {
-		t.Fatalf("decisive value omitted")
+	if !strings.Contains(finding, "value=decisive-failure") || !strings.Contains(comment, "decisive-failure") {
+		t.Fatalf("decisive value omitted: %q / %q", finding, comment)
 	}
 	if !strings.Contains(finding, "more observations in raw ARF/HTML") || len(comment) > 250 || len(finding) > 3000 {
 		t.Fatalf("unbounded display: %d / %d", len(finding), len(comment))
@@ -94,7 +94,7 @@ func TestAssessmentHTMLOnlyScanUsesObservedComparison(t *testing.T) {
 
 func TestAssessmentRuleKeepsUnreviewedReason(t *testing.T) {
 	f, c := assessmentRule(reconcile.Control{Status: "not_reviewed", Reason: "no mapped scan result"}, nil, arf.Report{Rules: map[string]arf.Rule{}})
-	if !strings.Contains(c, "NOT REVIEWED") || !strings.Contains(c, "no mapped scan result") || !strings.Contains(f, "No matching automated check") {
+	if !strings.Contains(c, "Not Reviewed") || !strings.Contains(c, "No mapped scan result") || !strings.Contains(f, "No matching automated check") {
 		t.Fatalf("unreviewed: %q / %q", f, c)
 	}
 }
@@ -104,7 +104,7 @@ func TestAssessmentRuleDoesNotExposeUnevaluatedExistenceItem(t *testing.T) {
 	html := map[string]reporthtml.Rule{"ssg_package": {Checks: []reporthtml.Check{{Name: "package crypto-policies is installed", ID: "oval:pkg"}}}}
 	host := arf.Report{Rules: map[string]arf.Rule{"ssg_package": {Tests: []arf.Test{{ID: "oval:pkg", Result: "true", CheckExistence: "all_exist", Items: []arf.Item{{Result: "not evaluated", Fields: `name: "crypto-policies"`}}}}}}}
 	finding, comment := assessmentRule(c, html, host)
-	if comment != "Not a Finding" || !strings.Contains(finding, "package crypto-policies is installed") || !strings.Contains(finding, "name=crypto-policies") || strings.Contains(strings.ToLower(finding), "not evaluated") {
+	if !strings.HasPrefix(comment, "Not a Finding.") || !strings.Contains(finding, "package crypto-policies is installed") || !strings.Contains(finding, "name=crypto-policies") || strings.Contains(strings.ToLower(finding), "not evaluated") {
 		t.Fatalf("misleading existence observation: %q / %q", finding, comment)
 	}
 }
@@ -135,7 +135,7 @@ func TestAssessmentRuleDisplaysConciseHumanEvidence(t *testing.T) {
 		{ID: "oval:config:tst:1", Result: "true", Items: []arf.Item{{Result: "not evaluated", Fields: `filepath: "/boot/grub2/grub.cfg"; pattern: "^[\\s]*set.*$"; line: "^[\\s]*set.*$"; text: "set superusers=\\"root\\""`}}},
 	}}}}
 	finding, comment := assessmentRule(c, html, host)
-	if comment != "Open" || !strings.Contains(finding, "Check GRUB password") || !strings.Contains(finding, "required object was not found") || !strings.Contains(finding, "/boot/grub2/grub.cfg") || strings.Contains(finding, "not evaluated") {
+	if !strings.HasPrefix(comment, "Open.") || !strings.Contains(finding, "Check GRUB password") || !strings.Contains(finding, "required object was not found") || !strings.Contains(finding, "/boot/grub2/grub.cfg") || strings.Contains(finding, "not evaluated") {
 		t.Fatalf("human-readable evidence missing: %q / %q", finding, comment)
 	}
 	if strings.Contains(finding+comment, "pattern:") || strings.Contains(finding+comment, "line:") || strings.Contains(finding+comment, "oval:obj:1") || strings.Contains(finding+comment, "oval:config:tst:1") || strings.Contains(comment, "oval:boot:tst:1") || strings.Contains(finding, "check_existence=") || len(finding) > 900 || len(comment) > 250 {

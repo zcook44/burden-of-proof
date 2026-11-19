@@ -76,7 +76,7 @@ func TestCiscoCLIEmitsAutomaticVerdictWithoutOverwritingPriorCandidate(t *testin
 	if controls, ok := sidecar["automated_controls"].([]any); !ok || len(controls) != 1 {
 		t.Fatalf("missing decision inventory: %+v", sidecar)
 	}
-	if !strings.Contains(doc["title"].(string), "REVIEW CANDIDATE") || bytes.Contains(append(body, raw...), []byte("SENSITIVE_TEST_MARKER")) {
+	if doc["title"] != "DOD-ACC-SW01 - IOS-XE Switch L2S" || bytes.Contains(append(body, raw...), []byte("SENSITIVE_TEST_MARKER")) {
 		t.Fatal("missing auto label or secret leaked")
 	}
 	for _, p := range []string{path, path + ".provenance.json"} {

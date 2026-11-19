@@ -26,13 +26,16 @@ func TestCiscoConfigEvaluatesDecidableSTPButNotOperationalTrunk(t *testing.T) {
 			if text == "" || strings.Contains(text, "SENSITIVE_TEST_MARKER") {
 				t.Errorf("rule %v unsafe %s: %q", row["group_id"], field, text)
 			}
-			if status == "not_a_finding" && field == "finding_details" && !strings.Contains(strings.ToLower(text), "automated") {
-				t.Errorf("rule %v lacks method in %s: %q", row["group_id"], field, text)
+			if status == "not_a_finding" && !strings.Contains(text, "saved running configuration") {
+				t.Errorf("rule %v lacks device result in %s: %q", row["group_id"], field, text)
+			}
+			if strings.Contains(text, "SHA-256") {
+				t.Errorf("rule %v hash leaked into %s: %q", row["group_id"], field, text)
 			}
 		}
 	}
-	if !strings.Contains(doc["title"].(string), "REVIEW CANDIDATE") {
-		t.Fatal("checklist title does not identify a review candidate")
+	if doc["title"] != "DOD-ACC-SW01 - IOS-XE Switch L2S" {
+		t.Fatalf("title: %v", doc["title"])
 	}
 }
 

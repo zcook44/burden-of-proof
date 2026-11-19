@@ -44,7 +44,7 @@ func TestNetworkXCCDFRoundTripKeepsScannerResult(t *testing.T) {
 	if !scan.ConfigComplete || scan.ConfigSHA256 != strings.Repeat("ab", 32) {
 		t.Fatalf("scan evidence: %#v", scan)
 	}
-	if !strings.Contains(converted[0].(map[string]any)["finding_details"].(string), "Network XCCDF result: pass") {
+	if !strings.Contains(converted[0].(map[string]any)["finding_details"].(string), "Network scan result: pass") || strings.Contains(converted[0].(map[string]any)["finding_details"].(string), "SHA-256") {
 		t.Fatal("checklist was not built from the scan result")
 	}
 	target := again["target_data"].(map[string]any)
