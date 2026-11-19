@@ -10,7 +10,7 @@ Checkmate is the scan admin's editor. Security imports the CKLB into STIG Viewer
 flowchart TD
     subgraph upstream["Upstream: separate tools, not Checkmate"]
         scan["External OpenSCAP scan"] --> evidence["Private same-run XCCDF + HTML + ARF"]
-        evidence --> converter["burden-of-proof converter: pair scan bundle, reconcile V/SV IDs"]
+        evidence --> converter["docket: pair scan bundle, reconcile V/SV IDs"]
         benchmark["Official DISA manual XCCDF + optional per-OS policy"] --> converter
         converter --> generated["CKLB review candidate + provenance sidecar"]
     end
@@ -102,7 +102,7 @@ If your private checklist tree is `/scratch/src/admin/stig/completed_ckl`, use `
 - The CLI checks the supplied file's format and draft, **not its provenance or checksum**. A different Draft 2019-09 schema may compile but is not DISA validation. Schema validity does not prove a finding correct or a checklist importable in STIG Viewer.
 - The upstream ZIP has no explicit redistribution notice; the repository's license does **not** apply to this third-party schema. Verify your organization's authority before sharing the bundle beyond authorized recipients. The validator library and its Draft 2019-09 meta-schemas remain vendored for disconnected builds.
 
-To install a private copy, run this from the repository root (or the extracted docket archive, which has the same `schemas/` directory):
+To install a private copy, run this from the repository root (or the extracted Ceasefire archive, which has the same `schemas/` directory):
 
 ```sh
 install -m 600 schemas/SV3_CKLB_1_0_JSON_SCHEMA.json \
@@ -167,8 +167,8 @@ From the repository root, on a build host with Go 1.22 or newer and the vendored
 
 ```sh
 ./scripts/package-disconnected.sh 2.1.0 ./dist/releases
-(cd ./dist/releases && sha256sum -c docket-2.1.0-linux-amd64.tar.gz.sha256)
-./scripts/install-docket.sh --prefix "$HOME/.local" ./dist/releases/docket-2.1.0-linux-amd64.tar.gz
+(cd ./dist/releases && sha256sum -c ceasefire-2.1.0-linux-amd64.tar.gz.sha256)
+./scripts/install-docket.sh --prefix "$HOME/.local" ./dist/releases/ceasefire-2.1.0-linux-amd64.tar.gz
 ```
 
 The archive contains `bin/docket`, `bin/checkmate`, bash completion for both, the installer, the preflight, the DISA JSON schema, and its [provenance notice](../../schemas/PROVENANCE.md). It does **not** contain private checklists, scan evidence, or benchmarks. The build uses `GOPROXY=off`, `GOSUMDB=off`, `GOTOOLCHAIN=local`, and `CGO_ENABLED=0`. The target is Linux amd64. If `$HOME/.local/bin` is not on `PATH`, the installer prints the `export` line and still finishes. Completion is installed under the prefix even when the system completion directory is not writable.
@@ -176,7 +176,7 @@ The archive contains `bin/docket`, `bin/checkmate`, bash completion for both, th
 ```mermaid
 flowchart LR
     source["Source checkout: Go 1.22+, vendor, both commands"] --> pack["scripts/package-disconnected.sh"]
-    pack --> generic["docket archive: docket, checkmate, schema, docs"]
+    pack --> generic["Ceasefire archive: docket, checkmate, schema, docs"]
     generic --> offline["Disconnected host: scripts/install-docket.sh"]
     private["Private scans, CKLB copies, benchmarks, tailoring"] -.->|Separate authorized transfer| offline
 ```

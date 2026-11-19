@@ -9,7 +9,7 @@ These are **invented test inputs**, not exports from Cisco devices and **not com
 - `manifest.json`: exact device-to-benchmark associations, selected by an operator rather than guessed from config text.
 - `targets/<host>/scan.running-config`: synthetic text; the target directory and config file need modes `0700` and `0600`, respectively, to run the converter. Git cannot retain those permissions on a fresh checkout; set them after checkout.
 - `checklists/<exact-benchmark-id>/<host>/*.cklb`: one generated checklist per benchmark/host directory so Checkmate's newest-per-directory rule cannot hide a second benchmark for the same device.
-- Each CKLB's `.provenance.json` binds hashes of the example config, official benchmark and CKLB. Its source paths are machine-specific generation records, **not portable attestations**. A copy in Checkmate contains the original burden-of-proof source path. An editor changes CKLB bytes and makes that sidecar's hash stale.
+- Each CKLB's `.provenance.json` binds hashes of the example config, official benchmark and CKLB. Its source paths are machine-specific generation records, **not portable attestations**. A copy in Checkmate contains the checkout path that generated it. An editor changes CKLB bytes and makes that sidecar's hash stale.
 
 ISE, ACI and SNA benchmarks are not represented by invented IOS-style running configurations; their appliance/controller evidence models need separate fixtures. ASA IPS/VPN benchmarks likewise need those features explicitly configured and independently verified; the firewall/NDM examples do not assert IPS/VPN applicability.
 

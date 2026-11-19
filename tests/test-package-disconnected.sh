@@ -5,7 +5,7 @@ tmp=$(mktemp -d "${TMPDIR:?}/docket-package-test.XXXXXX")
 trap 'rm -rf -- "$tmp"' EXIT
 version=offline-smoke
 "$repo/scripts/package-disconnected.sh" "$version" "$tmp"
-name="docket-${version}-linux-amd64"
+name="ceasefire-${version}-linux-amd64"
 archive="$tmp/$name.tar.gz"
 [[ -s $archive && -s $archive.sha256 ]]
 (cd "$tmp" && sha256sum -c "$name.tar.gz.sha256")

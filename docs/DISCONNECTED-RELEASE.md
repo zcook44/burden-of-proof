@@ -2,7 +2,7 @@
 
 ## Release 2.1.0
 
-Release 2.0.0 published `docket` alone, in `docket-2.0.0-linux-amd64.tar.gz`. Release 2.1.0 is the same kind of archive, `docket-2.1.0-linux-amd64.tar.gz`, and it is the whole toolkit: `bin/docket` and `bin/checkmate`, both completions, the preflight, the tailoring generator, the example tailoring files, the DISA CKLB schema, and the docs. One install puts both commands on `PATH`. There is no separate Checkmate archive.
+Release 2.0.0 published the converter alone, in `docket-2.0.0-linux-amd64.tar.gz`. Release 2.1.0 is Ceasefire: one archive, `ceasefire-2.1.0-linux-amd64.tar.gz`, containing `bin/docket` and `bin/checkmate`, both completions, the preflight, the tailoring generator, the example tailoring files, the DISA CKLB schema, and the docs. One install puts both commands on `PATH`. The commands keep their names. There is no separate Checkmate archive.
 
 Since 2.0.0 the converter also gained `docket quarter`, one shared config file, and schema v3 tailoring shared with Checkmate. The CKLB written for this release is the file STIG Viewer opens. Its title is the host and the benchmark. Each rule includes the manual's check text, discussion, fix text, and potential impact when the manual contains them. The comment leads with the status and what this host showed. Finding details carry that observation. The scan admin confirms the set is complete. Security judges every host in STIG Viewer, including every Not a Finding.
 
@@ -25,19 +25,19 @@ A host that only runs the installed `docket` and `checkmate` binaries does not n
 ./scripts/install-docket.sh
 ```
 
-`install-docket.sh` picks the newest `dist/releases/docket-*-linux-amd64.tar.gz`, checks the sibling `.sha256`, and installs `docket` and `checkmate` onto `~/.local/bin` (or `--prefix`). If that `bin` directory is not on `PATH`, the installer prints `export PATH="<prefix>/bin:$PATH"` and still exits 0. Release 1.0.1 was published before the rename, so its archive is still called `stig-evidence-1.0.1-linux-amd64.tar.gz`. Archives built from this tree use the `docket-` prefix. `--from-source` is for a checkout that contains `vendor/` and `scripts/require-go.sh`. The release archive does not contain them.
+`install-docket.sh` picks the newest `dist/releases/ceasefire-*-linux-amd64.tar.gz`, checks the sibling `.sha256`, and installs `docket` and `checkmate` onto `~/.local/bin` (or `--prefix`). A `docket-*-linux-amd64.tar.gz` from release 2.0.0 is still accepted. If that `bin` directory is not on `PATH`, the installer prints `export PATH="<prefix>/bin:$PATH"` and still exits 0. Release 1.0.1 was published before the command rename, so its archive is still called `stig-evidence-1.0.1-linux-amd64.tar.gz`. Archives built from this tree use the `ceasefire-` prefix. `--from-source` is for a checkout that contains `vendor/` and `scripts/require-go.sh`. The release archive does not contain them.
 
 The archive contains `bin/docket`, `bin/checkmate`, bash completion for both commands, the executable Bash `scripts/preflight-offline.sh`, the Python 3 `scripts/generate-cisco-tailoring.py` (Python is needed only to run this optional generator), four example `templates/RHEL_{7,8,9,10}_STIG.tailoring.yaml` files, partial schema v3 Cisco root tailoring examples under `cisco-library/`, `schemas/SV3_CKLB_1_0_JSON_SCHEMA.json` and its [provenance notice](../schemas/PROVENANCE.md), repository and `docs/*.md` documentation, the asset contract, **both** non-executable `docs/snapshots/oscap_scan.yml` and `docs/snapshots/run-lab-oscap.sh`, `RELEASE.txt` (including source commit and dirty state), and `SHA256SUMS` for every included file. The DISA schema is for **optional CKLB validation** through `checkmate --validate`, not a converter input. The upstream ZIP has no explicit redistribution notice; verify organizational authority before sharing the bundle beyond authorized recipients. It does **not** contain the live `/scratch/ansible` playbook/wrapper, official XCCDF benchmarks (including the 25 Cisco XMLs tracked in this source repository), SSG scan results, credentials, approvals, or signing material. The outer SHA-256 file detects transfer corruption **only if its expected hash arrives through an independently trusted channel**; neither checksum is a publisher signature. Do not execute an untrusted archive merely because its adjacent hash matches.
 
 On the disconnected Linux/amd64 host, after authenticating the bundle and its expected hash through your approved transfer process:
 
 ```sh
-install -d -m 700 "$HOME/docket-releases"
-(cd /transfer && sha256sum -c docket-VERSION-linux-amd64.tar.gz.sha256)
-tar -tzf /transfer/docket-VERSION-linux-amd64.tar.gz
-tar -xzf /transfer/docket-VERSION-linux-amd64.tar.gz -C "$HOME/docket-releases"
-"$HOME/docket-releases/docket-VERSION-linux-amd64/scripts/install-docket.sh" \
-  /transfer/docket-VERSION-linux-amd64.tar.gz
+install -d -m 700 "$HOME/ceasefire-releases"
+(cd /transfer && sha256sum -c ceasefire-VERSION-linux-amd64.tar.gz.sha256)
+tar -tzf /transfer/ceasefire-VERSION-linux-amd64.tar.gz
+tar -xzf /transfer/ceasefire-VERSION-linux-amd64.tar.gz -C "$HOME/ceasefire-releases"
+"$HOME/ceasefire-releases/ceasefire-VERSION-linux-amd64/scripts/install-docket.sh" \
+  /transfer/ceasefire-VERSION-linux-amd64.tar.gz
 ```
 
 The installer always copies bash completion for `docket` and `checkmate` under `$prefix/share/bash-completion/completions/`. It also copies them to `/usr/share/bash-completion/completions/` (or `/etc/bash_completion.d/` when that is the directory present) when that directory is writable or passwordless sudo is available. A system directory that is not writable does not fail the install. Completion covers subcommands, including `tailoring check`, `tailoring rehash`, `tailoring migrate`, and `quarter`. When `DOCKET_CONFIG` or `~/.config/docket/config.yaml` names a library, completion also offers benchmark IDs and host directory names from that tree. Zsh and fish are not included.

@@ -1,6 +1,6 @@
 # Go-only review converter
 
-`docket` is the command. The repository is still burden-of-proof. Build it with the environment in [install and run](README.md); the packaged static Linux/amd64 CLI needs no Go or Python runtime. Paths below use that page's `/private/stig-library`. A simple per-OS YAML supplies checklist comments and decisions, but the retired *signed-release* tailoring implementation was **not** ported. No command here verifies an approval signature, releases an official assessment, or delivers evidence. The lab, inconveniently, still lives somewhere else. See [disconnected release](DISCONNECTED-RELEASE.md), [workflow](WORKFLOW.md), and the [asset record contract](../contracts/asset-record-v1.md).
+Ceasefire is the toolkit. `docket` is the converter command, and `checkmate` is the editor. The git repository is still burden-of-proof. Build it with the environment in [install and run](README.md); the packaged static Linux/amd64 CLI needs no Go or Python runtime. Paths below use that page's `/private/stig-library`. A simple per-OS YAML supplies checklist comments and decisions, but the retired *signed-release* tailoring implementation was **not** ported. No command here verifies an approval signature, releases an official assessment, or delivers evidence. The lab, inconveniently, still lives somewhere else. See [disconnected release](DISCONNECTED-RELEASE.md), [workflow](WORKFLOW.md), and the [asset record contract](../contracts/asset-record-v1.md).
 
 ## Commands
 

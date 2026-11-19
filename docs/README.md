@@ -1,6 +1,6 @@
 # Install and run
 
-One package installs `docket` and `checkmate`. `docket` converts RHEL OpenSCAP results and Cisco running configurations into private CKLB review candidates. `checkmate` is the optional editor the scan admin uses for a site fact. Neither command scans a guest, logs into a switch, approves a finding, or delivers evidence. Those jobs remain with people, which is inconvenient and also the point.
+Ceasefire is one package. It installs `docket` and `checkmate`. `docket` converts RHEL OpenSCAP results and Cisco running configurations into private CKLB review candidates. `checkmate` is the optional editor the scan admin uses for a site fact. Neither command scans a guest, logs into a switch, approves a finding, or delivers evidence. Those jobs remain with people, which is inconvenient and also the point.
 
 [Repository overview](../README.md) · [RHEL picture](RHEL-OSCAP-WORKFLOW.md) · [Cisco picture](CISCO-SCAN-PROCESS.md) · [Batch rules](BATCH-CKLB.md) · [Cisco checks](CISCO-CONFIG.md) · [Network scan fields](NETWORK-SCAN.md) · [Commands](GO-MIGRATION.md) · [Review workflow](WORKFLOW.md) · [Quarterly run](QUARTERLY-RUNBOOK.md) · [Disconnected release](DISCONNECTED-RELEASE.md)
 

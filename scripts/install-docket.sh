@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Unpack a built docket release and put the binary on PATH.
+# Unpack a Ceasefire release and install the docket and checkmate commands.
 # --from-source builds from this checkout and fails if Go or the vendored
 # modules are not actually usable offline.
 set -euo pipefail
@@ -8,7 +8,8 @@ umask 022
 usage() {
   printf 'Usage: %s [--prefix DIR] [TARBALL]\n' "${0##*/}" >&2
   printf '       %s --from-source [--prefix DIR]\n' "${0##*/}" >&2
-  printf 'Default prefix is $HOME/.local. Default tarball is the newest dist/releases/docket-*-linux-amd64.tar.gz.\n' >&2
+  printf 'Default prefix is $HOME/.local. Default tarball is the newest dist/releases/ceasefire-*-linux-amd64.tar.gz.\n' >&2
+  printf 'A docket-*-linux-amd64.tar.gz from release 2.0.0 is still accepted.\n' >&2
   exit 2
 }
 die() { printf 'install-docket: %s\n' "$*" >&2; exit 1; }
@@ -73,8 +74,8 @@ if [[ $from_source -eq 1 ]]; then
 else
   if [[ -z $tarball ]]; then
     [[ -d $repo/dist/releases ]] || die "no dist/releases directory. Build a tarball first, or pass its path."
-    tarball=$(find "$repo/dist/releases" -maxdepth 1 -type f -name 'docket-*-linux-amd64.tar.gz' -printf '%T@ %p\n' | sort -nr | awk 'NR==1 { print substr($0, index($0,$2)) }')
-    [[ -n $tarball ]] || die "no docket-*-linux-amd64.tar.gz under dist/releases"
+    tarball=$(find "$repo/dist/releases" -maxdepth 1 -type f \( -name 'ceasefire-*-linux-amd64.tar.gz' -o -name 'docket-*-linux-amd64.tar.gz' \) -printf '%T@ %p\n' | sort -nr | awk 'NR==1 { print substr($0, index($0,$2)) }')
+    [[ -n $tarball ]] || die "no ceasefire-*-linux-amd64.tar.gz or docket-*-linux-amd64.tar.gz under dist/releases"
   fi
   [[ -f $tarball && ! -L $tarball ]] || die "tarball is not a regular file: $tarball"
   [[ -f ${tarball}.sha256 && ! -L ${tarball}.sha256 ]] || die "checksum file is missing beside the tarball"

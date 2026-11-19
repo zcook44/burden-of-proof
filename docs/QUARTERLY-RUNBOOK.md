@@ -1,6 +1,6 @@
 # Quarterly STIG runbook
 
-This is the operator procedure for one DISA publication quarter on a disconnected network. It uses the `docket` and `checkmate` binaries from one release archive, the shared config file, and `docket quarter`.
+This is the operator procedure for one DISA publication quarter on a disconnected network. It uses the Ceasefire archive: the `docket` and `checkmate` binaries, the shared config file, and `docket quarter`.
 
 `docket` does not download manuals, scan a host, log into a switch, or approve a finding. You move the manuals and the evidence. The tools write private checklists. A person reviews them.
 
@@ -88,17 +88,17 @@ tar -C "$HOME/sdk" -xzf go1.22.2.linux-amd64.tar.gz
 export PATH="$HOME/sdk/go/bin:$PATH"
 go version
 ./scripts/package-disconnected.sh 2.1.0 ./dist/releases
-sha256sum ./dist/releases/docket-2.1.0-linux-amd64.tar.gz
+sha256sum ./dist/releases/ceasefire-2.1.0-linux-amd64.tar.gz
 ```
 
 The disconnected host that only runs the installed binaries does not need Go.
 
-Transfer `docket-2.1.0-linux-amd64.tar.gz` and the `.sha256` file beside it. On the disconnected host:
+Transfer `ceasefire-2.1.0-linux-amd64.tar.gz` and the `.sha256` file beside it. On the disconnected host:
 
 ```sh
 cd /secure/incoming
-sha256sum -c docket-2.1.0-linux-amd64.tar.gz.sha256
-./scripts/install-docket.sh --prefix "$HOME/.local" /secure/incoming/docket-2.1.0-linux-amd64.tar.gz
+sha256sum -c ceasefire-2.1.0-linux-amd64.tar.gz.sha256
+./scripts/install-docket.sh --prefix "$HOME/.local" /secure/incoming/ceasefire-2.1.0-linux-amd64.tar.gz
 ```
 
 The installer unpacks the archive, checks the checksum, and installs `docket` and `checkmate`. Expected lines when the system completion directory is not writable:

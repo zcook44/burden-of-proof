@@ -1,6 +1,6 @@
 # Asset record v1
 
-The lab lives in a separate repository and produces this versioned, non-secret handoff. Burden of Proof consumes it for evidence-side validation with `asset-check`; it does not provision the lab or independently verify the producing manifest. The example below is a shape illustration, not evidence from a guest. See the [quick start](../docs/README.md) and [review workflow](../docs/WORKFLOW.md).
+The lab lives in a separate repository and produces this versioned, non-secret handoff. Ceasefire consumes it for evidence-side validation with `docket asset-check`; it does not provision the lab or independently verify the producing manifest. The example below is a shape illustration, not evidence from a guest. See the [quick start](../docs/README.md) and [review workflow](../docs/WORKFLOW.md).
 
 Supply `--asset PATH` as UTF-8 JSON with **exactly** these fields (no extras, omissions, or duplicate keys):
 

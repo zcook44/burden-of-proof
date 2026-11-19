@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Build and package a Linux/amd64 runtime using only this repository's vendor tree.
+# Build the Ceasefire Linux/amd64 archive from this repository's vendor tree.
+# The archive installs the docket and checkmate commands. Those names do not change.
 set -euo pipefail
 umask 077
 
@@ -38,7 +39,7 @@ output=$(cd -- "$output" && pwd -P)
 [[ $(stat -c %u "$output") -eq $(id -u) && $(stat -c %a "$output") == 700 ]] || {
   echo "Output directory must be owned by this user and mode 0700: $output" >&2; exit 1;
 }
-name="docket-${version}-linux-amd64"
+name="ceasefire-${version}-linux-amd64"
 [[ ! -e $output/$name.tar.gz && ! -e $output/$name.tar.gz.sha256 ]] || {
   echo "Refusing to overwrite an existing release: $name" >&2; exit 1;
 }
@@ -76,10 +77,11 @@ if git -C "$root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   [[ -z $(git -C "$root" status --porcelain --untracked-files=normal) ]] || source_state=dirty
 fi
 {
-  printf 'Product: docket\nVersion: %s\nTarget: linux/amd64 (CGO_ENABLED=0)\n' "$version"
+  printf 'Product: Ceasefire\nVersion: %s\nTarget: linux/amd64 (CGO_ENABLED=0)\n' "$version"
+  printf 'Commands: docket, checkmate\n'
   printf 'Go: %s\nSource commit: %s\nSource worktree: %s\n' "$(go version)" "$commit" "$source_state"
   printf 'Build: GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local GOFLAGS=-mod=vendor\n'
-  printf 'Contents: docket and checkmate CLIs, Bash installer, completions, RHEL preflight, Python 3 Cisco tailoring generator, RHEL templates (4), Cisco partial root tailoring (25), DISA CKLB schema, documentation and file checksums.\n'
+  printf 'Contents: Ceasefire archive with the docket and checkmate commands, Bash installer, completions, RHEL preflight, Python 3 Cisco tailoring generator, RHEL templates (4), Cisco partial root tailoring (25), DISA CKLB schema, documentation and file checksums.\n'
   printf 'Not included: official DISA benchmarks, SSG scan inputs, Cisco running configs, device collectors, private evidence, credentials, signatures.\n'
 } > "$package/RELEASE.txt"
 (

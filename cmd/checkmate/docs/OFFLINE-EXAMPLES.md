@@ -25,7 +25,7 @@ From the repository root, with Go 1.22 or newer:
 
 ```sh
 ./scripts/package-disconnected.sh 2.1.0 ./dist/releases
-./scripts/install-docket.sh --prefix "$HOME/.local" ./dist/releases/docket-2.1.0-linux-amd64.tar.gz
+./scripts/install-docket.sh --prefix "$HOME/.local" ./dist/releases/ceasefire-2.1.0-linux-amd64.tar.gz
 checkmate --root "$HOME/private/checkmate-practice/examples" --list
 checkmate --root "$HOME/private/checkmate-practice/examples" --benchmark RHEL_9_STIG --list
 checkmate --root "$HOME/private/checkmate-practice/examples" --validate \
