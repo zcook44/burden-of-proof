@@ -1,0 +1,15 @@
+{
+  "benchmark": {
+    "path": "/home/zrc/.hermes/cache/scratch/cisco-fixtures.pEIDsbsO/library/U_Cisco_IOS-XE_Switch_NDM_STIG_V3R6_Manual-xccdf.xml",
+    "sha256": "e23e97f7a66d77a6d477e770c709749c7a5e6d1207a585bc089fc1026dc89e40"
+  },
+  "benchmark_id": "Cisco_IOS_XE_Switch_NDM_STIG",
+  "checklist_sha256": "f9579a1462ef0efde873b47d9c205f16264d611f360515dd61597cf4b426befb",
+  "config": {
+    "path": "/home/zrc/git/burden-of-proof/examples/cisco-synthetic/targets/ios-xe-switch-01/scan.running-config",
+    "sha256": "3f6fc46dd5f94ef654b685b11fbb64f0700bb78e8da3dba9fcb55525915202d0"
+  },
+  "mapping_method": "config-only; no automated STIG assessment; all controls require human review",
+  "schema_version": 1,
+  "target": "ios-xe-switch-01"
+}

@@ -1,0 +1,7 @@
+# RHEL 7 DISA STIG V3R15 checklist tailoring.
+# No RHEL 7 remediation exception list was available to seed this policy.
+# Add entries with rule_name, stig_id, sv_id, status and comment only after
+# matching the IDs to the selected official benchmark. See the RHEL 9 file
+# for an example. status: auto preserves the scan-derived checklist status.
+# This file applies to EVERY RHEL 7 host converted with this library.
+rules: []

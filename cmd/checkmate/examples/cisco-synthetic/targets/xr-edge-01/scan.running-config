@@ -1,0 +1,86 @@
+!! SYNTHETIC TEST FIXTURE — not captured from a device; secrets are nonworking placeholders.
+!! Cisco IOS XR router, NDM plus internal routing illustration; NOT a STIG assessment.
+hostname xr-edge-01
+service timestamps log datetime localtime
+logging buffered 8888888
+logging buffered informational
+logging 192.0.2.30 severity informational
+logging 192.0.2.31 severity critical
+logging source-interface MgmtEth0/RP0/CPU0/0
+banner login #
+Authorized test-lab access only. Activity may be monitored.
+#
+username breakglass
+ group netadmin
+ secret 0 NOT_A_REAL_PASSWORD_CHANGE_BEFORE_USE
+!
+radius-server host 192.0.2.20 auth-port 1812 acct-port 1813 key 0 NOT_A_REAL_RADIUS_KEY
+radius-server host 192.0.2.21 auth-port 1812 acct-port 1813 key 0 NOT_A_REAL_RADIUS_KEY
+radius-server source-interface MgmtEth0/RP0/CPU0/0
+radius-server dead-criteria time 10 tries 3
+radius-server deadtime 5
+aaa authentication login default group radius local
+aaa authorization exec default group radius local
+aaa accounting exec default start-stop group radius
+!
+ipv4 access-list MGMT_NET
+ 10 permit ipv4 192.0.2.0 255.255.255.0 any
+ 20 deny ipv4 any any log-input
+!
+line console
+ exec-timeout 5 0
+ login authentication default
+!
+line default
+ exec-timeout 5 0
+ transport input ssh
+ access-class MGMT_NET in
+ login authentication default
+!
+vty-pool default 0 4
+ssh server v2
+ssh server session-limit 2
+!
+ntp
+ authentication-key 1 hmac-sha2 encrypted NOT_VALID_ENCRYPTED_NTP_KEY
+ trusted-key 1
+ authenticate
+ server 192.0.2.40 key 1
+ server 192.0.2.41 key 1
+ source MgmtEth0/RP0/CPU0/0
+!
+interface MgmtEth0/RP0/CPU0/0
+ description OOB management — documentation network
+ ipv4 address 192.0.2.11 255.255.255.0
+ no shutdown
+!
+interface Loopback0
+ description Internal routing identifier
+ ipv4 address 203.0.113.11 255.255.255.255
+!
+interface TenGigE0/0/0/0
+ description Internal transit to lab core
+ ipv4 address 198.51.100.1 255.255.255.252
+ no shutdown
+!
+interface TenGigE0/0/0/1
+ description Unused test interface
+ shutdown
+!
+router static
+ address-family ipv4 unicast
+  0.0.0.0/0 192.0.2.1
+ !
+!
+router ospf 100
+ router-id 203.0.113.11
+ area 0
+  interface Loopback0
+   passive enable
+  !
+  interface TenGigE0/0/0/0
+   network point-to-point
+  !
+ !
+!
+end

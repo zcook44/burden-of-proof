@@ -1,0 +1,15 @@
+{
+  "benchmark": {
+    "path": "/home/zrc/.hermes/cache/scratch/cisco-fixtures.pEIDsbsO/library/U_Cisco_IOS_Router_RTR_STIG_V3R5_Manual-xccdf.xml",
+    "sha256": "be7b76e01ac1552507d597bc518d3f8e7b15b5dd161c599fed26853b3dad2bcf"
+  },
+  "benchmark_id": "Cisco_IOS_Router_RTR_STIG",
+  "checklist_sha256": "d01dc6c7568645c0c887c665c9b54aa2424dfed78c2d34fa33955f45d7e1abf3",
+  "config": {
+    "path": "/home/zrc/git/burden-of-proof/examples/cisco-synthetic/targets/ios-router-01/scan.running-config",
+    "sha256": "92b03138bac022b1f2b4e7d9befc64bcbf4a341a2c69f573cb2d172e209eb668"
+  },
+  "mapping_method": "config-only; no automated STIG assessment; all controls require human review",
+  "schema_version": 1,
+  "target": "ios-router-01"
+}
