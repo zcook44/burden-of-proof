@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/zcook44/burden-of-proof/internal/tailoring"
 	"gopkg.in/yaml.v3"
 )
 
@@ -96,39 +97,30 @@ func ciscoPolicyDirectory(hostDir, benchmarkDir, benchmarkID string) string {
 	return benchmarkDir
 }
 
-// suggestCiscoTailoring is the editable per-device inventory. Scored controls
-// stay auto. Not Reviewed controls carry the reason an admin replaces.
+// suggestCiscoTailoring writes a schema v3 partial host worksheet.
+// Scored passes are omitted. Administrator overrides and not-reviewed rows remain.
 func suggestCiscoTailoring(benchmarkID string, benchmark []byte, doc map[string]any) ([]byte, error) {
+	_ = benchmark
 	rows := doc["stigs"].([]any)[0].(map[string]any)["rules"].([]any)
-	policy := ciscoTailoringFile{
-		SchemaVersion: 1, BenchmarkID: benchmarkID, BenchmarkSHA256: sha256Hex(benchmark),
-		Rules: make([]ciscoTailoringRule, 0, len(rows)),
-	}
+	worksheet := make([]tailoring.WorksheetRow, 0)
 	for _, item := range rows {
 		row := item.(map[string]any)
-		rule := ciscoTailoringRule{STIGID: row["group_id"].(string), SVID: row["rule_id"].(string), Status: "auto"}
-		if status, comment, ok := administratorOverride(row["comments"].(string)); ok {
-			rule.Status = status
-			rule.Comment = comment
-		} else if row["status"] == "not_reviewed" {
-			rule.Status = "not_reviewed"
-			rule.Comment = strings.TrimSpace(row["comments"].(string))
-			if rule.Comment == "" {
-				rule.Comment = "Not Reviewed. Replace this comment with the local evidence and set status."
-			}
-			rule.Comment += " Tune this row by setting status to not_a_finding, open, or not_applicable and replacing this comment with the evidence used."
+		entry := tailoring.WorksheetRow{
+			STIGID: row["group_id"].(string),
+			SVID:   row["rule_id"].(string),
+			Status: row["status"].(string),
 		}
-		policy.Rules = append(policy.Rules, rule)
+		if status, comment, ok := administratorOverride(row["comments"].(string)); ok {
+			entry.Status = status
+			entry.Comment = comment
+		} else if entry.Status == "not_reviewed" {
+			entry.Comment = strings.TrimSpace(row["comments"].(string))
+		} else {
+			continue
+		}
+		worksheet = append(worksheet, entry)
 	}
-	body, err := yaml.Marshal(policy)
-	if err != nil {
-		return nil, err
-	}
-	header := "# Per-device tailoring file suggestion for " + benchmarkID + ".\n" +
-		"# status auto keeps the running-config result.\n" +
-		"# Edit a not_reviewed row, then copy this tailoring file beside scan.running-config as " + benchmarkID + ".tailoring.yaml.\n" +
-		"# The next cisco-cklb, cisco-batch, or cisco-xccdf run for that device applies it.\n"
-	return append([]byte(header), body...), nil
+	return tailoring.HostWorksheet(benchmarkID, worksheet), nil
 }
 
 func administratorOverride(comments string) (string, string, bool) {

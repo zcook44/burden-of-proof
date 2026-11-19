@@ -1,10 +1,12 @@
 # Manual Test Plan for Layered Tailoring
 
+Schema version 3 is current. Host files omit `benchmark_sha256`. Root files keep the pin. Follow [docs/TAILORING.md](docs/TAILORING.md) and [docs/QUARTERLY-RUNBOOK.md](docs/QUARTERLY-RUNBOOK.md). Automated coverage lives in `cmd/docket/quarter_test.go`, `cmd/docket/docs_commands_test.go`, `internal/tailoring`, and `cmd/checkmate/internal/checklist`.
+
 This test plan verifies the layered tailoring system works correctly on a disconnected deployment.
 
 ## Prerequisites
 
-1. Unpacked docket release archive with `cisco-library/` containing 25 schema v2 Cisco root inventories
+1. Unpacked docket release archive with `cisco-library/` containing 25 partial schema v3 Cisco root files (`rules: []` plus the benchmark pin)
 2. RHEL 9 benchmark: `U_RHEL_9_STIG_V2R10_Manual-xccdf.xml`
 3. Cisco IOS Router RTR benchmark: `U_Cisco_IOS_Router_RTR_STIG_V3R11_Manual-xccdf.xml`
 4. One RHEL 9 scan result: `node1.results.xccdf.xml`
@@ -16,16 +18,16 @@ This test plan verifies the layered tailoring system works correctly on a discon
 
 ```bash
 # Create library root with RHEL 9 benchmark
-mkdir -p /tmp/test-library
+install -d -m 700 /tmp/test-library
 cp U_RHEL_9_STIG_V2R10_Manual-xccdf.xml /tmp/test-library/
 chmod 600 /tmp/test-library/U_RHEL_9_STIG_V2R10_Manual-xccdf.xml
 
 # Compute benchmark SHA-256
 RHEL_SHA=$(sha256sum /tmp/test-library/U_RHEL_9_STIG_V2R10_Manual-xccdf.xml | awk '{print $1}')
 
-# Create root tailoring (site-wide policy) - schema v2 with NO comments on auto
+# Create root tailoring (site-wide policy), schema v3. A comment on root auto is a note.
 cat > /tmp/test-library/RHEL_9_STIG.tailoring.yaml <<EOF
-schema_version: 2
+schema_version: 3
 benchmark_id: RHEL_9_STIG
 benchmark_sha256: $RHEL_SHA
 rules:
@@ -39,15 +41,15 @@ EOF
 chmod 600 /tmp/test-library/RHEL_9_STIG.tailoring.yaml
 
 # Create scan root with one host scan
-mkdir -p /tmp/test-scans/node1.example.test
+install -d -m 700 /tmp/test-scans /tmp/test-scans/node1.example.test
+chmod 700 /tmp/test-scans /tmp/test-scans/node1.example.test
 cp node1.results.xccdf.xml /tmp/test-scans/node1.example.test/scan.results.xccdf.xml
 chmod 600 /tmp/test-scans/node1.example.test/scan.results.xccdf.xml
 
 # Create host override (this specific host needs password for sudo)
 cat > /tmp/test-scans/node1.example.test/RHEL_9_STIG.tailoring.yaml <<EOF
-schema_version: 2
+schema_version: 3
 benchmark_id: RHEL_9_STIG
-benchmark_sha256: $RHEL_SHA
 rules:
   - stig_id: V-258106
     sv_id: SV-258106r1102061_rule
@@ -123,16 +125,15 @@ cat /tmp/test-scans/node1.example.test/*-ASSESSMENT.cklb.provenance.json | jq '{
 
 ```bash
 # Create library root with Cisco benchmark
-mkdir -p /tmp/cisco-library
+install -d -m 700 /tmp/cisco-library
 cp U_Cisco_IOS_Router_RTR_STIG_V3R11_Manual-xccdf.xml /tmp/cisco-library/
 chmod 600 /tmp/cisco-library/U_Cisco_IOS_Router_RTR_STIG_V3R11_Manual-xccdf.xml
 
-# Copy schema v2 root inventory from release package
+# Copy the partial schema v3 root file from the release package
 cp cisco-library/Cisco_IOS_Router_RTR_STIG.tailoring.yaml /tmp/cisco-library/
 chmod 600 /tmp/cisco-library/Cisco_IOS_Router_RTR_STIG.tailoring.yaml
 
-# Edit root file to add ONE site-wide override (example: V-216555)
-# Change line "    status: auto" to "    status: not_applicable" and add comment:
+# Add ONE site-wide override to the partial root file (example: V-216555).
 #   - stig_id: V-216555
 #     sv_id: SV-216555r1007824_rule
 #     status: not_applicable
@@ -142,7 +143,8 @@ chmod 600 /tmp/cisco-library/Cisco_IOS_Router_RTR_STIG.tailoring.yaml
 CISCO_SHA=$(sha256sum /tmp/cisco-library/U_Cisco_IOS_Router_RTR_STIG_V3R11_Manual-xccdf.xml | awk '{print $1}')
 
 # Create device directory with config
-mkdir -p /tmp/cisco-devices/router1
+install -d -m 700 /tmp/cisco-devices /tmp/cisco-devices/router1
+chmod 700 /tmp/cisco-devices /tmp/cisco-devices/router1
 cat > /tmp/cisco-devices/router1/scan.running-config <<'EOF'
 hostname router1
 version 15.7
@@ -159,9 +161,8 @@ chmod 600 /tmp/cisco-devices/router1/scan.running-config
 
 # Create host override (this device has local accounts, revert site override)
 cat > /tmp/cisco-devices/router1/Cisco_IOS_Router_RTR_STIG.tailoring.yaml <<EOF
-schema_version: 2
+schema_version: 3
 benchmark_id: Cisco_IOS_Router_RTR_STIG
-benchmark_sha256: $CISCO_SHA
 rules:
   - stig_id: V-216555
     sv_id: SV-216555r1007824_rule
@@ -177,7 +178,7 @@ chmod 600 /tmp/cisco-devices/router1/Cisco_IOS_Router_RTR_STIG.tailoring.yaml
 ```bash
 ./docket tailoring check --library-root /tmp/cisco-library --scan-root /tmp/cisco-devices
 
-# Expected: OK for both root (validates full inventory) and host (partial) files
+# Expected: OK for the partial root file and the partial host file
 ```
 
 ### Dry Run
@@ -229,7 +230,7 @@ cat /tmp/cisco-devices/router1/*-ASSESSMENT.cklb.provenance.json | jq '{
 ## Test 3: Generate Cisco Root Inventory from Scratch
 
 ```bash
-# Use the included generator to create a new full-inventory root file
+# Use the included generator to create a partial schema v3 root file (`rules: []`)
 ./scripts/generate-cisco-tailoring.py --library-root /tmp/cisco-library --dry-run
 
 # Expected: Shows count of benchmarks and rules that would be generated
@@ -237,19 +238,16 @@ cat /tmp/cisco-devices/router1/*-ASSESSMENT.cklb.provenance.json | jq '{
 # Generate (creates .tailoring.yaml for each benchmark not already present)
 ./scripts/generate-cisco-tailoring.py --library-root /tmp/cisco-library
 
-# Verify generated file is schema v2
+# Verify generated file is schema v3 and has no rule rows
 head -10 /tmp/cisco-library/Cisco_IOS_Switch_RTR_STIG.tailoring.yaml
 
 # Expected:
-# # Cisco STIG root-layer tailoring (full inventory)
-# # Generated by generate-cisco-tailoring.py - schema version 2
-# # status: auto keeps the config-scored result
-# # Override with open/not_a_finding/not_applicable/not_reviewed + comment
-# schema_version: 2
+# # Cisco STIG root-layer tailoring (partial schema v3)
+# # Generated by generate-cisco-tailoring.py
+# schema_version: 3
 # benchmark_id: Cisco_IOS_Switch_RTR_STIG
 # benchmark_sha256: <hex>
-# rules:
-#   - stig_id: V-...
+# rules: []
 ```
 
 ---
@@ -276,32 +274,31 @@ head -10 /tmp/cisco-library/Cisco_IOS_Switch_RTR_STIG.tailoring.yaml
 
 ## Common Issues to Test
 
-### Invalid: Schema v2 root with comment on auto
+### Valid: schema v3 root auto with a comment is a remediation note
 
 ```bash
 cat > /tmp/test-library/RHEL_9_STIG.tailoring.yaml <<EOF
-schema_version: 2
+schema_version: 3
 benchmark_id: RHEL_9_STIG
 benchmark_sha256: $RHEL_SHA
 rules:
   - stig_id: V-257837
     sv_id: SV-257837r1268251_rule
     status: auto
-    comment: "This should be rejected in schema v2"
+    comment: "Remediation is tracked outside this checklist."
 EOF
 
 ./docket tailoring check --library-root /tmp/test-library
 
-# Expected: ERROR about auto entries must not have comments (schema v2)
+# Expected: VALIDATION PASSED. The scan status is kept and the comment is a note.
 ```
 
 ### Invalid: Host file without comment on auto
 
 ```bash
 cat > /tmp/test-scans/node1.example.test/RHEL_9_STIG.tailoring.yaml <<EOF
-schema_version: 2
+schema_version: 3
 benchmark_id: RHEL_9_STIG
-benchmark_sha256: $RHEL_SHA
 rules:
   - stig_id: V-258106
     sv_id: SV-258106r1102061_rule
@@ -316,8 +313,8 @@ EOF
 ### Invalid: Stale benchmark hash
 
 ```bash
-cat > /tmp/test-scans/node1.example.test/RHEL_9_STIG.tailoring.yaml <<EOF
-schema_version: 2
+cat > /tmp/test-library/RHEL_9_STIG.tailoring.yaml <<EOF
+schema_version: 3
 benchmark_id: RHEL_9_STIG
 benchmark_sha256: 0000000000000000000000000000000000000000000000000000000000000000
 rules:
@@ -329,7 +326,7 @@ EOF
 
 ./docket tailoring check --scan-root /tmp/test-scans
 
-# Expected: ERROR about benchmark_sha256 mismatch
+# Expected: ERROR about benchmark_sha256 mismatch on the root file
 ```
 
 ---
@@ -339,8 +336,8 @@ EOF
 ✓ All validation commands pass for valid files
 ✓ Invalid files (wrong schema, missing comments, stale hashes) are rejected with clear errors
 ✓ Dry runs show both root and host files loaded
-✓ Generated checklists have correct provenance (schema v2 for RHEL, v4 for Cisco)
+✓ Generated checklists have correct provenance (layered RHEL and layered Cisco)
 ✓ Per-rule layer tracking correctly shows "root" vs "host" origin
 ✓ Preflight script validates tailoring files before conversion
-✓ Generator creates schema v2 files
+✓ Generator creates partial schema v3 files (`rules: []` plus the pin)
 ✓ Disconnected package includes Cisco root inventories and generator

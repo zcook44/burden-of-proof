@@ -80,7 +80,7 @@ Source: [Batch CKLB](BATCH-CKLB.md) historical v6 readback. Library selection wa
 | Check the handoff | `asset-check --asset --pre --host` | Nothing. It checks the asset record against the supplied pre-scan bytes. |
 | Preview | `preflight-offline.sh`, then `batch-cklb --dry-run` | Nothing. It prints the newest benchmark and any tailoring file it would use. |
 | Convert | `batch-cklb --input-root --library-root` | `<prefix>-disa-<benchmark-hash>-<bundle-hash>-ASSESSMENT.cklb` and a matching `.cklb.provenance.json` |
-| Optional inventory | Checkmate `--list`, and `--validate --schema` when supplied | A count or a schema result. Checkmate is not in this archive. |
+| Optional inventory | `checkmate --list`, and `--validate --schema` when supplied | A count or a schema result. `checkmate` is in the same archive as `docket`. |
 
 ## A hash identifies bytes
 

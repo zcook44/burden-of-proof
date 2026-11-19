@@ -33,23 +33,54 @@ type assessmentRecord struct {
 }
 
 type assessmentRecordLayered struct {
-	SchemaVersion      int                  `json:"schema_version"`
-	ChecklistSHA256    string               `json:"checklist_sha256"`
-	MappingMethod      string               `json:"mapping_method"`
-	Scan               evidenceInput        `json:"scan"`
-	Benchmark          evidenceInput        `json:"benchmark"`
-	HTML               *evidenceInput       `json:"html,omitempty"`
-	ARF                *evidenceInput       `json:"arf,omitempty"`
-	TailoringRoot      *evidenceInput       `json:"tailoring_root,omitempty"`
-	TailoringHost      *evidenceInput       `json:"tailoring_host,omitempty"`
-	TailoringRuleLayer map[string]string    `json:"tailoring_rule_layer,omitempty"` // STIG_ID -> "root" or "host"
-	Reconciliation     reconcile.Report     `json:"reconciliation"`
+	SchemaVersion      int               `json:"schema_version"`
+	ChecklistSHA256    string            `json:"checklist_sha256"`
+	MappingMethod      string            `json:"mapping_method"`
+	Scan               evidenceInput     `json:"scan"`
+	Benchmark          evidenceInput     `json:"benchmark"`
+	HTML               *evidenceInput    `json:"html,omitempty"`
+	ARF                *evidenceInput    `json:"arf,omitempty"`
+	TailoringRoot      *evidenceInput    `json:"tailoring_root,omitempty"`
+	TailoringHost      *evidenceInput    `json:"tailoring_host,omitempty"`
+	TailoringRuleLayer map[string]string `json:"tailoring_rule_layer,omitempty"` // STIG_ID -> "root" or "host"
+	Reconciliation     reconcile.Report  `json:"reconciliation"`
 }
 
 // equivalentProvenance accepts an old sidecar only when its sole difference
-// is where byte-identical private inputs were read. Retain the old record and
-// its paths; never rewrite audit provenance merely to make a rerun pass.
+// is where byte-identical inputs were read. Retain the old record and its
+// paths; never rewrite audit provenance merely to make a rerun pass.
+// Schema v1 is a single tailoring file. Schema v2 is the layered root/host record.
 func equivalentProvenance(existing, expected []byte) bool {
+	var probe struct {
+		SchemaVersion int `json:"schema_version"`
+	}
+	if json.Unmarshal(existing, &probe) != nil {
+		return false
+	}
+	if probe.SchemaVersion == 2 {
+		return equivalentLayeredProvenance(existing, expected)
+	}
+	return equivalentFlatProvenance(existing, expected)
+}
+
+func inputStillMatches(input *evidenceInput, benchmark bool) bool {
+	if input == nil {
+		return true
+	}
+	if input.Path == "" || !filepath.IsAbs(input.Path) {
+		return false
+	}
+	var data []byte
+	var err error
+	if benchmark {
+		data, err = readBenchmark(input.Path)
+	} else {
+		data, err = readPrivate(input.Path)
+	}
+	return err == nil && sha256Hex(data) == input.SHA256
+}
+
+func equivalentFlatProvenance(existing, expected []byte) bool {
 	var old, current assessmentRecord
 	if json.Unmarshal(existing, &old) != nil || json.Unmarshal(expected, &current) != nil {
 		return false
@@ -58,21 +89,8 @@ func equivalentProvenance(existing, expected []byte) bool {
 	if err != nil || !bytes.Equal(append(canonical, '\n'), existing) {
 		return false // reject unknown fields, duplicates, or edited serialization
 	}
-	for _, input := range []*evidenceInput{&old.Scan, &old.Benchmark, old.HTML, old.ARF, old.Tailoring} {
-		if input == nil {
-			continue
-		}
-		if input.Path == "" {
-			return false
-		}
-		path := input.Path
-		if !filepath.IsAbs(path) {
-			return false // old relative paths have no trustworthy recorded base
-		}
-		data, err := readPrivate(path)
-		if err != nil || sha256Hex(data) != input.SHA256 {
-			return false
-		}
+	if !inputStillMatches(&old.Scan, false) || !inputStillMatches(&old.Benchmark, true) || !inputStillMatches(old.HTML, false) || !inputStillMatches(old.ARF, false) || !inputStillMatches(old.Tailoring, false) {
+		return false
 	}
 	old.Scan.Path = current.Scan.Path
 	old.Benchmark.Path = current.Benchmark.Path
@@ -84,6 +102,39 @@ func equivalentProvenance(existing, expected []byte) bool {
 	}
 	if old.Tailoring != nil && current.Tailoring != nil {
 		old.Tailoring.Path = current.Tailoring.Path
+	}
+	canonical, err = json.MarshalIndent(old, "", "  ")
+	return err == nil && bytes.Equal(append(canonical, '\n'), expected)
+}
+
+func equivalentLayeredProvenance(existing, expected []byte) bool {
+	var old, current assessmentRecordLayered
+	if json.Unmarshal(existing, &old) != nil || json.Unmarshal(expected, &current) != nil {
+		return false
+	}
+	if old.SchemaVersion != 2 || current.SchemaVersion != 2 {
+		return false
+	}
+	canonical, err := json.MarshalIndent(old, "", "  ")
+	if err != nil || !bytes.Equal(append(canonical, '\n'), existing) {
+		return false
+	}
+	if !inputStillMatches(&old.Scan, false) || !inputStillMatches(&old.Benchmark, true) || !inputStillMatches(old.HTML, false) || !inputStillMatches(old.ARF, false) || !inputStillMatches(old.TailoringRoot, false) || !inputStillMatches(old.TailoringHost, false) {
+		return false
+	}
+	old.Scan.Path = current.Scan.Path
+	old.Benchmark.Path = current.Benchmark.Path
+	if old.HTML != nil && current.HTML != nil {
+		old.HTML.Path = current.HTML.Path
+	}
+	if old.ARF != nil && current.ARF != nil {
+		old.ARF.Path = current.ARF.Path
+	}
+	if old.TailoringRoot != nil && current.TailoringRoot != nil {
+		old.TailoringRoot.Path = current.TailoringRoot.Path
+	}
+	if old.TailoringHost != nil && current.TailoringHost != nil {
+		old.TailoringHost.Path = current.TailoringHost.Path
 	}
 	canonical, err = json.MarshalIndent(old, "", "  ")
 	return err == nil && bytes.Equal(append(canonical, '\n'), expected)

@@ -130,9 +130,8 @@ func TestCiscoXCCDFAppliesDeviceTailoring(t *testing.T) {
 		t.Fatal(err)
 	}
 	policy := filepath.Join(filepath.Dir(cfg), "Cisco_IOS_Router_NDM_STIG.tailoring.yaml")
-	// Host-layer tailoring file with schema v2 and comments on all overrides
-	benchSum := sha256.Sum256(benchmark)
-	hostPolicy := "schema_version: 2\nbenchmark_id: Cisco_IOS_Router_NDM_STIG\nbenchmark_sha256: " + hex.EncodeToString(benchSum[:]) + "\nrules:\n  - stig_id: V-215662\n    sv_id: SV-215662r1269385_rule\n    status: not_applicable\n    comment: Site accepts this session limit.\n"
+	_ = benchmark
+	hostPolicy := "schema_version: 3\nbenchmark_id: Cisco_IOS_Router_NDM_STIG\nrules:\n  - stig_id: V-215662\n    sv_id: SV-215662r1269385_rule\n    status: not_applicable\n    comment: Site accepts this session limit.\n"
 	if err := os.WriteFile(policy, []byte(hostPolicy), 0600); err != nil {
 		t.Fatal(err)
 	}

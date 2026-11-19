@@ -14,6 +14,7 @@ import (
 	"syscall"
 
 	"github.com/zcook44/burden-of-proof/internal/batch"
+	"github.com/zcook44/burden-of-proof/internal/config"
 	"github.com/zcook44/burden-of-proof/internal/draft"
 	"github.com/zcook44/burden-of-proof/internal/reconcile"
 )
@@ -84,6 +85,15 @@ func runBatch(args []string, out, stderr io.Writer) int {
 	} else if err != nil {
 		return 2
 	}
+	cfg, _, cfgErr := config.Load()
+	if cfgErr != nil {
+		fmt.Fprintf(stderr, "batch: %v\n", cfgErr)
+		return 2
+	}
+	*root = config.Resolve(*root, "DOCKET_INPUT_ROOT", cfg.InputRoot, "")
+	if *benchmarkPath == "" {
+		*libraryRoot = config.Resolve(*libraryRoot, "DOCKET_LIBRARY_ROOT", cfg.LibraryRoot, "")
+	}
 	if flags.NArg() != 0 || *root == "" || (*benchmarkPath == "") == (*libraryRoot == "") {
 		fmt.Fprintln(stderr, "usage: docket batch-cklb --input-root PATH (--library-root DIR | --benchmark XCCDF) [--dry-run]")
 		return 2
@@ -111,7 +121,7 @@ func runBatch(args []string, out, stderr io.Writer) int {
 	}
 	selected := map[int]selection{}
 	if *benchmarkPath != "" {
-		data, err := readPrivate(*benchmarkPath)
+		data, err := readBenchmark(*benchmarkPath)
 		if err != nil {
 			fmt.Fprintf(stderr, "batch benchmark: %v\n", err)
 			return 2
@@ -157,11 +167,11 @@ func runBatch(args []string, out, stderr io.Writer) int {
 			libraryDir = filepath.Dir(selectedPath)
 		}
 		hostDir := s.Dir
-		
+
 		// Use new layered tailoring: root + host override
 		// RHEL root layer is partial (only overrides), not full inventory
 		tailoring, rootPath, rootBytes, hostPath, hostBytes, err := loadLayeredTailoring(
-			libraryDir, hostDir, report.DISABenchmark, benchmark, report, false)
+			libraryDir, hostDir, report.DISABenchmark, benchmark, report)
 		if err != nil {
 			fmt.Fprintf(stderr, "batch tailoring for %s: %v\n", s.XCCDF, err)
 			return 2
@@ -245,7 +255,7 @@ func runBatch(args []string, out, stderr io.Writer) int {
 		digest := bundleDigest(digestParts...)
 		name := s.Prefix + "-disa-" + report.BenchmarkSHA256[:16] + "-" + digest[:16] + "-ASSESSMENT.cklb"
 		path := filepath.Join(s.Dir, name)
-		
+
 		// Build layered tailoring provenance
 		var tailorProv *tailoringProvenance
 		if hasTailoring {
@@ -261,7 +271,7 @@ func runBatch(args []string, out, stderr io.Writer) int {
 				tailorProv.HostSHA256 = sha256Hex(hostBytes)
 			}
 		}
-		
+
 		provenance, err := assessmentProvenanceLayered(body, report, s.XCCDF, selectedPath, s.HTML, s.ARF, html, arfBytes, tailorProv)
 		if err != nil {
 			fmt.Fprintf(stderr, "batch provenance %s: %v\n", s.XCCDF, err)
@@ -272,7 +282,7 @@ func runBatch(args []string, out, stderr io.Writer) int {
 			fmt.Fprintf(stderr, "batch %s: %v (created=%d skipped=%d)\n", s.XCCDF, err, created, skipped)
 			return 2
 		}
-		
+
 		// Check provenance equivalence when file already existed
 		if wasSkipped {
 			// A prior run may have used a different private path for the same
@@ -303,7 +313,7 @@ func runBatch(args []string, out, stderr io.Writer) int {
 				continue
 			}
 		}
-		
+
 		// Write provenance for newly created files
 		if _, err := writeBatchResult(path+".provenance.json", provenance); err != nil {
 			fmt.Fprintf(stderr, "batch provenance %s: %v (checklist retained for safe retry)\n", path, err)

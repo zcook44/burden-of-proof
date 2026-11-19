@@ -86,7 +86,7 @@ func selectCiscoBenchmark(root, id string) (string, []byte, error) {
 		if m == nil {
 			return nil
 		}
-		data, err := readPrivate(path)
+		data, err := readBenchmark(path)
 		if err != nil {
 			return err
 		}
@@ -193,7 +193,7 @@ func runCisco(args []string, out, stderr io.Writer) int {
 	if *libraryRoot != "" {
 		*benchmarkPath, benchmark, err = selectCiscoBenchmark(*libraryRoot, *benchmarkID)
 	} else {
-		benchmark, err = readPrivate(*benchmarkPath)
+		benchmark, err = readBenchmark(*benchmarkPath)
 		if err == nil {
 			m := ciscoFile.FindStringSubmatch(filepath.Base(*benchmarkPath))
 			if m == nil {
@@ -232,16 +232,19 @@ func runCisco(args []string, out, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "Cisco checklist: %v\n", err)
 		return 2
 	}
-	
+
 	// Build report for tailoring validation
 	draftReport := buildCiscoReportForCLI(doc, *benchmarkID, benchmark)
-	
-	// Load layered tailoring
-	// Cisco root layer requires full inventory (all controls)
+
+	// Root tailoring lives at the library root. An explicit benchmark file
+	// uses its own directory when no library root was given.
 	libraryDir := filepath.Dir(*benchmarkPath)
+	if *libraryRoot != "" {
+		libraryDir = *libraryRoot
+	}
 	hostDir := filepath.Dir(*configPath)
 	policyRules, rootPath, rootBytes, hostPath, hostBytes, err := loadLayeredTailoring(
-		libraryDir, hostDir, *benchmarkID, benchmark, draftReport, true)
+		libraryDir, hostDir, *benchmarkID, benchmark, draftReport)
 	if err != nil {
 		fmt.Fprintf(stderr, "Cisco tailoring: %v\n", err)
 		return 2

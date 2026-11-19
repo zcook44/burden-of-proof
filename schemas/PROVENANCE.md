@@ -7,7 +7,7 @@
 
 The upstream ZIP contains only the JSON file and no license or redistribution notice. This file is third-party DISA material, **not covered by this repository's license**. Its presence in this private repository does not establish permission to redistribute it publicly. Confirm the applicable terms with your organization before distributing a release beyond authorized recipients. A SHA-256 comparison verifies byte identity, not publisher authentication; obtain the expected value through an independently trusted channel.
 
-The converter does not use this schema to create CKLBs; validation is external. The read-only Bash preflight can pass it explicitly to a separately supplied Checkmate executable with `--schema schemas/SV3_CKLB_1_0_JSON_SCHEMA.json`. The separate `checkmate` repository carries an identical copy.
+The converter does not use this schema to create CKLBs. `checkmate --validate --schema schemas/SV3_CKLB_1_0_JSON_SCHEMA.json` checks existing checklists, and the Bash preflight can pass that same schema through. `checkmate` is `cmd/checkmate` in this module.
 
 ## Assessment provenance schema versions
 

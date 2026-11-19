@@ -15,7 +15,7 @@ ISE, ACI and SNA benchmarks are not represented by invented IOS-style running co
 
 ## Reproduce from an owner-private benchmark library
 
-This repository now tracks 25 official manual XCCDF XMLs and 25 all-`auto` inventories under `stig-library-cisco/` (not in the generic archive). Alternatively obtain ZIPs through your approved DISA source and extract them with the Checkmate source script. In either case independently verify provenance, then stage authorized XML/policies into an owner-owned `0700` private library with `0600` files; the Git checkout's modes are not accepted by the converter. The generator below uses that private library. From the `burden-of-proof` root:
+This repository tracks 25 official manual XCCDF XMLs and 25 partial schema v3 root tailoring files under `stig-library-cisco/` (not in the generic archive). Alternatively obtain ZIPs through your approved DISA source and extract them with `cmd/checkmate/scripts/unpack-stig-library.sh`. In either case independently verify provenance, then stage authorized XML into an owner-owned `0700` private library. Manuals may be `0644`. Tailoring stays `0600`. The Git checkout's modes are not accepted by the converter. The generator below uses that private library. From the repository root:
 
 ```sh
 umask 077
@@ -32,6 +32,14 @@ python3 scripts/generate-cisco-examples.py \
 python3 tests/test-cisco-examples.py
 ```
 
-The generator refuses unmarked configs, validates converter output hashes and exact benchmark IDs, stages each benchmark in a separate private directory, and never overwrites a different checklist. Keep operational benchmark copies, private scans and generated evidence out of Git; the tracked Cisco reference XML/policies are the stated exception. For Checkmate inventory, run its executable with `--root /path/to/checkmate/examples/cisco-synthetic/checklists --list`; opt-in `--validate --schema /path/to/checkmate/schemas/SV3_CKLB_1_0_JSON_SCHEMA.json` checks the JSON schema. **Schema validity is not a successful STIG Viewer GUI import or a compliance score.**
+The generator refuses unmarked configs, validates converter output hashes and exact benchmark IDs, stages each benchmark in a separate private directory, and never overwrites a different checklist. Keep operational benchmark copies, private scans and generated evidence out of Git; the tracked Cisco reference XML and partial tailoring files are the stated exception. For Checkmate inventory on a private copy of the generated checklists:
+
+```sh
+checkmate --root "$PWD/examples/cisco-synthetic/checklists" --list
+checkmate --root "$PWD/examples/cisco-synthetic/checklists" --validate \
+  --schema "$PWD/schemas/SV3_CKLB_1_0_JSON_SCHEMA.json"
+```
+
+**Schema validity is not a successful STIG Viewer GUI import or a compliance score.**
 
 `cisco-xccdf` can score these switch fixtures when the directory name matches the `hostname` command. The demo identity for FQDN, management IP, and a locally administered MAC is documented in [the admin walkthrough](../../docs/NETWORK-ADMIN-WALKTHROUGH.md).

@@ -39,51 +39,37 @@ extract_tmp=
 trap '[[ -n ${extract_tmp:-} ]] && rm -rf -- "$extract_tmp"' EXIT
 
 require_go() {
-  command -v go >/dev/null 2>&1 || die "Go is not installed. A source install cannot fetch a toolchain."
-  local version major minor
-  version=$(go env GOVERSION 2>/dev/null || true)
-  version=${version#go}
-  [[ $version =~ ^([0-9]+)\.([0-9]+) ]] || die "cannot read the Go version. Refusing to guess."
-  major=${BASH_REMATCH[1]}
-  minor=${BASH_REMATCH[2]}
-  if (( major < 1 || (major == 1 && minor < 22) )); then
-    die "Go ${version} is older than 1.22. The vendored build will not start."
-  fi
-  [[ -f $repo/vendor/modules.txt && -d $repo/cmd/docket ]] || die "vendor/ or cmd/docket is missing. Refusing to download modules."
+  [[ -f $script_dir/require-go.sh ]] || die "a source build needs this repository checkout, including scripts/require-go.sh and vendor/. The release archive does not include them. Installed docket and checkmate binaries do not need Go."
+  # shellcheck source=require-go.sh
+  source "$script_dir/require-go.sh"
+  docket_require_go || die "source build needs Go 1.22 or newer. See the message above."
+  [[ -f $repo/vendor/modules.txt && -d $repo/cmd/docket && -d $repo/cmd/checkmate ]] || die "vendor/, cmd/docket, or cmd/checkmate is missing. Refusing to download modules."
 }
 
 ensure_path() {
-  local bindir=$1 rc
+  local bindir=$1 line
   case :$PATH: in
     *:"$bindir":*) return 0 ;;
   esac
-  [[ $bindir == "$HOME/.local/bin" ]] || die "$bindir is not on PATH. Use --prefix \"\$HOME/.local\" or add that directory yourself."
-  local line='export PATH="$HOME/.local/bin:$PATH"'
-  for rc in "$HOME/.profile" "$HOME/.bashrc"; do
-    if [[ -L $rc ]]; then
-      die "refusing to follow a symlink while updating PATH: $rc"
-    fi
-    if [[ ! -e $rc ]]; then
-      touch "$rc" || die "cannot create $rc to put ~/.local/bin on PATH"
-    fi
-    [[ -w $rc ]] || die "cannot update $rc to put ~/.local/bin on PATH"
-    if ! grep -Fq '.local/bin' "$rc"; then
-      printf '\n%s\n' "$line" >> "$rc"
-    fi
-  done
-  printf 'install-docket: added ~/.local/bin to PATH in ~/.profile and ~/.bashrc. Open a new shell.\n' >&2
+  line="export PATH=\"$bindir:\$PATH\""
+  printf 'install-docket: %s is not on PATH.\n' "$bindir" >&2
+  printf 'install-docket: add it for this account with:\n' >&2
+  printf '  %s\n' "$line" >&2
 }
 
 binary=
+checkmate_bin=
+checkmate_completion=$script_dir/checkmate-completion.bash
 if [[ $from_source -eq 1 ]]; then
   [[ -z $tarball ]] || die "--from-source does not take a tarball"
   require_go
   binary=$repo/dist/docket
+  checkmate_bin=$repo/dist/checkmate
   install -d -m 755 "$repo/dist"
-  if ! (cd "$repo" && GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local GOWORK=off CGO_ENABLED=0 GOFLAGS=-mod=vendor go build -trimpath -ldflags='-s -w' -o "$binary" ./cmd/docket); then
+  if ! (cd "$repo" && GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local GOWORK=off CGO_ENABLED=0 GOFLAGS=-mod=vendor go build -trimpath -ldflags='-s -w' -o "$binary" ./cmd/docket && GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local GOWORK=off CGO_ENABLED=0 GOFLAGS=-mod=vendor go build -trimpath -ldflags='-s -w' -o "$checkmate_bin" ./cmd/checkmate); then
     die "offline Go build failed. Dependencies were not satisfied from vendor/."
   fi
-  [[ -x $binary ]] || die "Go reported success and left no binary. That is not success."
+  [[ -x $binary && -x $checkmate_bin ]] || die "Go reported success and left no binary. That is not success."
 else
   if [[ -z $tarball ]]; then
     [[ -d $repo/dist/releases ]] || die "no dist/releases directory. Build a tarball first, or pass its path."
@@ -97,30 +83,46 @@ else
   tar -xzf "$tarball" -C "$extract_tmp"
   archive_name=$(find "$extract_tmp" -mindepth 1 -maxdepth 1 -type d -printf '%f\n')
   [[ $(printf '%s\n' "$archive_name" | wc -l) -eq 1 && -x $extract_tmp/$archive_name/bin/docket ]] || die "archive does not contain bin/docket"
+  [[ -x $extract_tmp/$archive_name/bin/checkmate ]] || die "archive does not contain bin/checkmate"
   binary=$extract_tmp/$archive_name/bin/docket
+  checkmate_bin=$extract_tmp/$archive_name/bin/checkmate
   if [[ -f $extract_tmp/$archive_name/scripts/docket-completion.bash ]]; then
     completion_src=$extract_tmp/$archive_name/scripts/docket-completion.bash
+  fi
+  if [[ -f $extract_tmp/$archive_name/scripts/checkmate-completion.bash ]]; then
+    checkmate_completion=$extract_tmp/$archive_name/scripts/checkmate-completion.bash
   fi
 fi
 
 install -d -m 755 "$prefix/bin"
 install -m 755 "$binary" "$prefix/bin/docket"
+install -m 755 "$checkmate_bin" "$prefix/bin/checkmate"
 ensure_path "$prefix/bin"
-[[ -f $completion_src ]] || die "completion script is missing"
+[[ -f $completion_src && -f $checkmate_completion ]] || die "completion script is missing"
+prefix_comp=$prefix/share/bash-completion/completions
+install -d -m 755 "$prefix/share/bash-completion/completions"
+install -m 644 "$completion_src" "$prefix_comp/docket"
+install -m 644 "$checkmate_completion" "$prefix_comp/checkmate"
 comp_dir=/usr/share/bash-completion/completions
 [[ -d $comp_dir ]] || comp_dir=/etc/bash_completion.d
-[[ -d $comp_dir ]] || die "bash-completion is not installed. Neither /usr/share/bash-completion/completions nor /etc/bash_completion.d exists."
-if [[ -w $comp_dir ]]; then
+if [[ -d $comp_dir && -w $comp_dir ]]; then
   install -m 644 "$completion_src" "$comp_dir/docket"
-elif command -v sudo >/dev/null 2>&1; then
-  sudo install -m 644 "$completion_src" "$comp_dir/docket" || die "could not install the completion for every user into $comp_dir"
+  install -m 644 "$checkmate_completion" "$comp_dir/checkmate"
+  printf 'COMPLETION %s\n' "$comp_dir/docket"
+elif [[ -d $comp_dir ]] && command -v sudo >/dev/null 2>&1 && sudo -n true >/dev/null 2>&1; then
+  sudo install -m 644 "$completion_src" "$comp_dir/docket"
+  sudo install -m 644 "$checkmate_completion" "$comp_dir/checkmate"
+  printf 'COMPLETION %s\n' "$comp_dir/docket"
 else
-  die "cannot write $comp_dir and sudo is not available"
+  printf 'install-docket: system completion directory is not writable; installed completions under %s\n' "$prefix_comp" >&2
+  printf 'COMPLETION %s\n' "$prefix_comp/docket"
 fi
 user_completion=${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/docket
-if [[ -f $user_completion && ! -L $user_completion ]]; then
+if [[ -f $user_completion && ! -L $user_completion && $user_completion != $prefix_comp/docket ]]; then
   rm -f -- "$user_completion"
 fi
-printf 'COMPLETION %s\n' "$comp_dir/docket"
 printf 'INSTALLED %s\n' "$prefix/bin/docket"
+printf 'INSTALLED %s\n' "$prefix/bin/checkmate"
 "$prefix/bin/docket" batch-cklb --help >/dev/null
+"$prefix/bin/docket" quarter --help >/dev/null
+"$prefix/bin/docket" tailoring rehash --help >/dev/null

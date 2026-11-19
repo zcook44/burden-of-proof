@@ -1,0 +1,2 @@
+# Vendored upstream README retains its existing final blank line.
+vendor/github.com/santhosh-tekuri/jsonschema/v6/README.md whitespace=-blank-at-eof

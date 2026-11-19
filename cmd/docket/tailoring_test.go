@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -9,6 +11,16 @@ import (
 	"strings"
 	"testing"
 )
+
+func rhelPolicy(t *testing.T, library, status, comment string) string {
+	t.Helper()
+	bench, err := os.ReadFile(filepath.Join(library, "U_RHEL_9_STIG_V1R1_Manual-xccdf.xml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(bench)
+	return fmt.Sprintf("schema_version: 3\nbenchmark_id: RHEL_9_STIG\nbenchmark_sha256: %s\nrules:\n  - rule_name: ssg_a\n    stig_id: V-100\n    sv_id: SV-100r1_rule\n    status: %s\n    comment: %q\n", hex.EncodeToString(sum[:]), status, comment)
+}
 
 func tailoredFixture(t *testing.T) (string, string, string) {
 	t.Helper()
@@ -28,7 +40,7 @@ func tailoredFixture(t *testing.T) (string, string, string) {
 func TestBatchAppliesPerOSTailoringAndVersionsChanges(t *testing.T) {
 	root, host, library := tailoredFixture(t)
 	policy := filepath.Join(library, "RHEL_9_STIG.tailoring.yaml")
-	privateBench(t, library, filepath.Base(policy), "rules:\n  - rule_name: ssg_a\n    stig_id: V-100\n    sv_id: SV-100r1_rule\n    status: open\n    comment: 'Administrator reviewed the local configuration.'\n")
+	privateBench(t, library, filepath.Base(policy), rhelPolicy(t, library, "open", "Administrator reviewed the local configuration."))
 	args := []string{"batch-cklb", "--input-root", root, "--library-root", library}
 	var out, errs bytes.Buffer
 	if code := run(args, &out, &errs); code != 0 {
@@ -69,7 +81,7 @@ func TestBatchAppliesPerOSTailoringAndVersionsChanges(t *testing.T) {
 	if code := run(args, &out, &errs); code != 0 {
 		t.Fatalf("rerun failed %d: %s %s", code, out.String(), errs.String())
 	}
-	privateBench(t, library, filepath.Base(policy), "rules:\n  - rule_name: ssg_a\n    stig_id: V-100\n    sv_id: SV-100r1_rule\n    status: not_a_finding\n    comment: 'Verified documented false positive by an administrator.'\n")
+	privateBench(t, library, filepath.Base(policy), rhelPolicy(t, library, "not_a_finding", "Verified documented false positive by an administrator."))
 	out.Reset()
 	errs.Reset()
 	if code := run(args, &out, &errs); code != 0 || !strings.Contains(out.String(), "created=1 skipped=0") {
@@ -83,7 +95,7 @@ func TestBatchAppliesPerOSTailoringAndVersionsChanges(t *testing.T) {
 
 func TestBatchRejectsMismatchedTailoringIDsWithoutWriting(t *testing.T) {
 	root, host, library := tailoredFixture(t)
-	privateBench(t, library, "RHEL_9_STIG.tailoring.yaml", "rules:\n  - rule_name: ssg_a\n    stig_id: V-100\n    sv_id: SV-100r999_rule\n    status: not_a_finding\n    comment: 'Mismatched revision must fail.'\n")
+	privateBench(t, library, "RHEL_9_STIG.tailoring.yaml", strings.Replace(rhelPolicy(t, library, "not_a_finding", "Mismatched revision must fail."), "SV-100r1_rule", "SV-100r999_rule", 1))
 	var out, errs bytes.Buffer
 	if code := run([]string{"batch-cklb", "--input-root", root, "--library-root", library}, &out, &errs); code == 0 || !strings.Contains(errs.String(), "tailoring") {
 		t.Fatalf("invalid policy accepted %d: %s", code, errs.String())
@@ -107,7 +119,12 @@ func TestBatchAcceptsEmptyPerOSPolicy(t *testing.T) {
 			}
 			privateBench(t, host, "run.results.xml", sourceFixture(major))
 			privateBench(t, library, fmt.Sprintf("U_RHEL_%d_STIG_V1R1_Manual-xccdf.xml", major), officialFixture(major, 1))
-			privateBench(t, library, fmt.Sprintf("RHEL_%d_STIG.tailoring.yaml", major), "# Add verified per-OS decisions here.\nrules: []\n")
+			bench, err := os.ReadFile(filepath.Join(library, fmt.Sprintf("U_RHEL_%d_STIG_V1R1_Manual-xccdf.xml", major)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			sum := sha256.Sum256(bench)
+			privateBench(t, library, fmt.Sprintf("RHEL_%d_STIG.tailoring.yaml", major), fmt.Sprintf("schema_version: 3\nbenchmark_id: RHEL_%d_STIG\nbenchmark_sha256: %s\nrules: []\n", major, hex.EncodeToString(sum[:])))
 			var out, errs bytes.Buffer
 			if code := run([]string{"batch-cklb", "--input-root", root, "--library-root", library}, &out, &errs); code != 0 {
 				t.Fatalf("empty policy rejected %d: %s", code, errs.String())
@@ -134,7 +151,7 @@ func TestBatchAcceptsEmptyPerOSPolicy(t *testing.T) {
 
 func TestBatchAutoPolicyKeepsObservedStatus(t *testing.T) {
 	root, host, library := tailoredFixture(t)
-	privateBench(t, library, "RHEL_9_STIG.tailoring.yaml", "rules:\n  - rule_name: ssg_a\n    stig_id: V-100\n    sv_id: SV-100r1_rule\n    status: auto\n    comment: 'Remediation excluded; assessment still comes from the scan.'\n")
+	privateBench(t, library, "RHEL_9_STIG.tailoring.yaml", rhelPolicy(t, library, "auto", "Remediation excluded; assessment still comes from the scan."))
 	var out, errs bytes.Buffer
 	if code := run([]string{"batch-cklb", "--input-root", root, "--library-root", library}, &out, &errs); code != 0 {
 		t.Fatalf("automatic status policy rejected %d: %s", code, errs.String())

@@ -1,0 +1,8 @@
+# Example RHEL_10_STIG tailoring. Not approved site policy.
+# schema version 3. benchmark_sha256 is a placeholder until you run
+#   docket tailoring rehash --library-root <library>
+# beside the official manual. Host copies of this file must omit benchmark_sha256.
+schema_version: 3
+benchmark_id: RHEL_10_STIG
+benchmark_sha256: rehash-me
+rules: []
