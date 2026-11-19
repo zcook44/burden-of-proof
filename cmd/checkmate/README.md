@@ -2,7 +2,7 @@
 
 A terminal editor for STIG Viewer `.cklb` checklists. It reads CKLB JSON, so Cisco IOS, RHEL, and other benchmarks all get the same treatment. Apparently the paperwork is the one platform everyone agreed to standardize.
 
-Checkmate edits checklist answers. It does **not** run scans, assess a host, approve a control, or make an incorrect answer correct by displaying it in a handsome terminal.
+Checkmate is the scan admin's editor. Security imports the CKLB into STIG Viewer and does not run this program. It edits checklist answers. It does **not** run scans, assess a host, approve a control, or make an incorrect answer correct by displaying it in a handsome terminal. A Not a Finding stays the result `docket` wrote for that host.
 
 ## Primary workflow
 

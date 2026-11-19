@@ -138,7 +138,7 @@ func TestHostWorksheetIsPartial(t *testing.T) {
 	if strings.Contains(text, "benchmark_sha256:") || strings.Contains(text, "V-100") || strings.Contains(text, "rule_name:") {
 		t.Fatalf("worksheet not partial:\n%s", text)
 	}
-	if !strings.Contains(text, "schema_version: 3") || !strings.Contains(text, "status: not_applicable") || !strings.Contains(text, "Site accepts this session limit.") || !strings.Contains(text, "status: not_reviewed") {
+	if !strings.Contains(text, "schema_version: 3") || !strings.Contains(text, "status: not_applicable") || !strings.Contains(text, "Site accepts this session limit.") || !strings.Contains(text, "status: not_reviewed") || !strings.Contains(text, "missing show output") {
 		t.Fatalf("worksheet missing decisions:\n%s", text)
 	}
 }

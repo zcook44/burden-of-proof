@@ -62,7 +62,7 @@ The output uses the same CKLB `stigs`/`rules` field structure as RHEL conversion
 
 Finding details bind the raw running-config and benchmark SHA-256 values and record an allowlisted observation. Raw configuration lines are never copied. The provenance sidecar binds the CKLB bytes, config and benchmark paths/hashes, optional port-role hash, evaluator version `cisco-config-review-v9`, and per-status counts. Output filenames incorporate a versioned digest. An unchanged run verifies and skips identical outputs. Existing differing output is never silently overwritten.
 
-A CKLB candidate is not an approved checklist. Review Open, Not Applicable, and Not Reviewed first, then spot-check Not a Finding. `cisco-batch` already places each benchmark in its own directory, which is the layout Checkmate can inventory without hiding a second benchmark. An edit in an external editor leaves the converter's provenance hash stale. No Cisco production configuration was used to claim control status in the synthetic tests.
+A CKLB candidate is not an approved checklist. Security opens each device's CKLB in STIG Viewer and judges every rule, including every Not a Finding. `cisco-batch` already places each benchmark in its own directory, which is the layout Checkmate can inventory without hiding a second benchmark. An edit in an external editor leaves the converter's provenance hash stale. No Cisco production configuration was used to claim control status in the synthetic tests.
 
 ## Device-named scan results
 

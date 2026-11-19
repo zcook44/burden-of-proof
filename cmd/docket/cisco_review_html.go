@@ -102,7 +102,7 @@ a { color: #1f4b3a; }
 <body>
 <main>
 <h1>Cisco review package</h1>
-<p class="note">These {{.Total}} checklists are review candidates built from saved configuration and a port-role table. They are not an approved assessment. Start with Open, then Not Reviewed, then spot-check Not a Finding.</p>
+<p class="note">These {{.Total}} checklists are review candidates built from saved configuration and a port-role table. They are not an approved assessment. The CKLB beside each page is the file STIG Viewer opens. Judge every rule on that device, including every Not a Finding.</p>
 <table>
 <thead><tr><th>Device</th><th>Benchmark</th><th>Open</th><th>Not reviewed</th><th>Not applicable</th><th>Not a finding</th></tr></thead>
 <tbody>

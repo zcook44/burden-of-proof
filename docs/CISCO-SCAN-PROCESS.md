@@ -97,7 +97,7 @@ Checklist path: `checklists/<STIG>/<host>/<host>.cklb`. Scan path: `scans/<host>
 
 ## What stays with a person
 
-A Not reviewed row is a design, architecture, or policy fact the running configuration cannot prove: the required banner text, an approved management network, a supported-release list, or a value the site defines. That reason is written on the row and again in `<host>.tailoring.yaml`. Copy the edited file beside `scan.running-config` as `<benchmark-id>.tailoring.yaml`. The next `cisco-xccdf` run for that device applies it.
+A Not reviewed row is a design, architecture, or policy fact the running configuration cannot prove: the required banner text, an approved management network, a supported-release list, or a value the site defines. That reason is on the CKLB row and in `<host>.tailoring.yaml`. Replace the comment with the site fact, drop every other row, and copy the file beside `scan.running-config` as `<benchmark-id>.tailoring.yaml`. The next `cisco-xccdf` run for that device applies it. The CKLB, including every Not a Finding, is what STIG Viewer opens.
 
 `cisco-cklb` and `cisco-batch` score a saved configuration directly. The scan path scores with the same evaluator, then keeps the verdict in the XCCDF file so the checklist is built from that file. `<host>.cklb.provenance.json` binds the checklist bytes to that result, the benchmark, and the running-config SHA-256.
 

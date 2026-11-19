@@ -11,7 +11,7 @@ Read [CONFIG.md](CONFIG.md) and [TAILORING.md](TAILORING.md) once. This runbook 
 - One library that contains this quarter's manuals and root tailoring pinned to those bytes.
 - A fresh OpenSCAP result for every in-scope RHEL host.
 - A fresh running configuration for every in-scope Cisco device.
-- New CKLB files and provenance sidecars.
+- One CKLB per host and benchmark, written so STIG Viewer can show the check, the discussion, the fix, the potential impact, and this host's finding.
 - Last quarter's library, scans, configs, and checklists outside the active paths.
 
 ## Layout
@@ -73,7 +73,7 @@ chmod 600 /private/evidence/devices.json "$HOME/.config/docket/config.yaml"
 | `/private/evidence` | `<host>/scan.running-config` and optional `port-roles.csv` |
 | `/private/evidence/devices.json` | Cisco batch manifest |
 | `/private/cisco-review/2026-q4` | `cisco-batch` output |
-| `/private/checklists/2026-q4` | Copies you review in checkmate |
+| `/private/checklists/2026-q4` | Optional working copies for checkmate. Security imports the CKLBs `docket quarter` wrote. |
 
 `batch-cklb` and the Cisco commands walk subdirectories of the library and take the highest version, then the highest release. `tailoring check` uses that same rule. A newer manual left under `old/` becomes the benchmark for every host. Archive last quarter **outside** the library root.
 
@@ -373,13 +373,15 @@ scripts/preflight-offline.sh \
 docket quarter
 ```
 
-Expected ending: `QUARTER complete`. RHEL checklists appear beside each scan as `*-ASSESSMENT.cklb` plus `.provenance.json`. Cisco checklists, review HTML, and a partial `.tailoring.yaml` worksheet appear under `/private/cisco-review/2026-q4/<benchmark-id>/<host>/`. `index.html` lists them.
+Expected ending: `QUARTER complete`. RHEL checklists appear beside each scan as `*-ASSESSMENT.cklb` plus `.provenance.json`. Cisco checklists, review HTML, and a partial `.tailoring.yaml` worksheet appear under `/private/cisco-review/2026-q4/<benchmark-id>/<host>/`. `index.html` lists them. Those CKLBs are the files security opens in STIG Viewer. Before you hand them over, confirm every in-scope host is present and that every rule has a status, a comment, finding details, and check text.
 
-Copy or link the checklists you will review into `/private/checklists/2026-q4/<host>/`. Checkmate selects the newest `.cklb` in each directory.
+Copy a checklist into `/private/checklists/2026-q4/<host>/` only when you are about to record a site fact in checkmate. Checkmate selects the newest `.cklb` in each directory.
 
-## 8. Review in checkmate
+## 8. Hand the checklists to STIG Viewer
 
-`--root` is the checklist tree. `checklist_root` in the config, or `DOCKET_CHECKLIST_ROOT`, is the same path when the flag is omitted. The examples pass `--root` so they work without the config file. No host starts selected. Set a status and a comment only where you have a reason. A shared STIG id is not a shared finding.
+Security opens each host's CKLB and judges every rule on that host, including every Not a Finding. A pass on one host does not cover the next host. The comment and finding details already say what this host showed. The check text, discussion, fix, and potential impact come from the manual.
+
+Checkmate is optional, and it is for you, not for security. Use it when a rule needs a fact the scan cannot see: banner text, an approved address, or a feature this host does not have. `--root` is the checklist tree. `checklist_root` in the config, or `DOCKET_CHECKLIST_ROOT`, is the same path when the flag is omitted. The examples pass `--root` so they work without the config file. No host starts selected. Set a status and a comment only where you have a reason. A shared STIG id is not a shared finding. Leave machine Not a Finding rows unchanged.
 
 ```sh
 checkmate --root /private/checklists/2026-q4 --list

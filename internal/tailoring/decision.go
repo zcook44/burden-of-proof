@@ -72,7 +72,7 @@ func HostWorksheet(benchmarkID string, rows []WorksheetRow) []byte {
 				continue
 			}
 		case "not_reviewed":
-			if comment == "" || isAutomatedComment(comment) {
+			if comment == "" {
 				comment = "Not reviewed. Replace this comment with the local evidence and set status."
 			}
 		default:
@@ -88,6 +88,7 @@ func HostWorksheet(benchmarkID string, rows []WorksheetRow) []byte {
 	b.WriteString("# Schema version 3. This file has no benchmark_sha256; it inherits the root pin.\n")
 	b.WriteString("# Copy it beside the host evidence as " + benchmarkID + ".tailoring.yaml after review.\n")
 	b.WriteString("# Drop rows that should keep the scan or config result.\n")
+	b.WriteString("# A Not Reviewed comment is why this row still needs a person. Replace it with the site fact before copying.\n")
 	b.Write(Format(f))
 	return []byte(b.String())
 }

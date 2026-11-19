@@ -55,7 +55,7 @@ The IP on each row is the management address in that sample configuration: VLAN 
 
    Those same values are stored in the checklist file the security tool imports. Hostname, IP, FQDN, MAC, role, and technology area are filled in there.
 
-4. Use the buttons to walk the rows in this order: **Open**, **Not reviewed**, **Not applicable**, then a sample of **Not a finding**.
+4. Use the buttons to walk every row on this switch: **Open**, **Not reviewed**, **Not applicable**, and every **Not a finding**. The same rows are in the CKLB that STIG Viewer opens.
 
 5. Beside the checklist is `ios-xe-switch-01.tailoring.yaml`. Every row the configuration could not decide is listed there with the reason. Edit the rows that depend on the design of the network (which ports face users, which servers are the approved log hosts, which banner text the site requires). Copy the edited file beside `scan.running-config` as `Cisco_IOS_XE_Switch_L2S_STIG.tailoring.yaml`. The next `cisco-xccdf` run for that switch applies it.
 
@@ -72,7 +72,7 @@ The IP on each row is the management address in that sample configuration: VLAN 
 | What you see | Plain meaning | What you do |
 | --- | --- | --- |
 | Open | The configuration shows the rule is not met. | Fix the switch, or tell the reviewer why the site accepts it. |
-| Not a finding | The configuration shows the rule is met. | Spot-check a few. The reviewer still owns the sign-off. |
+| Not a finding | The configuration shows the rule is met on this switch. | Leave it on this switch's checklist. Security judges that row in STIG Viewer. The next scan can still change it. |
 | Not applicable | The rule is about a feature this switch does not use. | Confirm the feature really is absent. |
 | Not reviewed | The configuration cannot prove the rule. The reason is on the row and in the tailoring file. | You supply the missing fact: a port role, an approved address, a site policy. |
 

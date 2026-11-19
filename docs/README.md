@@ -1,10 +1,10 @@
 # Install and run
 
-One binary converts RHEL OpenSCAP results and Cisco running configurations into private CKLB review candidates. It does not scan a guest, log into a switch, approve a finding, or deliver evidence. Those jobs remain with people, which is inconvenient and also the point.
+One package installs `docket` and `checkmate`. `docket` converts RHEL OpenSCAP results and Cisco running configurations into private CKLB review candidates. `checkmate` is the optional editor the scan admin uses for a site fact. Neither command scans a guest, logs into a switch, approves a finding, or delivers evidence. Those jobs remain with people, which is inconvenient and also the point.
 
 [Repository overview](../README.md) · [RHEL picture](RHEL-OSCAP-WORKFLOW.md) · [Cisco picture](CISCO-SCAN-PROCESS.md) · [Batch rules](BATCH-CKLB.md) · [Cisco checks](CISCO-CONFIG.md) · [Network scan fields](NETWORK-SCAN.md) · [Commands](GO-MIGRATION.md) · [Review workflow](WORKFLOW.md) · [Quarterly run](QUARTERLY-RUNBOOK.md) · [Disconnected release](DISCONNECTED-RELEASE.md)
 
-## 1. Install the same binary either way
+## 1. Install the package
 
 After `scripts/package-disconnected.sh` writes a tarball, `scripts/install-docket.sh` checks its checksum, unpacks it, and installs `docket` and `checkmate` onto `~/.local/bin`. If that directory is not already on `PATH`, the installer prints `export PATH="$HOME/.local/bin:$PATH"` and still finishes. Completion files are always copied under `$prefix/share/bash-completion/completions/`. They are also copied to `/usr/share/bash-completion/completions/` when that directory is writable or passwordless sudo can write it. A system directory that is not writable does not fail the install. The connected build needs Go 1.22 or newer. `scripts/install-docket.sh --from-source` builds from this checkout and fails when Go is missing, older than 1.22, or unable to build from `vendor/` with the network turned off. The installed binaries need no Go. The archive does not contain official benchmarks.
 
@@ -98,6 +98,6 @@ A repeated run with the same bytes skips. A different result is never silently o
 
 ## 5. Read the candidate, then stop
 
-Review Open, then Not Reviewed, then Not Applicable, then a sample of Not a Finding. Import a representative checklist into STIG Viewer before anyone calls it adopted. `checkmate --root DIR --list` inventories CKLBs and `checkmate --root DIR --validate --schema FILE` checks them against the bundled schema. `checklist_root` is the config equivalent of `--root`. `checkmate --root DIR --export-tailoring DIR` writes schema v3 root candidates from shared administrator decisions. Editing a checklist there makes the provenance hash stale, which is the tool's way of refusing to cosign your edits.
+Confirm every in-scope host has a checklist, and that every rule has a status, a comment, finding details, and the manual's check text. Hand those CKLBs to security. They open each host in STIG Viewer and judge every rule, including every Not a Finding. `checkmate --root DIR --list` inventories CKLBs and `checkmate --root DIR --validate --schema FILE` checks them against the bundled schema. `checklist_root` is the config equivalent of `--root`. `checkmate --root DIR --export-tailoring DIR` writes schema v3 root candidates from shared administrator decisions. A machine Not a Finding is left out of that export. Editing a checklist there makes the provenance hash stale, which is the tool's way of refusing to cosign your edits.
 
 RHEL details: [batch converter](BATCH-CKLB.md) and the [picture](RHEL-OSCAP-WORKFLOW.md). Cisco check behavior: [Cisco config](CISCO-CONFIG.md). Scan fields: [network scan](NETWORK-SCAN.md). The demo script for people who do not want a flag reference: [admin walkthrough](NETWORK-ADMIN-WALKTHROUGH.md).
